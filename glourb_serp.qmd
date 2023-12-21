@@ -1,0 +1,649 @@
+---
+title: "glourb_SERP"
+format: html
+editor: visual
+author: Liolia Bajemon & Lise Vaudor
+---
+
+```{r setup}
+library(tidyverse)
+library(httr)
+library(jsonlite)
+library(tidytext)
+library(forcats)
+library(ggplot2)
+library(ggpattern)
+library(remotes)
+remotes::install_github("lvaudor/mixr") # for the lexicon
+remotes::install_github("Tomeriko96/polyglotr", force = TRUE) # for translations
+```
+
+## Description
+
+The aim of this document is to use the Value SERP API ([access link](https://get.valueserp.com/try-it-free/)) to collect data relative to Google searches. SERP stands for Search Engine Results Pages and corresponds to the pages displayed in response to a query on a search engine, e.g. Google.
+
+Here, our query corresponds to the combination of {city name} + {river name} + {river} for approximately 300 selected agglomerations.
+
+## Set-up
+
+#### Authentication
+
+1.  Create an account on the Value SERP API. Your API Key is displayed at the top-left of the homepage ("API Playground").
+
+2.  Open your R environment
+
+    ```{r save_api_key}
+    usethis::edit_r_environ()
+    ```
+
+3.  Write this line in your R environment :
+
+VALUE_SERP="copy_here_your_VALUE_SERP_API_key"
+
+4.  Now you can access your key from any of your scripts :
+
+```{r get_api_key}
+value_serp_api_key = Sys.getenv("VALUE_SERP")
+```
+
+#### City-river combinations
+
+We will create a table containing all the considered {city name} + {river name} + {river} combinations, with the variables corresponding to :
+
+-   city : The studied city.
+
+-   river : The main river flowing through the city.
+
+-   gl : A 2-letters code corresponding to the country from which the Google search is presumably run.
+
+-   hl : A 2-letters code corresponding to the language(s) of the country (ISO 639-1, see [here](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes)). It has to answer to two conditions: 1. to be supported by Google Translate and 2. to be stated as an "official language" or "national language" on Wikidata.
+
+We will read the file containing all the considered {city name} + {river name} combinations and arrange it.
+
+```{r read_data_city_river}
+data_city_river = read.csv("glourb_serp/input/test_cityriver.csv") # read the data
+
+# change the name of the columns
+colnames(data_city_river) = c("country", "country_fr", "gl", "city", "city_hl", "river", "river_en", "river_hl", "hl1", "hl2", "hl3", "hl4", "hl5", "hl6") 
+
+head(data_city_river)
+```
+
+## Collection of data
+
+Now we will collect the data using the Value SERP API.
+
+### In English
+
+First, we will collect the data in English for all the cities.
+
+#### Collect raw data
+
+Let's define a function `get_serp_data()` which collects SERP results for a given city name, a river name and a country.
+
+```{r def_get_serp_data_en}
+get_serp_data = function(cityname, rivername, gl){
+    file = glue::glue("glourb_serp/data/en/data_RDS/res_{cityname}_{rivername}.RDS")
+          if(!file.exists(file)){
+          # Parameters list
+          q = paste0(rivername, "AND river AND", cityname) # our query
+          params = list(
+            `api_key` = value_serp_api_key,
+            `q` = q,
+            `gl` = gl,
+            `hl` = "en",
+            `num` = 100,
+            `google_domain` = 'google.com' 
+          )
+          # q : the search query
+          # gl : 2 letter country code 
+          # hl : language code
+          # num : number of result asked
+          # google_domain : the Google domain used to run the query, google.com by default
+          # ask for the data
+          res <- httr::GET(url = 'https://api.valueserp.com/search', query = params)
+          saveRDS(res, file = file)
+    } # if the file already exists no API request is carried out
+}
+```
+
+The query results are saved in a directory "data/en/data_RDS/" (and are not re-generated unless the corresponding .RDS files are suppressed).
+
+Now let's run the function for each of our combinations.
+
+```{r run_get_serp_data_en}
+if(!dir.exists("glourb_serp/data/en/data_rds")){dir.create("glourb_serp/data/en/data_rds")}
+data_city_river %>% 
+  mutate(data = purrr::pmap(list(cityname = city,
+                               rivername = river,
+                               gl = gl),
+                          get_serp_data))
+```
+
+#### Clean raw data
+
+Let's clean the raw data so it's readable.
+
+```{r def_get_serp_tibble}
+get_serp_tibble = function(cityname,rivername){
+# translate to string
+    res = readRDS(file = glue::glue("glourb_serp/data/en/data_RDS/res_{cityname}_{rivername}.RDS"))
+
+    res_text <- httr::content(res, "text")
+    
+    # translate to a more readable format
+    res_json <- jsonlite::fromJSON(res_text, flatten = TRUE)
+    res_tib = res_json[["organic_results"]]
+    if(is.null(res_tib)){res_tib = tibble::tibble("Result" = "NoData")}
+    readr::write_csv(res_tib,
+                     glue::glue("glourb_serp/data/en/data_tib/tib_{cityname}_{rivername}.csv"))
+    return(res_tib)
+}
+```
+
+Now format all RDS results as a single table:
+
+```{r run_get_serpentine_tibble}
+tib_serp <- data_city_river %>% 
+  group_by(city, river) %>% 
+  tidyr::nest() %>% 
+  mutate(data = purrr::map2(city, river, get_serp_tibble)) %>% 
+  tidyr::unnest(cols = "data")
+```
+
+#### Process data
+
+Now we will process the data we extracted. The aim is to get the frequency of terms. We will use an English lexicon:
+
+```{r get_lexicon}
+lexen = mixr::get_lexicon("en")
+```
+
+```{r def_get_words}
+get_words = function(cityname, rivername){
+  
+  ## First, get tibble with results
+  tib = get_serp_tibble(cityname, rivername)
+  
+  ## Try and get all geonames 
+  #(and deal with special characters in geographic names)
+  geonames = tib %>% 
+    mutate(snippet = str_replace_all(snippet, "Rhône", "Rhone")) %>% 
+    mutate(snippet = str_replace_all(snippet, "Saône", "Saone")) %>% 
+    # we consider the words starting with a capital letter
+    # that are not situated right after a punctuation sign
+    mutate(word = str_extract_all(snippet, "(?<![:punct:])[A-Z][a-z]*")) %>% 
+    select(word) %>% 
+    tidyr::unnest(cols = c(word)) %>% 
+    mutate(basis = str_to_lower(word)) %>%
+    group_by(word, basis) %>% 
+    summarise(n = n()) %>% 
+    arrange(desc(n)) %>% 
+    # see if these capitalized words appear (uncapitalized) in the lexicon
+    left_join(lexen, by = c("basis"="word")) %>% 
+    # if not, then we can probably consider they are geographical names
+    filter(is.na(type)) %>% 
+    select(word, n) %>% 
+    mutate(geoname = TRUE)
+  
+  ## Now, we consider all words
+  tib_words = tib %>% 
+    unnest_tokens(word, snippet, to_lower=FALSE) %>% 
+    left_join(lexen, by = "word") %>% 
+    # we only keep those that correspond to nouns, verbs or adjectives
+    mutate(righttype = type %in% c("nom", "ver", "adj")) %>% 
+    mutate(capitalized = stringr::str_detect(word, "[A-Z][a-z]*")) %>% 
+    # we keep the nouns-verbs-abjectives OR the capitalized terms
+    filter(righttype|(capitalized & is.na(type))) %>% 
+    group_by(lemma) %>% 
+    summarise(n = n()) %>% 
+    arrange(desc(n)) %>% 
+    select(word = lemma, n) %>% 
+    na.omit() %>% 
+    mutate(geoname = FALSE) %>% 
+    bind_rows(geonames) %>% 
+    filter(!(word %in% c(cityname, rivername, "river"))) %>% # remove the cityname, rivername and "river"
+    filter(!(word %in% c("Jan","Feb","Mar","Apr","May","Jun",
+                     "Jul","Aug","Sept","Oct","Nov","Dec",
+                     "January","February","March","April",
+                     "June","July","August","September",
+                     "October","November","December",
+                     "Monday","Tuesday","Wednesday",
+                     "Thursday","Friday","Saturday","Sunday"))) %>% # remove the words corresponding to days or months
+  arrange(desc(n)) %>% 
+    na.omit()
+  
+  # save the results  
+  readr::write_csv(tib_words,
+                   glue::glue("glourb_SERP/data/en/data_words/tib_{cityname}_{rivername}.csv"))
+  return(tib_words)
+}
+```
+
+Now let's run the function:
+
+```{r, run_get_words}
+data_city_river %>% 
+  mutate(data = purrr::map2(city, river, get_words))
+```
+
+We will also differentiate the words in English from the words in the local language.
+
+```{r get_word_en}
+get_words_en = function(cityname, rivername){
+  tib_words = read.csv(glue::glue("glourb_SERP/data/en/data_words/tib_{cityname}_{rivername}.csv"))
+
+    # create a new column which will tell us if the word is in english 
+  # all values are TRUE by default
+ tib_words %>% 
+   add_column(language = TRUE, .after = "geoname")
+  
+  # consider all the words previously identified
+  i = 1
+  while (!(is.na(tib_words$word[i]))){
+    # detect the language
+    lang = polyglotr::language_detect(tib_words$word[i]) 
+    # check if the language is english or not 
+    condition = (lang == "en")
+    # update the language value if the word is not in english 
+    tib_words$language[i] = condition
+      i = i+1 
+  }
+  
+  # save the results  
+  readr::write_csv(tib_words,
+                   glue::glue("glourb_SERP/data/en/data_words/tib_{cityname}_{rivername}.csv"))
+  
+}
+```
+
+```{r, run_get_words_en}
+data_city_river %>% 
+  mutate(data = purrr::map2(city, river, get_words_en))
+```
+
+### Results
+
+Finally let's display our results for all the combinations:
+
+```{r show_results}
+show_results = function(cityname, rivername){
+  
+  # read the data
+  freq = read.csv(file=glue::glue("glourb_SERP/data/en/data_words/tib_{cityname}_{rivername}.csv"))
+  
+  # select the data we want to display
+  freq_cut = freq[freq$n > 1,] # only show the words which appear at least twice
+  freq_cut = freq_cut[1:30,] # only display 30 words so it's more readable
+ 
+  # make a subset of the words which are not in english and which are not the name of a place
+  local_language = subset(freq_cut, language == FALSE & geoname == FALSE)
+  
+  png(file = glue::glue("glourb_SERP/data/en/plot/{cityname}_{rivername}_en.png"), res = 100) # indicate we want to save the plot 
+  
+  # make the plot
+  myplot = freq_cut %>% # our data
+    mutate(word = fct_reorder(word, n)) %>% # rearrange in decreasing order
+    ggplot(mapping = aes(x = word,
+                         y = n, 
+                         fill = geoname,
+                         pattern = language)) + 
+    geom_col() +
+    scale_fill_manual("Nom de lieu", values = c("lightsalmon", "yellowgreen")) +
+    geom_col_pattern(data = local_language, 
+                     pattern_color = NA,
+                     pattern_fill = "black",
+                     pattern_angle = 45,
+                     pattern_spacing = 0.03,
+                     pattern_density = 0.3
+                     ) +
+    scale_pattern_manual("Mot anglais", values = c("stripe", "none")) + 
+    guides(fill = guide_legend(override.aes = list(pattern = "none")), pattern = guide_legend(override.aes = list(fill = NA))) +
+    coord_flip() + # flip x and y coordinates 
+    labs(title = paste("Requête : « ", rivername, " river AND ", cityname, " »", sep = ""),
+         pattern = "",
+         x = "lemme",
+         y = "fréquence"
+    ) + 
+    theme_classic()
+  
+  print(myplot) # display the plot
+  dev.off() # Close the plot and save it 
+  
+  return(myplot)
+} 
+```
+
+```{r run_show_results}
+data_city_river %>% 
+  mutate(data = purrr::map2(city, river, show_results))
+```
+
+### In the local languages
+
+Now, using the same principle, we will collect data in the language(s) of the country from which we are presumably running the query.
+
+In many countries, more than one language is used (e.g. Switzerland, India, Niger, *etc.)* so the script will be ran for multiple languages (as long as they are supported by Google Translate), in order to compare the results. More precisely the official language might be different depending on the region. Here, the goal is to get an overview of the subjects mentioned by the **local** population, therefore we will use the official languages of the region where the city is located, when possible. For example, in Dehli, the official languages are English, Hindi, Punjabi and Urdu.
+
+Let's create the folders for each language.
+
+```{r create_folders}
+# read the file containing all the languages we will use
+all_languages = read.csv("languages_glourb.csv")
+summary(all_languages) 
+# the summary tells us that the table is 307x6
+
+for(j in 1:6){
+  for(i in 1:307){
+    if(all_languages[i,j]!=""){
+      hl = all_languages[i,j]
+      # if the folder doesn't already exist
+      if(!dir.exists(glue::glue("glourb_serp/data/{hl}"))){
+        # then the folder is created 
+        dir.create(glue::glue("glourb_serp/data/{hl}"))}
+      }
+    } 
+}
+```
+
+We will define all the needed functions and then we will run them for each of the languages.
+
+#### Collect raw data
+
+```{r def_get_serp_data_hl}
+get_serp_data_hl = function(cityname, rivername, gl, hl){
+
+  file = glue::glue("glourb_SERP/data/{hl}/data_rds/res_{cityname}_{rivername}.RDS")
+         if(!file.exists(file)){
+
+    # let's translate the city and the river names in the target language 
+    # check beforehand if your target language is supported by google translate 
+    # name of the city in the local language
+    city_name = polyglotr::google_translate(cityname, target_language = hl, source_language = "en") 
+    # the name of the river + "river" in english
+    river_and_rivername = paste(rivername, " river", sep ="")
+    # the name of the river + "river" in the local language
+    river_hl = polyglotr::google_translate(river_and_rivername, target_language = hl, source_language = "en") 
+
+    # let's define our query with a parameters list
+    q = paste0(river_name, " ", river_hl, " AND ", city_name) # our query
+    params = list(
+            `api_key` = value_serp_api_key,
+            `q` = q,
+            `gl` = gl,
+            `hl` = hl,
+            `num` = 100
+    )
+      # q : the search query
+      # gl : 2 letter country code 
+      # hl : language code
+      # num : number of result asked
+      # google_domain : the Google domain used to run the query, google.com by default
+      # ask for the data
+    res <- httr::GET(url = 'https://api.valueserp.com/search', query = params)
+    saveRDS(res, file = file)
+      # if the file already exists no API request is carried out
+    }
+}
+```
+
+This function will clean our raw data so it's readable:
+
+```{r def_get_serp_tibble_hl}
+get_serp_tibble_hl = function(cityname, rivername, hl){
+# translate to string
+  
+    file = glue::glue("glourb_SERP/data/{hl}/data_tib/tib_{cityname}_{rivername}.csv")
+        if(!file.exists(file)){
+    res = readRDS(file = glue::glue("glourb_SERP/data/{hl}/data_RDS/res_{cityname}_{rivername}.RDS"))
+
+    res_text <- httr::content(res, "text")
+    
+    # translate to a more readable format
+    res_json <- jsonlite::fromJSON(res_text, flatten = TRUE)
+    res_tib = res_json[["organic_results"]]
+    if(is.null(res_tib)){res_tib=tibble::tibble("Result" = "NoData")}
+    readr::write_csv(res_tib,
+                     glue::glue("glourb_SERP/data/{hl}/data_tib/tib_{cityname}_{rivername}.csv"))
+    return(res_tib)
+        }
+}
+```
+
+Let's remove the URL which are inside the snippets, because they cause an error in Google translate.
+
+```{r def_clean_data}
+clean_data = function(cityname, rivername, hl){
+  # if the data has already been cleaned, the function is not executed
+    file = glue::glue("glourb_SERP/data/{hl}/data_clean/clean_{cityname}_{rivername}.csv")
+    if(!file.exists(file)){
+      tib_csv = read.csv(file = glue::glue("glourb_SERP/data/{hl}/data_tib/tib_{cityname}_{rivername}.csv"))
+      snip = tib_csv %>% 
+        mutate(snippet = str_replace_all(snippet, "http:", " ")) 
+      readr::write_csv(snip, 
+                   glue::glue("glourb_SERP/data/{hl}/data_clean/clean_{cityname}_{rivername}.csv"))
+  return(snip$snippet)
+    }
+}
+```
+
+#### Process data
+
+Now let's translate the snippets:
+
+```{r def_translate_snippet}
+translate_snippet = function(cityname, rivername, hl){
+
+  # if the file already exists, the function is not executed
+  
+  file = glue::glue("glourb_SERP/data/{hl}/data_snip/snip_{cityname}_{rivername}.csv")
+  if(!file.exists(file)){
+    
+    tib_hl = read.csv(file = glue::glue("glourb_SERP/data/{hl}/data_clean/clean_{cityname}_{rivername}.csv"))
+    snippet_hl = tib_hl[["snippet"]] # extract the snippet of the dataframe and convert it to a vector 
+  
+  # translate each element of the vector
+  snip_en = frame() # create an empty dataframe object
+for (i in 1:100){
+  text = snippet_hl[i]
+  snippet_en = polyglotr::google_translate(text, "en", hl) # translate the snippet 
+  snip_en = rbind(snip_en, snippet_en)
+}
+ 
+  # remove the special characters (é, è, à, ü, ö, etc.) from place names or names of persons 
+  snip_en = stringi::stri_trans_general(snip_en, "latin-ascii")
+  
+  write.csv(snip_en, glue::glue("glourb_SERP/data/{hl}/data_snip/snip_{cityname}_{rivername}.csv"))
+  return(snip_en)
+  }
+}
+```
+
+We will get the frequency of terms:
+
+```{r def_get_words_hl}
+get_words_hl = function(cityname, rivername, hl){
+  
+  file = glue::glue("glourb_SERP/data/{hl}/data_words/tib_{cityname}_{rivername}.csv")
+  if(!file.exists(file)){
+  
+  # remove the special character(s) from the name of the river and of the city
+  river_ascii = stringi::stri_trans_general(rivername, "latin-ascii") 
+  city_ascii = stringi::stri_trans_general(cityname, "latin-ascii")
+
+  # first, get tibble with results
+  tib = read.csv(file = glue::glue("glourb_SERP/data/{hl}/data_snip/snip_{cityname}_{rivername}.csv"))
+                 
+  # try and get all geonames 
+  geonames = tib %>% 
+  # we consider the words starting with a capital letter 
+  # that are not situated right after a punctuation sign
+    # x is the name of the column containing the snippets in the snip file
+    mutate(word = str_extract_all(x, "(?<![:punct:])[A-Z][a-z]*")) %>% 
+    select(word) %>% 
+    tidyr::unnest(cols = c(word)) %>% 
+    mutate(basis = str_to_lower(word)) %>%
+    group_by(word, basis) %>% 
+    summarise(n = n()) %>% 
+    arrange(desc(n)) %>% 
+    # see if these capitalized words appear (uncapitalized) in the lexicon
+    left_join(lexen, by = c("basis"="word")) %>% 
+    # if not, then we can probably consider they are geographical names (or a person's name)
+    filter(is.na(type)) %>% 
+    select(word, n) %>% 
+    mutate(geoname = TRUE)
+  
+  # Now, we consider all words
+  tib_words = tib %>% 
+    unnest_tokens(word, x, to_lower = FALSE) %>% 
+    left_join(lexen, by = "word") %>% 
+    # we only keep those that correspond to nouns, verbs or adjectives
+    mutate(righttype = type %in% c("nom", "ver", "adj")) %>% 
+    mutate(capitalized = stringr::str_detect(word, "[:alpha:]*")) %>% 
+    # we keep the nouns-verbs-abjectives OR the capitalized terms
+    filter(righttype|(capitalized & is.na(type))) %>% 
+    group_by(lemma) %>% 
+    summarise(n = n()) %>% 
+    arrange(desc(n)) %>% 
+    select(word = lemma, n) %>% 
+    na.omit() %>% 
+    mutate(geoname = FALSE) %>% 
+    bind_rows(geonames) %>% 
+    filter(!(word %in% c(cityname, rivername, river_ascii, city_ascii, "river"))) %>% # remove the cityname, rivername and "river"
+    filter(!(word %in% c("Jan","Feb","Mar","Apr","May","Jun",
+                     "Jul","Aug","Sept","Oct","Nov","Dec",
+                     "January","February","March","April",
+                     "June","July","August","September",
+                     "October","November","December",
+                     "Monday","Tuesday","Wednesday",
+                     "Thursday","Friday","Saturday","Sunday"))) %>% # remove the words corresponding to days or months
+  arrange(desc(n)) %>% 
+    na.omit()
+  
+  readr::write_csv(tib_words,
+                   glue::glue("glourb_SERP/data/{hl}/data_words/tib_{cityname}_{rivername}.csv"))
+  return(tib_words)
+  }
+}
+```
+
+#### Results
+
+Finally, we will display the results.
+
+```{r show_results_hl}
+show_results_hl = function(cityname, rivername, hl){
+  
+  # if the file already exists, the function is not executed
+  file = glue::glue("glourb_SERP/data/{hl}/plot/{cityname}_{rivername}_{hl}.png")
+  if(!file.exists(file)){
+  
+  # get the table containing all the languages
+  data_language = read.csv("languages_glourb_code.csv")
+  # and select the name of the language we are interested in 
+  language = data_language[data_language["code"] == hl, 1]
+    
+  # read the data
+  freq = read.csv(file = glue::glue("glourb_SERP/data/{hl}/data_words/tib_{cityname}_{rivername}.csv"))
+  
+  # select the data we want to display
+  freq_cut = freq[freq$n > 1,] # only show the words which appear at least twice
+  freq_cut = freq_cut[1:30,] # only display 20 words so it's more readable
+ 
+  # retrieve the translated words
+   city = polyglotr::google_translate(cityname, target_language = hl, source_language = "en") 
+   river_and_rivername = paste(rivername, " river", sep ="")
+   river_hl = polyglotr::google_translate(river_and_rivername, target_language = hl, source_language = "en") 
+  
+  if(!dir.exists(glue::glue("glourb_SERP/data/{hl}/plot"))){dir.create(glue::glue("glourb_SERP/data/{hl}/plot"))}
+    
+  png(file = glue::glue("glourb_SERP/data/{hl}/plot/{cityname}_{rivername}_{hl}.png", sep=""), res = 100) # indicate we want to download the plot 
+  
+  # make the plot
+  myplot = freq_cut %>% # our data
+    mutate(word = fct_reorder(word, n)) %>% # rearrange in decreasing order
+    ggplot(mapping = aes(x = word, # create the plot
+                         y = n, fill = (geoname == "TRUE"))) + 
+    geom_col() +
+    scale_fill_manual("Lieu", values = c("lightsalmon", "yellowgreen")) +
+    coord_flip() + # flip x and y coordinates 
+    labs(title = paste("Requête : « ", river_hl, " AND ", city, " »", sep = ""), 
+    subtitle = paste("(Nom de la rivière et nom de la ville en ", language, ")", sep = ""),
+         x = "lemme",
+         y = "fréquence"
+    ) + 
+    theme_classic() + 
+    theme(plot.subtitle = element_text(face = "italic"))
+  
+  print(myplot) # display the plot
+  dev.off() # Close the plot and save it 
+  
+  return(myplot)
+  } 
+}
+```
+
+#### Run the functions
+
+We will run all the functions for each of our combinations and for each language of said combinations.
+
+```{r run_functions}
+
+#### define in which language we will run the functions
+# the languages used in a city are in the 9th to 14th columns
+
+for(i in 9:14) {
+  # only select the cities which have the ith language we're interested in
+  # e.g. the select which have a fourth language (hl4)
+  data_subset = filter(data_city_river, (!is.na(data_city_river[,i])) & (data_city_river[,i] != ""))
+  # then only keep the column containing the ith language we're interested in
+  # e.g. hl4 
+  data = select(.data = data_subset, 1:8, i)  
+  hl = data[,9]
+
+#### COLLECT DATA
+# use value SERP
+  
+data %>% 
+  mutate(data = purrr::pmap(list(cityname = city,
+                                 rivername = river,
+                                 gl = gl,
+                                 hl = hl),
+                            get_serp_data_hl))
+
+# transform the data from .rds to .txt
+data %>% 
+  mutate(data = purrr::pmap(list(cityname = city,
+                                 rivername = river,
+                                 hl = hl),
+                            get_serp_tibble_hl))
+
+# remove the URL from the snippets
+data %>% 
+  mutate(data = purrr::pmap(list(cityname = city,
+                                 rivername = river,
+                                 hl = hl),
+                            clean_data))
+
+#### TRANSLATE DATA
+data %>%
+  mutate(data = purrr::pmap(list(cityname = city,
+                                 rivername = river,
+                                 hl = hl),
+                            translate_snippet))
+
+#### GET THE FREQUENCY OF EACH WORD
+data %>% 
+  mutate(data = purrr::pmap(list(cityname = city,
+                                 rivername = river,
+                                 hl = hl),
+                            get_words_hl))
+
+#### RESULTS
+data %>% 
+  mutate(data = purrr::pmap(list(cityname = city,
+                               rivername = river,
+                               hl = hl),
+                         show_results_hl))
+  }
+```
