@@ -18,7 +18,7 @@ library(dplyr)
 ```{r topic_modelling}
 
 # read data
-dataset = read.csv("2_get_data/english/df_tokenized_snippets.csv")
+dataset = read.csv("collected_data/english/df_tokenized_snippets.csv")
 mycorpus = corpus(dataset, text_field = "tokenized")
 dfm = dfm(mycorpus)
 
@@ -54,7 +54,7 @@ plot = data_top_terms %>%
 
 #### Find sentiments (positive and negative):
 
-```{r}
+```{r find_sentiments}
 
 # find sentiments
 data_sentiments = data_tidy %>% 

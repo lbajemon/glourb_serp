@@ -9,7 +9,7 @@ author: "Liolia Bajemon"
 
 The aim of this document is to do a clusterisation on a corpus.
 
-Our corpus consists of snippets (or "rich snippets", i.e. the first lines extracted from a search engine pages results - SERP) extracted from multiple queries on Google. For 303 combinations of a city and its river(s), a {rivername} AND {cityname} type query was ran, in each official language of the given city (for more details, see <https://github.com/lbajemon/glourb_serp>). Each query was ran 4 times over 4 months, to reduce the eventual variability due to special events.
+Our corpus consists of snippets (or "rich snippets", i.e. the first lines extracted from a search engine pages results - SERP) extracted from multiple queries on Google. For 303 combinations of a city and its river(s), a {rivername} AND {cityname} type query was ran, in each official language of the given city. Each query was ran 4 times over 4 months, to reduce the eventual variability due to special events.
 
 This method uses the [rainette package](https://juba.github.io/rainette/), which is based on a variant of the Reinert textual clustering method. This classification method is used for short text segments, which applies to our case, the snippets being approximately thirty words long.
 
@@ -39,7 +39,7 @@ First, let's import our dataset and convert it to a corpus using the quanteda pa
 read_corpus = function(df, text_field, docid_field){
   my_corpus = quanteda::corpus(df, docid_field, text_field) 
   # now make tokens
-  tok_serp = tokens(my_corpus, remove_punct = TRUE, remove_numbers = TRUE, remove_symbols = TRUE, remove_url = TRUE, split_hyphens = TRUE) # tokenization and removal of diverse items 
+  tok_serp = tokens(my_corpus, remove_punct = TRUE, remove_numbers = TRUE, remove_symbols = TRUE, remove_url = TRUE, split_hyphens = TRUE) # tokenization and removal of diverse items
   }
 ```
 
@@ -84,7 +84,7 @@ run_dhc = function(df, dfmatrix, n_class, min_members, corpus){
     show_negative = FALSE,
     text_size = 12
   )
-  ggsave(glue::glue("4_clustering/clustering_k{k}.png"), plot, width = 500, height = 250, units = "mm", limitsize = FALSE)
+  ggsave(glue::glue("analysis/clustering/clustering_k{k}.png"), plot, width = 500, height = 250, units = "mm", limitsize = FALSE)
 
   # save the results (i.e. most frequent terms for each cluster)
   groups = cutree_rainette(dhc, k = n_class)
@@ -103,7 +103,7 @@ run_dhc = function(df, dfmatrix, n_class, min_members, corpus){
   df_clusters = df %>% 
     left_join(docvar, by = "seg_id", keep = FALSE)
 # and save the result
-  write.csv(df_clusters, glue::glue("4_clustering/classified_snippets_k{k}.csv"), row.names = FALSE)
+  write.csv(df_clusters, glue::glue("analysis/clustering/classified_snippets_k{k}.csv"), row.names = FALSE)
   
   return(df_clusters)
 }
@@ -138,8 +138,8 @@ summary_clusters = function(df){
 
 ```{r run_functions}
 # read datasets
-data_city_river = read.csv("1_input/data_city_river.csv")
-df = read.csv("2_get_data/english/df_tokenized_snippets.csv") %>% 
+data_city_river = read.csv("input_data/data_city_river.csv")
+df = read.csv("collected_data/english/df_tokenized_snippets.csv") %>% 
   # remove the tokenized snippets which include locations
   # through trial and error we found better results without including the locations
   subset(select = -12) %>% 
@@ -196,15 +196,15 @@ nb_snippets = clusters_6[,c(1,13)] %>%
   unique() %>% 
   mutate(fid = as.numeric(fid))
 
-dataset = read.csv("4_clustering/selection_50_cities/clustering_300.csv") # %>%
+dataset = read.csv("analysis/clustering/selection_50_cities/clustering_300.csv") # %>%
   left_join(summary_6, by = "fid") %>% 
   left_join(nb_snippets, by = "fid") %>% 
-  write.csv("4_clustering/selection_50_cities/results_clustering6.csv", row.names = FALSE)
+  write.csv("analysis/clustering/selection_50_cities/results_clustering6.csv", row.names = FALSE)
 
 # summarise results for k = 18
 summary_18 = summary_clusters(clusters_18)
-data_city_river = read.csv("1_input/data_city_river.csv") %>% 
+data_city_river = read.csv("input_data/data_city_river.csv") %>% 
   left_join(summary_18, by = "fid")
 # and save them
-write.csv(data_city_river, "4_clustering/18_clusters_371_cities.csv")
+write.csv(data_city_river, "analysis/clustering/18_clusters_371_cities.csv")
 ```

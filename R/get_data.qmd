@@ -13,66 +13,15 @@ library(tidytext)
 library(remotes)
 remotes::install_github("lvaudor/mixr") # for the lexicon
 remotes::install_github("Tomeriko96/polyglotr", force = TRUE) # for translations
-setwd("~/01_thèse/SERP/1_glourb_serp_get_data")
 ```
 
 ## Description
 
-The aim of this document is to use the ![](https://dka575ofm4ao0.cloudfront.net/pages-transactional_logos/retina/211386/logo_color_transparent_background.png){width="105" height="17"} API ([access link](https://get.valueserp.com/try-it-free/)) to collect data relative to Google searches. SERP stands for Search Engine Results Pages and corresponds to the pages displayed in response to a query on a search engine, e.g. Google. Diverse parameters are entered in the Value Serp API and the query is ran accordingly:
+The aim of this document is to use the ![](https://dka575ofm4ao0.cloudfront.net/pages-transactional_logos/retina/211386/logo_color_transparent_background.png){width="105" height="17"} API ([access link](https://get.valueserp.com/try-it-free/)) to collect data relative to Google searches. SERP stands for Search Engine Results Pages and corresponds to the pages displayed in response to a query on a search engine, e.g. Google.
 
-![](0_figures/query_parameters_serp_schema.png)
+Here, our query corresponds to the combination of {city name} + {river} for approximately 300 selected agglomerations. A given city can have multiple rivers (e. g. in Lyon, the Rhône and the Saône rivers are both flowing through the city).
 
-```{r serp_query_diagram}
-install.packages("DiagrammeR")
-library(DiagrammeR)
-
-grViz("
-digraph boxes_and_circles {
-
-  graph [overlap = true]
-  
-  node [fontname = Helvetica,
-        fontsize = 10]
-        
-  subgraph {    
-  node [shape = rectangle,
-  color = cornflowerblue]
-  rank = same; 'rivername river'; cityname; }
-
-  node [shape = rectangle,
-        fontname = Helvetica,
-        fontsize = 8,
-        color = thistle]
-  query; gl; hl; google_domain; cookies; 'number of results'; results
-
-  subgraph{
-  rank = same;
-  node [shape = oval, style = filled, fillcolor = orange, fontcolor = white, color = white] 
-  'Value Serp'
-  
-  node [shape = oval, style = filled, color = white, fillcolor = red, fontcolor = white]
-  Google }
-
-  'number of results' -> 'Value Serp'
-  'query'-> 'Value Serp' [label = 'search query', fontname = Helvetica, fontsize = 8]
-  'gl'-> 'Value Serp' [label = 'country', fontname = Helvetica, fontsize = 8]
-  'hl'-> 'Value Serp' [label = 'UI language', fontname = Helvetica, fontsize = 8]
-  'cookies'-> 'Value Serp' [label = 'no cookies', fontname = Helvetica, fontsize = 8]
-  'google_domain'-> 'Value Serp' [label = 'e.g. \\n .com', fontname = Helvetica, fontsize = 8]
-  'Value Serp' -> Google [label = '     webscraping    ',
-                        fontname = Helvetica,
-                        fontsize = 8]
-  'Google' -> 'results'  
-  {'rivername river', cityname} -> query [arrowhead = small]
-  'rivername river' -> cityname [label = ' AND', color = white, fontname = Helvetica, fontsize = 8]
- } ")
-```
-
-Here, our query corresponds to the combination of {city name} + {aquatic ecosystem name} for approximately 300 selected agglomerations. A given city can have multiple aquatic ecosystems (e. g. in Lyon, the Rhône and the Saône rivers are both flowing through the city). In the following sections, the aquatic ecosystems are referred to as "rivers" as a simplification.
-
-The following diagram summarizes the flowchart of this document:
-
-![](0_figures/schema_serp_get_data.png){fig-align="center" width="432"}
+![Workflow](https://github.com/lbajemon/glourb_serp/blob/main/figures/workflow_get_data.png)
 
 ## Set-up
 
@@ -126,41 +75,25 @@ We will create a table containing all the considered {city name(s)} + {river(s) 
 
 -   river_position: A three levels variable indicating roughly the position of the river in relation to the city (far, adjacent, inside).
 
--   pattern: A variable describing roughly the city and its river(s)
+-   sub_continent: Division of the cities by sub-continent (used for reducing the size of the shapefiles)
 
-    -   confluence: there is a confluence of two important rivers in the city.
+-   clima: climate zone (GEnS, Metzger et al. 2013 - extracted from BasinATLAS level 06)
 
-    -   multiple: there are multiple water elements in the city.
+-   clco: land cover class ([GLC2000, Bartholomé & Belward, 2005](https://forobs.jrc.ec.europa.eu/glc2000) - extracted from BasinATLAS level 06)
 
-    -   unique: there is a unique water element.
-
-    -   upstream: there is a confluence of two important rivers upstream from the city.
-
-    -   lake: the main aquatic element is a lake.
-
-    -   coastal: it is a coastal city and there might be a bay or estuary.
-
-    -   specific: it is a specific/particular case which requires more attention or can't be descried with those variables.
+-   biome: terrestrial biome ([TEOW, Dinerstein et al. 2017](https://ecoregions.appspot.com/) - extracted from BasinATLAS level 06)
 
 -   tld: Top-level domain of the country, *e.g.* 'fr' for France.
 
 -   google_domain: The Google domain of the country, *e.g.* 'google.fr' for France (see [here](https://fr.wikipedia.org/wiki/Liste_des_domaines_de_Google)).
 
--   sub_continent: Division of the cities by sub-continent (used for reducing the size of the shapefiles)
-
--   climate: climate zone (GEnS, Metzger et al. 2013 - extracted from BasinATLAS level 06)
-
--   clco: land cover class ([GLC2000, Bartholomé & Belward, 2005](https://forobs.jrc.ec.europa.eu/glc2000) - extracted from BasinATLAS level 06)
-
--   Biome: terrestrial biome ([TEOW, Dinerstein et al. 2017](https://ecoregions.appspot.com/) - extracted from BasinATLAS level 06)
-
 We will read the file containing all the considered {city name} + {river name} combinations and arrange it.
 
 ```{r read_data}
-data_city_river = read.csv("1_input/data_city_river.csv")
+data_city_river = read.csv("input_data/data_city_river.csv")
 
 # get the tld and google domain for each country
-data_google_domain = read.csv("1_input/glourb-countries.csv")
+data_google_domain = read.csv("input_data/country_code_internet.csv")
 data_google_domain = subset(data_google_domain, select = c("gl", "tld", "google_domain"))
 # and put it in our table
 data_city_river = left_join(data_city_river, data_google_domain, by = "gl", relationship = "many-to-many")
@@ -206,7 +139,7 @@ Let's define a function `get_serp_data()` which collects SERP results for a give
 
 ```{r def_get_serp_data_en}
 get_serp_data = function(fid, cityname, rivername){
-    file = glue::glue("2_get_data/english/raw_data/{fid}.rds")
+    file = glue::glue("collected_data/english/raw_data/{fid}.rds")
     
           if(!file.exists(file)){
           # Parameters list
@@ -253,11 +186,11 @@ Let's convert the raw data to a text format so it's readable.
 ```{r def_get_serp_tibble}
 get_serp_tibble = function(fid){
   
-  file = glue::glue("2_get_data/english/raw_data_text/raw_{fid}.csv")
+  file = glue::glue("collected_data/english/raw_data_text/raw_{fid}.csv")
 
     if(!file.exists(file)){
 # translate to string
-    res = readRDS(file = glue::glue("2_get_data/english/raw_data/{fid}.rds"))
+    res = readRDS(file = glue::glue("collected_data/english/raw_data/{fid}.rds"))
     res_text <- httr::content(res, "text")
     
     # translate to a more readable format
@@ -268,7 +201,7 @@ get_serp_tibble = function(fid){
       fid = paste0(fid, "_nodata")
     }
     readr::write_csv(res_tib,
-                     glue::glue("2_get_data/english/raw_data_text/raw_{fid}.csv"))
+                     glue::glue("collected_data/english/raw_data_text/raw_{fid}.csv"))
     return(res_tib)
   }
 }
@@ -283,11 +216,11 @@ We can visualize some of the data, for example a random sample of 10 snippets fo
 
 ```{r vis_data}
 ## Lyon
-sample(x = read.csv("2_get_data/english/raw_data_text/raw_832.csv")$snippet, size = 10)
+sample(x = read.csv("collected_data/english/raw_data_text/raw_832.csv")$snippet, size = 10)
 ## Piura
-sample(x = read.csv("2_get_data/english/raw_data_text/raw_647.csv")$snippet, size = 10)
+sample(x = read.csv("collected_data/english/raw_data_text/raw_647.csv")$snippet, size = 10)
 ## Bamako
-sample(x = read.csv("2_get_data/english/raw_data_text/raw_529.csv")$snippet, size = 10)
+sample(x = read.csv("collected_data/english/raw_data_text/raw_529.csv")$snippet, size = 10)
 ```
 
 Here we may notice that some snippets are not in English. Let's translate the snippets so that they are all in English and they can be analyzed.
@@ -295,10 +228,10 @@ Here we may notice that some snippets are not in English. Let's translate the sn
 ```{r def_translate_snippets}
 translate_snippets = function(fid){
 
-  file = glue::glue("2_get_data/english/clean_data/clean_{fid}.csv")
+  file = glue::glue("collected_data/english/clean_data/clean_{fid}.csv")
   
   if(!file.exists(file)){
-    df = read.csv(glue::glue("2_get_data/english/raw_data_text/raw_{fid}.csv"))
+    df = read.csv(glue::glue("collected_data/english/raw_data_text/raw_{fid}.csv"))
     
   ### CLEAN 
   ## remove the URL because they cause an error with google translate 
@@ -366,7 +299,7 @@ translate_snippets = function(fid){
   ### SAVE 
   # write the results in a new file
   readr::write_csv(final_df,
-                   glue::glue("2_get_data/english/clean_data/clean_{fid}.csv"))
+                   glue::glue("collected_data/english/clean_data/clean_{fid}.csv"))
   }
 }
 ```
@@ -390,7 +323,7 @@ We will define all the needed functions and then we will run them for each of th
 ```{r def_get_serp_data_hl}
 get_serp_data_hl = function(fid, cityname, rivername, gl, hl, google_domain){
 
-  file = glue::glue("2_get_data/hl/raw_data/{fid}_{hl}.RDS")
+  file = glue::glue("collected_data/hl/raw_data/{fid}_{hl}.RDS")
          if(!file.exists(file)){
 
     # let's define our query with a parameters list
@@ -426,10 +359,10 @@ This function will change the format of our raw data so it's readable:
 get_serp_tibble_hl = function(fid, hl){
 # translate to string
   
-    file = glue::glue("2_get_data/hl/raw_data_text/raw_{fid}_{hl}.csv")
+    file = glue::glue("collected_data/hl/raw_data_text/raw_{fid}_{hl}.csv")
     
     if(!file.exists(file)){
-      res = readRDS(file = glue::glue("2_get_data/hl/raw_data/{fid}_{hl}.RDS"))
+      res = readRDS(file = glue::glue("collected_data/hl/raw_data/{fid}_{hl}.RDS"))
       res_text <- httr::content(res, "text")
     
       # translate to a more readable format
@@ -437,7 +370,7 @@ get_serp_tibble_hl = function(fid, hl){
       res_tib = res_json[["organic_results"]]
       if(is.null(res_tib)){res_tib = tibble::tibble("Result" = "NoData")}
       readr::write_csv(res_tib,
-                       glue::glue("2_get_data/hl/raw_data_text/raw_{fid}_{hl}.csv"))
+                       glue::glue("collected_data/hl/raw_data_text/raw_{fid}_{hl}.csv"))
       
       return(res_tib)
         }
@@ -453,17 +386,17 @@ translate_snippet = function(fid, hl){
 
   # if the file already exists, the function is not executed
   
-  file1 = glue::glue("2_get_data/hl/clean_data/clean_{fid}_{hl}.csv")
-  file2 = glue::glue("2_get_data/hl/clean_data/nodata_{fid}_{hl}.csv")
+  file1 = glue::glue("collected_data/hl/clean_data/clean_{fid}_{hl}.csv")
+  file2 = glue::glue("collected_data/hl/clean_data/nodata_{fid}_{hl}.csv")
   
   if(!file.exists(file1) & !file.exists(file2)){
-    if(file.exists(glue::glue("2_get_data/hl/raw_data_text/raw_{fid}_{hl}.csv"))){
-      df_hl= read.csv(file = glue::glue("2_get_data/hl/raw_data_text/raw_{fid}_{hl}.csv")) 
+    if(file.exists(glue::glue("collected_data/hl/raw_data_text/raw_{fid}_{hl}.csv"))){
+      df_hl= read.csv(file = glue::glue("collected_data/hl/raw_data_text/raw_{fid}_{hl}.csv")) 
      
       # check if data has been found beforehand
       if(df_hl[1,1] == "NoData"){
         print(paste0("No data, fid = ",fid, ", hl = ",hl))
-        write.csv(df_hl, glue::glue("2_get_data/hl/clean_data/nodata_{fid}_{hl}.csv"))
+        write.csv(df_hl, glue::glue("collected_data/hl/clean_data/nodata_{fid}_{hl}.csv"))
       }
       
       else{
@@ -503,7 +436,7 @@ translate_snippet = function(fid, hl){
   
   # remove the special characters (é, è, à, ü, ö, etc.) from place names or names of persons snip_en = stringi::stri_trans_general(snip_en, "latin-ascii")
   
-  write.csv(final_df, glue::glue("2_get_data/hl/clean_data/clean_{fid}_{hl}.csv"))
+  write.csv(final_df, glue::glue("collected_data/hl/clean_data/clean_{fid}_{hl}.csv"))
       }
     }
     else{

@@ -7,7 +7,7 @@ editor: visual
 
 ## Description
 
-Thanks to the ![](https://dka575ofm4ao0.cloudfront.net/pages-transactional_logos/retina/211386/logo_color_transparent_background.png){width="105" height="17"} API ([access link](https://get.valueserp.com/try-it-free/)), data relative to Google searches have been gathered (see this first [document](https://github.com/lbajemon/glourb_serp)) for approximately 300 combinations of agglomerations and rivers. This document aims to compile the data for all the cities in one single table. This table will be used for further analysis (clustering, topic modelling, specificity score, *etc.*).
+Thanks to the Value SERP API ([access link](https://get.valueserp.com/try-it-free/)), data relative to Google searches have been gathered (see [here](https://github.com/lbajemon/glourb_serp/blob/main/R/get_data.qmd)) and lemmatised (see [here](https://github.com/lbajemon/glourb_serp/blob/main/R/lemmatisation.qmd)). This document aims to compile the data in one single table. This table will be used for further analysis (clustering, topic modelling, specificity score, *etc.*).
 
 ```{r load_packages, results = 'hide', warning = FALSE, message = FALSE}
 library(magrittr)
@@ -28,16 +28,16 @@ This table contains all the tokens from all the snippets combined in a single da
 
 ```{r combine_tokens}
 
-data_city_river = read.csv("1_input/data_city_river.csv")
+data_city_river = read.csv("input_data/data_city_river.csv")
 
 # Combine all tokens in a single dataframe
 df = data.frame(data_city_river[,c(1,2, 21)]) %>% 
-  mutate(path = paste0("2_get_data/english/tokens/tokens_", fid, ".csv")) %>%  # indicate the path for finding the file for each city
+  mutate(path = paste0("collected_data/english/tokens/tokens_", fid, ".csv")) %>%  # indicate the path for finding the file for each city
   mutate(data = map(path, read.csv)) %>% # read the data for each city
   unnest(data) %>%  # create a row for each token for each city, i.e. over 287 000 rows
   mutate(snippet_id = paste0(fid, "_", position)) # create a unique id for each snippet
 df = df[,c(1:3,5:11,29,30,34,35,43)]
-write.csv(df, "2_get_data/english/df_tokens.csv", row.names = FALSE)
+write.csv(df, "collected_data/english/df_tokens.csv", row.names = FALSE)
 ```
 
 The table below contains all the original snippets, the translated snippets and the tokenized snippets for each city. For example, the snippet "*The wetland vegetations in Luliang Prefecture are concentrately distributed in the basins of Sanchuan River*" becomes "*wetland vegetation prefecture concentrately distribute basin wucheng*" with the locations and "*wetland vegetation prefecture concentrately distribute basin*" without the locations.
@@ -52,7 +52,7 @@ tokenized_snippets_loc = ddply(df_without_loc, "snippet_id", summarize, tokenize
 
 # now put the resulting tokenized sentences in a df containing all of the snippets 
 df_compile = data.frame(data_city_river[,c(1,2)]) %>% 
-  mutate(path = paste0("2_get_data/english/clean_data/clean_", fid, ".csv")) %>% 
+  mutate(path = paste0("collected_data/english/clean_data/clean_", fid, ".csv")) %>% 
   mutate(data = map(path, read.csv)) %>% # read the data for each city
   unnest(data) %>%  # create a row for each token for each city, i.e. over 287 000 rows
   mutate(snippet_id = paste0(fid, "_", position)) %>% # create a unique id for each snippet 
@@ -63,7 +63,7 @@ df_compile = data.frame(data_city_river[,c(1,2)]) %>%
 # simplify the resulting dataframe and save it
 df_compile = df_compile[,c(1:2,4:10,28,36:38)]
 colnames(df_compile) = c("fid","urban_aggl","position","title","link","domain","displayed_link","snippet","english","trans_snippet","snippet_id","tokenized","tokenized_noloc")
-write.csv(df_compile, "2_get_data/english/df_tokenized_snippets.csv", row.names = FALSE)
+write.csv(df_compile, "collected_data/english/df_tokenized_snippets.csv", row.names = FALSE)
 
     # fid: identifier of the city
     # urban_aggl: usual English name of the city
@@ -82,22 +82,21 @@ write.csv(df_compile, "2_get_data/english/df_tokenized_snippets.csv", row.names 
 
 Now, we have dataframe with the all the snippets combined, just like this (n_snippet ≤ 98 and n_city = 370):
 
-![](0_figures/Image1.png)
+![](https://github.com/lbajemon/glourb_serp/blob/main/figures/snippets_table.png){fig-alt="Extract of the combined table"}
 
 ### Compilation of results from the queries ran in the local languages
 
-Let's also do it for the data from the query ran in the local languages.
+Let's also do it for the data from the query ran in the local languages. (TO BE CONTINUED)
 
 ```{r}
 # now put the resulting tokenized sentences in a df containing all of the snippets 
 df_compile = data.frame(data_city_river[,c(1,2, 21)]) %>% 
   mutate(path = case_when(
-    file.exists(paste0("2_get_data/hl/clean_data/clean_", fid, "_", hl, ".csv")) ~ paste0("2_get_data/english/clean/clean_", fid, ".csv"),
-    !file.exists(paste0("2_get_data/hl/clean_data/clean_", fid, "_", hl, ".csv")) ~ "no data"
+    file.exists(paste0("collected_data/hl/clean_data/clean_", fid, "_", hl, ".csv")) ~ paste0("collected_data/english/clean/clean_", fid, ".csv"),
+    !file.exists(paste0("collected_data/hl/clean_data/clean_", fid, "_", hl, ".csv")) ~ "no data"
   )) %>%  # indicate the path for finding the file for each city
   subset(path != "no data") %>% 
   mutate(data = map(path, read.csv)) %>% # read the data for each city
   unnest(data) %>%  # create a row for each token for each city, i.e. over 287 000 rows
   mutate(snippet_id = paste0(fid, "_", position)) # create a unique id for each snippet
-
 ```

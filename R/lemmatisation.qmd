@@ -13,8 +13,7 @@ The aim of this document is to lemmatise and clean our snippets.
 library(tidyverse)
 library(tidytext)
 library(mixr) # for the lexicon
-library(polyglotr)
-setwd("~/01_thèse/SERP/1_glourb_serp_get_data")
+library(polyglotr) # for translation
 ```
 
 ### Define useful datasets
@@ -22,10 +21,10 @@ setwd("~/01_thèse/SERP/1_glourb_serp_get_data")
 Get our data set with all the river + city combinations.
 
 ```{r read_data}
-data_city_river = read.csv("1_input/data_city_river.csv")
+data_city_river = read.csv("input_data/data_city_river.csv")
 
 # get the tld and google domain for each country
-data_google_domain = read.csv("1_input/glourb-countries.csv")
+data_google_domain = read.csv("input_data/country_code_internet.csv")
 data_google_domain = subset(data_google_domain, select = c("gl", "tld", "google_domain"))
 # and put it in our table
 data_city_river = left_join(data_city_river, data_google_domain, by = "gl", relationship = "many-to-many")
@@ -59,7 +58,7 @@ data_city_river = data_city_river %>%
   mutate(hl6 = str_replace_all(hl6, "zh", "zh-cn"))
 
 lexicon_en = get_lexicon("en") %>% 
-  rbind(read.csv("1_input/missing_words_lexicon_en2.csv"))
+  rbind(read.csv("input_data/missing_words_lexicon_en2.csv"))
 ```
 
 Now, let's define multiple tables containing words we want to remove or keep, e.g. stop words, country names, city names, etc.
@@ -100,7 +99,7 @@ country_names = data_city_river[,5] %>% # keep only the country names
   mutate(word = str_to_lower(word))
 
 # city names 
-global_cities = read.csv("1_input/global_cities.csv", sep = ";") 
+global_cities = read.csv("input_data/global_cities.csv", sep = ";") 
 global_cities = global_cities[,2:3] %>% # keep only the english name and name in ASCII characters
   pivot_longer(cols = everything(),
                names_to = "type",
@@ -114,7 +113,7 @@ row.names(global_cities) = NULL # rename rows
 colnames(global_cities) = c("word", "type") # rename columns
 
 # get list of 1st level administrative division in each country
-global_admin = read.csv("1_input/global_admin.csv", sep = ",") %>% 
+global_admin = read.csv("input_data/global_admin.csv", sep = ",") %>% 
   mutate(name = str_split(name, pattern = " ")) %>% 
   unlist() %>% 
   as.data.frame() %>% 
@@ -136,11 +135,11 @@ locations = global_cities %>% # cities
 ```{r def_lemmatisation}
 lemmatisation_en = function(fid, cityname, rivername){
   
-    file = glue::glue("2_get_data/english/tokens/tokens_{fid}.csv")
+    file = glue::glue("collected_data/english/tokens/tokens_{fid}.csv")
     if(!file.exists(file)){
       
       # read data
-      df = read.csv(glue::glue("2_get_data/english/clean_data/clean_{fid}.csv")) 
+      df = read.csv(glue::glue("collected_data/english/clean_data/clean_{fid}.csv")) 
       
       # tokenize data
       df = df %>% 
@@ -221,7 +220,7 @@ lemmatisation_en = function(fid, cityname, rivername){
           !is.na(lemma) ~ lemma,
           is.na(lemma) ~ word)) 
       
-      write.csv(df_clean, glue::glue("2_get_data/english/tokens/tokens_{fid}.csv"), row.names = FALSE)
+      write.csv(df_clean, glue::glue("collected_data/english/tokens/tokens_{fid}.csv"), row.names = FALSE)
    }
 }
 ```
@@ -240,12 +239,12 @@ data_city_river %>%
 ```{r def_lemmatisation_hl}
 lemmatisation_hl = function(fid, cityname, rivername, hl){
   
-   file = glue::glue("2_get_data/hl/tokens/tokens_{fid}_{hl}.csv")
+   file = glue::glue("collected_data/hl/tokens/tokens_{fid}_{hl}.csv")
     if(!file.exists(file)){
       
       # read data
-      if(file.exists(glue::glue("2_get_data/hl/clean_data/clean_{fid}_{hl}.csv"))){
-      df = read.csv(glue::glue("2_get_data/hl/clean_data/clean_{fid}_{hl}.csv")) 
+      if(file.exists(glue::glue("collected_data/hl/clean_data/clean_{fid}_{hl}.csv"))){
+      df = read.csv(glue::glue("collected_data/hl/clean_data/clean_{fid}_{hl}.csv")) 
       
       # tokenize data
       df = df %>% 
@@ -326,7 +325,7 @@ lemmatisation_hl = function(fid, cityname, rivername, hl){
           !is.na(lemma) ~ lemma,
           is.na(lemma) ~ word)) 
       
-      write.csv(df_clean, glue::glue("2_get_data/hl/tokens/tokens_{fid}_{hl}.csv"), row.names = FALSE)
+      write.csv(df_clean, glue::glue("collected_data/hl/tokens/tokens_{fid}_{hl}.csv"), row.names = FALSE)
       print(paste0("Lemmatization done. FID = ", fid))
       }
       else {print(paste0("No data, FID = ", fid))}

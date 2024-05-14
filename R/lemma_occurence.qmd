@@ -25,7 +25,7 @@ library(polyglotr)
 Thanks to the ![](https://dka575ofm4ao0.cloudfront.net/pages-transactional_logos/retina/211386/logo_color_transparent_background.png){width="105" height="17"} API ([access link](https://get.valueserp.com/try-it-free/)), data relative to Google searches have been gathered (see this first [document](https://github.com/lbajemon/glourb_serp)) for approximately 300 combinations of agglomerations and rivers. This document aims to conduct a first analysis on the resulting data, by calculating the number of occurrences of each lemma.
 
 ```{r retrieve_data}
-data_city_river = read.csv("1_input/data_city_river.csv")
+data_city_river = read.csv("input_data/data_city_river.csv")
 ```
 
 ## Clean data
@@ -63,7 +63,7 @@ First let's deal with the data resulting from an English research query:
 get_words = function(fid, cityname, rivername){
   
   ## First, get dataframe with results
-  df = read.csv(glue::glue("2_get_data/english/clean_data/clean_{fid}.csv")) 
+  df = read.csv(glue::glue("collected_data/english/clean_data/clean_{fid}.csv")) 
   
   # get all forms of rivername and cityname to remove them from the snippets
   # for example with "N'Djaména" 
@@ -144,7 +144,7 @@ get_words = function(fid, cityname, rivername){
   
   # save the results  
   readr::write_csv(df_words,
-                   glue::glue("3_occurence/english/lemma_freq/word_{fid}.csv"))
+                   glue::glue("analysis/occurence/english/lemma_occ/word_{fid}.csv"))
   return()
 }
 ```
@@ -167,7 +167,7 @@ It's basically the same process as for the query in English:
 get_words_hl = function(fid, cityname, rivername, hl){
   
   ## First, get dataframe with results
-  df = read.csv(glue::glue("2_get_data/hl/clean_data/clean_{fid}_{hl}.csv")) 
+  df = read.csv(glue::glue("collected_data/hl/clean_data/clean_{fid}_{hl}.csv")) 
   
   # get all forms of rivername and cityname to remove them from the snippets
   # for example with "N'Djaména" 
@@ -248,7 +248,7 @@ get_words_hl = function(fid, cityname, rivername, hl){
   
   # save the results  
   readr::write_csv(df_words,
-                   glue::glue("3_frequency/hl/lemma_freq/word_{fid}_{hl}.csv"))
+                   glue::glue("analysis/occurence/hl/lemma_occ/word_{fid}_{hl}.csv"))
   return()
 }
 ```
@@ -283,7 +283,7 @@ Finally let's display our results for all the combinations:
 show_results = function(fid, cityname, rivername, urban_aggl){
   
   # read the data
-  freq = read.csv(file = glue::glue("3_occurence/english/lemma_freq/word_{fid}.csv"))
+  freq = read.csv(file = glue::glue("analysis/occurence/english/lemma_freq/word_{fid}.csv"))
   requete = paste("Requête : « ", rivername, " AND ", cityname, " »", sep = "")
   requete = str_replace_all(requete, ";", " OR ")
   
@@ -305,7 +305,7 @@ show_results = function(fid, cityname, rivername, urban_aggl){
     theme_bw(base_family = "CenturySch")
 
   # save the plot
-  ggsave(filename = paste("plot_",fid,".png"), plot = myplot, path = "3_frequency/english/plots/francais/", scale = 1)
+  ggsave(filename = paste("plot_",fid,".png"), plot = myplot, path = "analysis/occurence/english/plots/francais/", scale = 1)
   return()
 } 
 ```
@@ -325,16 +325,16 @@ data_city_river %>%
 show_results_hl = function(cityname, rivername, hl){
   
   # if the file already exists, the function is not executed
-  file = glue::glue("3_occurence/hl/plots/francais/{cityname}_{hl}.png")
+  file = glue::glue("analysis/occurence/hl/plots/francais/{cityname}_{hl}.png")
   if(!file.exists(file)){
   
   # get the table containing all the languages
-  data_language = read.csv("1_input/languages_glourb_code.csv", sep = ";")
+  data_language = read.csv("input_data/languages_code.csv", sep = ";")
   # and select the name of the language we are interested in 
   language = data_language[data_language["code"] == hl, 1]
     
   # read the data
-  freq = read.csv(file = glue::glue("3_occurence/hl/lemma_freq/word_{cityname}_{hl}.csv"))
+  freq = read.csv(file = glue::glue("analysis/occurence/hl/lemma_freq/word_{cityname}_{hl}.csv"))
   
   # select the data we want to display
   freq_cut = freq[freq$n > 1,] # only show the words which appear at least twice
@@ -345,7 +345,7 @@ show_results_hl = function(cityname, rivername, hl){
    river_and_rivername = paste(rivername, " river", sep ="")
    river_hl = polyglotr::google_translate(river_and_rivername, target_language = hl, source_language = "en") 
   
-  png(file = glue::glue("3_occurence/hl/plots/francais/{cityname}_{hl}.png", sep=""), res = 100) # indicate the path to save the plot 
+  png(file = glue::glue("analysis/occurence/hl/plots/francais/{cityname}_{hl}.png", sep=""), res = 100) # indicate the path to save the plot 
   
   # make the plot
   myplot = freq_cut %>% # our data

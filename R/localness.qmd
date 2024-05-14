@@ -28,7 +28,7 @@ library(urltools)
 
 # retrieve data
 cityname = "Lyon"
-file = read.csv(paste0("2_get_data/hl/clean_data/clean_", cityname, ".csv"))
+file = read.csv(paste0("collected_data/hl/clean_data/clean_", cityname, ".csv"))
 
 ## LOCALNESS
 file = file %>% 
@@ -58,7 +58,7 @@ tib_localness = file %>%
   mutate(perc = round(n/nrow(file)*100,1))
 
 # plot
-png(file = glue::glue("3_frequency/hl/plots/{cityname}_localness.png")) # indicate the path to save the plot 
+png(file = glue::glue("analysis/occurence/hl/plots/{cityname}_localness.png")) # indicate the path to save the plot 
 
 plot = tib_localness %>% 
   mutate(localness = fct_reorder(localness, perc))  %>%  # rearrange in decreasing order
@@ -83,7 +83,7 @@ plot = tib_localness %>%
 ```{r kinshasa}
 # retrieve data
 cityname = "Kinshasa"
-file = read.csv(paste0("2_get_data/hl/clean_data/clean_", cityname, ".csv"))
+file = read.csv(paste0("collected_data/hl/clean_data/clean_", cityname, ".csv"))
 
 ## LOCALNESS
 file = file %>% 
