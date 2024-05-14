@@ -23,7 +23,7 @@ library(forcats)
 ##### 1. Analysis of the English data
 
 ```{r prepare_data}
-df = read.csv("2_get_data/english/df_compile.csv")
+df = read.csv("collected_data/english/df_compile.csv")
 ```
 
 ##### a. Lemmas
