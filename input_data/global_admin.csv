@@ -1,0 +1,2327 @@
+name,country,admin_type
+Tamanrasset Province,Algeria,province
+Adrar Province,Algeria,province
+Illizi Province,Algeria,province
+Ouargla Province,Algeria,province
+Tindouf Province,Algeria,province
+In Salah Province,Algeria,province
+Bordj Baji Mokhtar Province,Algeria,province
+Béni Abbès Province,Algeria,province
+In Guezzam Province,Algeria,province
+Djanet Province,Algeria,province
+Moxico,Angola,province
+Cuando Cubango,Angola,province
+Lunda Norte,Angola,province
+Malanje Province,Angola,province
+Cunene,Angola,province
+Buenos Aires,Argentina,province
+Santa Cruz,Argentina,province
+Chubut,Argentina,province
+Río Negro,Argentina,province
+Córdoba Province,Argentina,province
+Salta Province,Argentina,province
+Mendoza Province,Argentina,province
+La Pampa,Argentina,province
+Santiago del Estero Province,Argentina,province
+Santa Fe Province,Argentina,province
+Catamarca,Argentina,province
+Chaco,Argentina,province
+Neuquén Province,Argentina,province
+La Rioja Province,Argentina,province
+San Juan Province,Argentina,province
+Corrientes Province,Argentina,province
+Western Australia,Australia,state
+Queensland,Australia,state
+Northern Territory,Australia,state
+South Australia,Australia,state
+New South Wales,Australia,state
+Victoria,Australia,state
+Tasmania,Australia,state
+Barisal,Bangladesh,division
+Chittagong,Bangladesh,division
+Dacca,Bangladesh,division
+Khulna,Bangladesh,division
+Mymensingh,Bangladesh,division
+Râjshâhî,Bangladesh,division
+Rangpur,Bangladesh,division
+Sylhet,Bangladesh,division
+Brest,Belarus,oblast
+City of Minsk,Belarus,oblast
+Gomel,Belarus,oblast
+Grodno,Belarus,oblast
+Mogilev,Belarus,oblast
+Minsk,Belarus,oblast
+Vietbsk,Belarus,oblast
+West Flanders,Belgium,province
+East Flanders,Belgium,province
+Antwerp,Belgium,province
+Limburg,Belgium,province
+Flemish Brabant,Belgium,province
+Walloon Brabant,Belgium,province
+Hainaut,Belgium,province
+Luxem­bourg,Belgium,province
+Namur,Belgium,province
+Liège,Belgium,province
+Lüttich,Belgium,province
+Flemish Region,Belgium,region
+Brussels Capital region,Belgium,region
+Walloon region,Belgium,region
+Alibori,Benin,department
+Atakora,Benin,department
+Atlantique,Benin,department
+Borgou,Benin,department
+Collines,Benin,department
+Kouffo,Benin,department
+Donga,Benin,department
+Littoral,Benin,department
+Mono,Benin,department
+Ouémé,Benin,department
+Plateau,Benin,department
+Zou,Benin,department
+Ayeyarwady Region,Myanmar,division
+Bago Region,Myanmar,division
+Chin State,Myanmar,division
+Kachin State,Myanmar,division
+Kayah State,Myanmar,division
+Kayin State,Myanmar,division
+Magway Region,Myanmar,division
+Mandalay Region,Myanmar,division
+Mon State,Myanmar,division
+Naypyidaw Union Territory,Myanmar,division
+Rakhine State,Myanmar,division
+Sagaing Region,Myanmar,division
+Shan State,Myanmar,division
+Tanintharyi Region,Myanmar,division
+Yangon Region,Myanmar,division
+Danu Self-Administered Zone ,Myanmar,division
+Kokang Self-Administered Zone ,Myanmar,division
+Naga Self-Administered Zone ,Myanmar,division
+Pa Laung Self-Administered Zone,Myanmar,division
+Pa'O Self-Administered Zone ,Myanmar,division
+Wa Self-Administered Division ,Myanmar,division
+Santa Cruz,Bolivia,department
+Beni,Bolivia,department
+La Paz Department,Bolivia,department
+Potosí Department,Bolivia,department
+Central,Botswana,district
+Ghanzi District,Botswana,district
+North-West,Botswana,district
+Kgalagadi,Botswana,district
+Acre,Brazil,state
+Alagoas,Brazil,state
+Amapá,Brazil,state
+Amazonas,Brazil,state
+Bahia,Brazil,state
+Ceará,Brazil,state
+Distrito Federal,Brazil,state
+Espírito Santo,Brazil,state
+Goiás,Brazil,state
+Maranhão,Brazil,state
+Mato Grosso,Brazil,state
+Mato Grosso do Sul,Brazil,state
+Minas Gerais,Brazil,state
+Pará,Brazil,state
+Paraíba,Brazil,state
+Paraná,Brazil,state
+Pernambuco,Brazil,state
+Piauí,Brazil,state
+Rio de Janeiro,Brazil,state
+Rio Grande do Norte,Brazil,state
+Rio Grande do Sul,Brazil,state
+Rondônia,Brazil,state
+Roraima,Brazil,state
+Santa Catarina,Brazil,state
+São Paulo,Brazil,state
+Sergipe,Brazil,state
+Tocantins,Brazil,state
+Cankuzo,Burundi,province
+Gitega,Burundi,province
+Rutana,Burundi,province
+Ruyigi,Burundi,province
+Karuzi,Burundi,province
+Kayanza,Burundi,province
+Kirundo,Burundi,province
+Muyinga,Burundi,province
+Ngozi,Burundi,province
+Bururi,Burundi,province
+Makamba,Burundi,province
+Rumonge,Burundi,province
+Bubanza,Burundi,province
+Bujumbura Mairie,Burundi,province
+Bujumbura Rural,Burundi,province
+Cibitoke,Burundi,province
+Muramvya,Burundi,province
+Mwaro,Burundi,province
+Banteay Meanchey,Cambodia,province
+Battambang,Cambodia,province
+Kampong Cham,Cambodia,province
+Kampong Chhnang,Cambodia,province
+Kampong Speu,Cambodia,province
+Kampong Thom,Cambodia,province
+Kampot,Cambodia,province
+Kandal,Cambodia,province
+Kep,Cambodia,province
+Koh Kong,Cambodia,province
+Kratié,Cambodia,province
+Mondulkiri,Cambodia,province
+Oddar Meanchey,Cambodia,province
+Pailin,Cambodia,province
+Phnom Penh,Cambodia,province
+Preah Sihanouk,Cambodia,province
+Preah Vihear,Cambodia,province
+Prey Veng,Cambodia,province
+Pursat,Cambodia,province
+Ratanakiri,Cambodia,province
+Siem Reap,Cambodia,province
+Stung Treng,Cambodia,province
+Svay Rieng,Cambodia,province
+Takéo,Cambodia,province
+Tboung Khmum,Cambodia,province
+Adamawa province,Cameroon,province
+Centre Province,Cameroon,province
+Extreme North Province,Cameroon,province
+East Province,Cameroon,province
+Littoral Province,Cameroon,province
+North Province,Cameroon,province
+Northwest Province,Cameroon,province
+West Province,Cameroon,province
+South Province,Cameroon,province
+Southwest Province,Cameroon,province
+Djérem,Cameroon,department
+Faro-et-Déo,Cameroon,department
+Mayo-Banyo,Cameroon,department
+Mbéré,Cameroon,department
+Vina,Cameroon,department
+Diamaré,Cameroon,department
+Logone-et-Chari,Cameroon,department
+Mayo-Danay,Cameroon,department
+Mayo-Kani,Cameroon,department
+Mayo-Sava,Cameroon,department
+Mayo-Tsanaga,Cameroon,department
+Bénoué,Cameroon,department
+Faro,Cameroon,department
+Mayo-Louti,Cameroon,department
+Mayo-Rey,Cameroon,department
+Haute-Sanaga,Cameroon,department
+Lekié,Cameroon,department
+Mbam-et-Inoubou,Cameroon,department
+Mbam-et-Kim,Cameroon,department
+Méfou-et-Afamba,Cameroon,department
+Méfou-et-Akono,Cameroon,department
+Mfoundi,Cameroon,department
+Nyong-et-Kéllé,Cameroon,department
+Nyong-et-Mfoumou,Cameroon,department
+Nyong-et-So'o,Cameroon,department
+Boumba-et-Ngoko,Cameroon,department
+Haut-Nyong,Cameroon,department
+Kadey,Cameroon,department
+Lom-et-Djerem,Cameroon,department
+Dja-et-Lobo,Cameroon,department
+Mvila,Cameroon,department
+Océan,Cameroon,department
+Vallée-du-Ntem,Cameroon,department
+Moungo,Cameroon,department
+Nkam,Cameroon,department
+Sanaga-Maritime,Cameroon,department
+Wouri,Cameroon,department
+Boyo,Cameroon,department
+Bui,Cameroon,department
+Donga-Mantung,Cameroon,department
+Menchum,Cameroon,department
+Mezam,Cameroon,department
+Momo,Cameroon,department
+Ngo-ketunjia,Cameroon,department
+Fako,Cameroon,department
+Koupé-Manengouba,Cameroon,department
+Lebialem,Cameroon,department
+Manyu,Cameroon,department
+Meme,Cameroon,department
+Ndian,Cameroon,department
+Bamboutos,Cameroon,department
+Haut-Nkam,Cameroon,department
+Hauts-Plateaux,Cameroon,department
+Koung-Khi,Cameroon,department
+Menoua,Cameroon,department
+Mifi,Cameroon,department
+Ndé,Cameroon,department
+Noun,Cameroon,department
+Nunavut,Canada,territory
+Northwest Territories,Canada,territory
+Yukon,Canada,territory
+Ontario,Canada,province
+British Columbia,Canada,province
+Alberta,Canada,province
+Quebec,Canada,province
+Nova Scotia,Canada,province
+New Brunswick,Canada,province
+Prince Edward Island,Canada,province
+Saskatchewan,Canada,province
+Manitoba,Canada,province
+Newfoundland and Labrador,Canada,province
+Bamingui-Bangoran,Central African Republic,prefecture
+Bangui (Prefecture),Central African Republic,prefecture
+Basse-Kotto,Central African Republic,prefecture
+Haute-Kotto,Central African Republic,prefecture
+Haut-Mbomou,Central African Republic,prefecture
+Kémo,Central African Republic,prefecture
+Lobaye,Central African Republic,prefecture
+Lim-Pendé,Central African Republic,prefecture
+Mambéré,Central African Republic,prefecture
+Mambéré-Kadéï,Central African Republic,prefecture
+Mbomou,Central African Republic,prefecture
+Nana-Grébizi,Central African Republic,prefecture
+Nana-Mambéré,Central African Republic,prefecture
+Ombella-M'Poko,Central African Republic,prefecture
+Ouaka,Central African Republic,prefecture
+Ouham,Central African Republic,prefecture
+Ouham-Fafa,Central African Republic,prefecture
+Ouham-Pendé,Central African Republic,prefecture
+Sangha-Mbaéré,Central African Republic,prefecture
+Vakaga,Central African Republic,prefecture
+Batha,Chad,department
+Chari-Baguirmi,Chad,department
+Hadjer-Lamis,Chad,department
+Wadi Fira,Chad,department
+Bahr el Gazel,Chad,department
+Borkou,Chad,department
+Ennedi-Est,Chad,department
+Ennedi-Ouest,Chad,department
+Guéra,Chad,department
+Kanem,Chad,department
+Lac,Chad,department
+Logone Occidental,Chad,department
+Logone Oriental,Chad,department
+Mandoul,Chad,department
+Mayo-Kebbi Est,Chad,department
+Mayo-Kebbi Ouest,Chad,department
+Moyen-Chari,Chad,department
+Ouaddaï,Chad,department
+Salamat,Chad,department
+Sila,Chad,department
+Tandjilé,Chad,department
+Tibesti,Chad,department
+N'Djamena,Chad,department
+Arica and Parinacota Region,Chile,region
+Tarapacá Region,Chile,region
+Antofagasta Region,Chile,region
+Atacama Region,Chile,region
+Coquimbo Region,Chile,region
+Valparaíso Region,Chile,region
+Región del Libertador General Bernardo O'Higgins,Chile,region
+Maule Region,Chile,region
+Ñuble Region,Chile,region
+Biobío Region,Chile,region
+Araucanía Region,Chile,region
+Los Ríos Region,Chile,region
+Los Lagos Region,Chile,region
+Aysén del General Carlos Ibáñez del Campo Region,Chile,region
+Magallanes and Antártica Chilena Region,Chile,region
+Santiago Metropolitan Region (RM),Chile,region
+Arica,Chile,province
+Parinacota,Chile,province
+El Tamarugal,Chile,province
+Iquique,Chile,province
+Tocopilla,Chile,province
+El Loa,Chile,province
+Antofagasta,Chile,province
+Chañaral,Chile,province
+Copiapó,Chile,province
+Huasco,Chile,province
+Elqui,Chile,province
+Limarí,Chile,province
+Choapa,Chile,province
+Petorca,Chile,province
+Los Andes,Chile,province
+San Felipe de Aconcagua,Chile,province
+Quillota,Chile,province
+Valparaíso,Chile,province
+Marga Marga,Chile,province
+San Antonio,Chile,province
+Isla de Pascua,Chile,province
+Cachapoal,Chile,province
+Colchagua,Chile,province
+Cardenal Caro,Chile,province
+Curicó,Chile,province
+Talca,Chile,province
+Linares,Chile,province
+Cauquenes,Chile,province
+Itata,Chile,province
+Diguillín,Chile,province
+Punilla,Chile,province
+Biobío,Chile,province
+Concepción,Chile,province
+Arauco,Chile,province
+Malleco,Chile,province
+Cautín,Chile,province
+Valdivia,Chile,province
+Ranco,Chile,province
+Osorno,Chile,province
+Llanquihue,Chile,province
+Chiloé,Chile,province
+Palena,Chile,province
+Coihaique,Chile,province
+Aisén,Chile,province
+General Carrera,Chile,province
+Capitán Prat,Chile,province
+Última Esperanza,Chile,province
+Magallanes,Chile,province
+Tierra del Fuego,Chile,province
+Antártica Chilena,Chile,province
+Chacabuco,Chile,province
+Cordillera,Chile,province
+Maipo,Chile,province
+Talagante,Chile,province
+Melipilla,Chile,province
+Santiago,Chile,province
+Hebei,China,province
+Shanxi,China,province
+Liaoning,China,province
+Jilin,China,province
+Heilongjiang,China,province
+Jiangsu,China,province
+Zhejiang,China,province
+Anhui,China,province
+Fujian,China,province
+Jiangxi,China,province
+Shandong,China,province
+Henan,China,province
+Hubei,China,province
+Hunan,China,province
+Guangdong,China,province
+Hainan,China,province
+Sichuan,China,province
+Guizhou,China,province
+Yunnan,China,province
+Shaanxi,China,province
+Gansu,China,province
+Qinghai,China,province
+Inner Mongolia Autonomous Region,China,autonomous region
+Guangxi Zhuang Autonomous Region,China,autonomous region
+Tibet Autonomous Region,China,autonomous region
+Ningxia Hui Autonomous Region,China,autonomous region
+Xinjiang Uygur Autonomous Region,China,autonomous region
+Capital District,Colombia,department
+Amazonas,Colombia,department
+Antioquia,Colombia,department
+Arauca,Colombia,department
+Atlántico,Colombia,department
+Bolívar,Colombia,department
+Boyacá,Colombia,department
+Caldas,Colombia,department
+Caquetá,Colombia,department
+Casanare,Colombia,department
+Cauca,Colombia,department
+Cesar,Colombia,department
+Chocó,Colombia,department
+Córdoba,Colombia,department
+Cundinamarca,Colombia,department
+Guainía,Colombia,department
+Guaviare,Colombia,department
+Huila,Colombia,department
+La Guajira,Colombia,department
+Magdalena,Colombia,department
+Meta,Colombia,department
+Nariño,Colombia,department
+Norte de Santander,Colombia,department
+Putumayo,Colombia,department
+Quindío,Colombia,department
+Risaralda,Colombia,department
+San Andrés y Providencia  ,Colombia,department
+Santander,Colombia,department
+Sucre,Colombia,department
+Tolima,Colombia,department
+Valle del Cauca,Colombia,department
+Vaupés,Colombia,department
+Vichada,Colombia,department
+Bjelovar-Bilogora,Croatia,county
+Brod-Posavina,Croatia,county
+Dubrovnik-Neretva,Croatia,county
+Istria,Croatia,county
+Karlovac,Croatia,county
+Koprivnica-Križevci,Croatia,county
+Krapina-Zagorje,Croatia,county
+Lika-Senj,Croatia,county
+Međimurje,Croatia,county
+Osijek-Baranja,Croatia,county
+Požega-Slavonia,Croatia,county
+Primorje-Gorski Kotar,Croatia,county
+Šibenik-Knin,Croatia,county
+Sisak-Moslavina,Croatia,county
+Split-Dalmatia,Croatia,county
+Varaždin,Croatia,county
+Virovitica-Podravina,Croatia,county
+Vukovar-Syrmia,Croatia,county
+Zadar,Croatia,county
+Zagreb,Croatia,county
+City of Zagreb,Croatia,county
+Prague,Czech Republic,region
+Central Bohemian,Czech Republic,region
+South Bohemian,Czech Republic,region
+Plzeň,Czech Republic,region
+Karlovy Vary,Czech Republic,region
+Ústí nad Labem,Czech Republic,region
+Liberec,Czech Republic,region
+Hradec Králové,Czech Republic,region
+Pardubice,Czech Republic,region
+Vysočina,Czech Republic,region
+South Moravian,Czech Republic,region
+Olomouc,Czech Republic,region
+Zlín,Czech Republic,region
+Moravian-Silesian,Czech Republic,region
+Kinshasa,Democratic Republic Of The Congo,
+Kongo Central,Democratic Republic Of The Congo,
+Kwango,Democratic Republic Of The Congo,
+Kwilu,Democratic Republic Of The Congo,
+Mai-Ndombe,Democratic Republic Of The Congo,
+Kasaï,Democratic Republic Of The Congo,
+Kasaï-Central,Democratic Republic Of The Congo,
+Kasaï-Oriental,Democratic Republic Of The Congo,
+Lomami,Democratic Republic Of The Congo,
+Sankuru,Democratic Republic Of The Congo,
+Maniema,Democratic Republic Of The Congo,
+South Kivu,Democratic Republic Of The Congo,
+North Kivu,Democratic Republic Of The Congo,
+Ituri,Democratic Republic Of The Congo,
+Haut-Uele,Democratic Republic Of The Congo,
+Tshopo,Democratic Republic Of The Congo,
+Bas-Uele,Democratic Republic Of The Congo,
+Nord-Ubangi,Democratic Republic Of The Congo,
+Mongala,Democratic Republic Of The Congo,
+Sud-Ubangi,Democratic Republic Of The Congo,
+Équateur,Democratic Republic Of The Congo,
+Tshuapa,Democratic Republic Of The Congo,
+Tanganyika,Democratic Republic Of The Congo,
+Haut-Lomami,Democratic Republic Of The Congo,
+Lualaba,Democratic Republic Of The Congo,
+Haut-Katanga,Democratic Republic Of The Congo,
+Capital Region of Denmark ,Denmark,region
+Central Denmark Region,Denmark,region
+North Denmark Region,Denmark,region
+Region Zealand,Denmark,region
+Region of Southern Denmark,Denmark,region
+Greenland,Denmark,region
+Faroe Islands,Denmark,region
+Azua,Dominican Republic,province
+Baoruco,Dominican Republic,province
+Barahona,Dominican Republic,province
+Dajabón,Dominican Republic,province
+Distrito Nacional,Dominican Republic,province
+Duarte,Dominican Republic,province
+Elías Piña,Dominican Republic,province
+El Seibo,Dominican Republic,province
+Espaillat,Dominican Republic,province
+Hato Mayor,Dominican Republic,province
+Hermanas Mirabal,Dominican Republic,province
+Independencia,Dominican Republic,province
+La Altagracia,Dominican Republic,province
+La Romana,Dominican Republic,province
+La Vega,Dominican Republic,province
+María Trinidad Sánchez,Dominican Republic,province
+Monseñor Nouel,Dominican Republic,province
+Monte Cristi,Dominican Republic,province
+Monte Plata,Dominican Republic,province
+Pedernales,Dominican Republic,province
+Peravia,Dominican Republic,province
+Puerto Plata,Dominican Republic,province
+Samaná,Dominican Republic,province
+Sánchez Ramírez,Dominican Republic,province
+San Cristóbal,Dominican Republic,province
+San José de Ocoa,Dominican Republic,province
+San Juan,Dominican Republic,province
+San Pedro de Macorís,Dominican Republic,province
+Santiago,Dominican Republic,province
+Santiago Rodríguez,Dominican Republic,province
+Santo Domingo,Dominican Republic,province
+Valverde,Dominican Republic,province
+Azuay,Ecuador,province
+Bolívar,Ecuador,province
+Cañar,Ecuador,province
+Carchi,Ecuador,province
+Chimborazo,Ecuador,province
+Cotopaxi,Ecuador,province
+El Oro,Ecuador,province
+Esmeraldas,Ecuador,province
+Galápagos,Ecuador,province
+Guayas,Ecuador,province
+Imbabura,Ecuador,province
+Loja,Ecuador,province
+Los Ríos,Ecuador,province
+Manabí,Ecuador,province
+Morona-Santiago,Ecuador,province
+Napo,Ecuador,province
+Orellana,Ecuador,province
+Pastaza,Ecuador,province
+Pichincha,Ecuador,province
+Santa Elena,Ecuador,province
+Santo Domingo de los Tsáchilas,Ecuador,province
+Sucumbíos,Ecuador,province
+Tungurahua,Ecuador,province
+Zamora-Chinchipe,Ecuador,province
+Alexandria,Egypt,governorate
+Aswan,Egypt,governorate
+Asyut,Egypt,governorate
+Beheira,Egypt,governorate
+Beni Suef,Egypt,governorate
+Cairo,Egypt,governorate
+Dakahlia,Egypt,governorate
+Damietta,Egypt,governorate
+Faiyum,Egypt,governorate
+Gharbia,Egypt,governorate
+Giza,Egypt,governorate
+Ismailia,Egypt,governorate
+Kafr El Sheikh,Egypt,governorate
+Luxor,Egypt,governorate
+Matrouh,Egypt,governorate
+Minya,Egypt,governorate
+Monufia,Egypt,governorate
+New Valley,Egypt,governorate
+North Sinai,Egypt,governorate
+Port Said,Egypt,governorate
+Qalyubia,Egypt,governorate
+Qena,Egypt,governorate
+Red Sea,Egypt,governorate
+Sharqia,Egypt,governorate
+Sohag,Egypt,governorate
+South Sinai,Egypt,governorate
+Suez,Egypt,governorate
+North East,United Kingdom,region
+North West,United Kingdom,region
+Yorkshire and the Humber,United Kingdom,region
+East Midlands,United Kingdom,region
+West Midlands,United Kingdom,region
+East of England,United Kingdom,region
+Greater London,United Kingdom,region
+South East,United Kingdom,region
+South West,United Kingdom,region
+Bedfordshire,United Kingdom,county
+Berkshire,United Kingdom,county
+Bristol,United Kingdom,county
+Buckinghamshire,United Kingdom,county
+Cambridgeshire,United Kingdom,county
+Cheshire,United Kingdom,county
+City of London,United Kingdom,county
+Cornwall,United Kingdom,county
+Cumbria,United Kingdom,county
+Derbyshire,United Kingdom,county
+Devon,United Kingdom,county
+Dorset,United Kingdom,county
+Durham,United Kingdom,county
+East Riding of Yorkshire,United Kingdom,county
+East Sussex,United Kingdom,county
+Essex,United Kingdom,county
+Gloucestershire,United Kingdom,county
+Greater London,United Kingdom,county
+Greater Manchester,United Kingdom,county
+Hampshire,United Kingdom,county
+Herefordshire,United Kingdom,county
+Hertfordshire,United Kingdom,county
+Isle of Wight,United Kingdom,county
+Kent,United Kingdom,county
+Lancashire,United Kingdom,county
+Leicestershire,United Kingdom,county
+Lincolnshire,United Kingdom,county
+Merseyside,United Kingdom,county
+Norfolk,United Kingdom,county
+North Yorkshire,United Kingdom,county
+Northamptonshire,United Kingdom,county
+Northumberland,United Kingdom,county
+Nottinghamshire,United Kingdom,county
+Oxfordshire,United Kingdom,county
+Rutland,United Kingdom,county
+Shropshire,United Kingdom,county
+Somerset,United Kingdom,county
+South Yorkshire,United Kingdom,county
+Staffordshire,United Kingdom,county
+Suffolk,United Kingdom,county
+Surrey,United Kingdom,county
+Tyne and Wear,United Kingdom,county
+Warwickshire,United Kingdom,county
+West Midlands,United Kingdom,county
+West Yorkshire,United Kingdom,county
+West Sussex,United Kingdom,county
+Wiltshire,United Kingdom,county
+Worcestershire,United Kingdom,county
+Auvergne-Rhône-Alpes,France,region
+Bourgogne-Franche-Comté,France,region
+Bretagne,France,region
+Centre-Val de Loire,France,region
+Corse,France,region
+Grand Est,France,region
+Hauts-de-France,France,region
+Île-de-France,France,region
+Normandie,France,region
+Nouvelle-Aquitaine,France,region
+Occitanie,France,region
+Pays de la Loire,France,region
+Provence-Alpes-Côte d'Azur,France,region
+Guadeloupe,France,region
+Guyane,France,region
+La Réunion,France,region
+Martinique,France,region
+Mayotte,France,region
+Auvergne-Rhône-Alps,France,region
+Burgundy-Free-County,France,region
+Brittany,France,region
+Central-Vale of the Loire,France,region
+Greater East,France,region
+Corsica,France,region
+Heights-of-France,France,region
+Isle-of-France,France,region
+Normandy,France,region
+Lands of the Loire,France,region
+Provence-Alps-Azure Coast,France,region
+French Guiana,France,region
+Réunion,France,region
+Occitania,France,region
+New Aquitaine,France,region
+Adjara,Georgia,autonomous republic
+Abkhazia,Georgia,autonomous republic
+South Ossetia,Georgia,autonomous oblast
+Tbilisi,Georgia,region
+Imereti,Georgia,region
+Ajaria,Georgia,region
+Kvemo Kartli,Georgia,region
+Samegrelo and Zemo Svaneti,Georgia,region
+Kakheti,Georgia,region
+Shida Kartli,Georgia,region
+Abkhazia,Georgia,region
+Samtskhe-Javakheti,Georgia,region
+Guria,Georgia,region
+Mtskheta-Mtianeti,Georgia,region
+Racha-Lechkhumi and Kvemo Svaneti,Georgia,region
+Baden-Württemberg,Germany,land
+Bavaria,Germany,land
+Berlin,Germany,land
+Brandenburg,Germany,land
+Bremen,Germany,land
+Hamburg,Germany,land
+Hesse,Germany,land
+Lower Saxony,Germany,land
+Mecklenburg-Vorpommern,Germany,land
+North Rhine-Westphalia,Germany,land
+Rhineland-Palatinate,Germany,land
+Saarland,Germany,land
+Saxony,Germany,land
+Saxony-Anhalt,Germany,land
+Schleswig-Holstein,Germany,land
+Thuringia,Germany,land
+Bayern,Germany,land
+Nordrhein-Westfalen,Germany,land
+Sachsen-Anhalt,Germany,land
+Thüringen,Germany,land
+Rheinland-Pfalz,Germany,land
+Sachsen,Germany,land
+Niedersachsen,Germany,land
+Hessen,Germany,land
+Atlántida,Honduras,department
+Choluteca,Honduras,department
+Colón,Honduras,department
+Comayagua,Honduras,department
+Copán,Honduras,department
+Cortés,Honduras,department
+El Paraíso,Honduras,department
+Francisco Morazán,Honduras,department
+Gracias a Dios,Honduras,department
+Intibucá,Honduras,department
+Islas de la Bahía,Honduras,department
+La Paz,Honduras,department
+Lempira,Honduras,department
+Ocotepeque,Honduras,department
+Olancho,Honduras,department
+Santa Bárbara,Honduras,department
+Valle,Honduras,department
+Yoro,Honduras,department
+West Bengal,India,state
+Uttarakhand,India,state
+Uttar Pradesh,India,state
+Tripura,India,state
+Telangana,India,state
+Tamil Nadu,India,state
+Sikkim,India,state
+Rajasthan,India,state
+Punjab,India,state
+Puducherry,India,state
+Odisha,India,state
+Nagaland,India,state
+Mizoram,India,state
+Meghalaya,India,state
+Manipur,India,state
+Maharashtra,India,state
+Madhya Pradesh,India,state
+Lakshadweep,India,state
+Ladakh,India,state
+Kerala,India,state
+Karnataka,India,state
+Jharkhand,India,state
+Jammu and Kashmir,India,state
+India,India,state
+Himachal Pradesh,India,state
+Haryana,India,state
+Gujarat,India,state
+Goa,India,state
+Delhi,India,state
+Dadra and Nagar Haveli and Daman and Diu,India,state
+Chhattisgarh,India,state
+Chandigarh,India,state
+Bihar,India,state
+Assam,India,state
+Arunachal Pradesh,India,state
+Andhra Pradesh,India,state
+Andaman and Nicobar Islands,India,state
+Aceh,Indonesia,province
+Bali,Indonesia,province
+Bangka Belitung Islands,Indonesia,province
+Banten,Indonesia,province
+Bengkulu,Indonesia,province
+Central Java,Indonesia,province
+Central Kalimantan,Indonesia,province
+Central Papua,Indonesia,province
+Central Sulawesi,Indonesia,province
+East Java,Indonesia,province
+East Kalimantan,Indonesia,province
+East Nusa Tenggara,Indonesia,province
+Gorontalo,Indonesia,province
+Highland Papua,Indonesia,province
+Special Region of Jakarta,Indonesia,province
+Jambi,Indonesia,province
+Lampung,Indonesia,province
+Maluku,Indonesia,province
+North Kalimantan,Indonesia,province
+North Maluku,Indonesia,province
+North Sulawesi,Indonesia,province
+North Sumatra,Indonesia,province
+Papua,Indonesia,province
+Riau,Indonesia,province
+Riau Islands,Indonesia,province
+Southeast Sulawesi,Indonesia,province
+South Kalimantan,Indonesia,province
+South Papua,Indonesia,province
+South Sulawesi,Indonesia,province
+South Sumatra,Indonesia,province
+Southwest Papua,Indonesia,province
+West Java,Indonesia,province
+West Kalimantan,Indonesia,province
+West Nusa Tenggara,Indonesia,province
+West Papua,Indonesia,province
+West Sulawesi,Indonesia,province
+West Sumatra,Indonesia,province
+Special Region of Yogyakarta,Indonesia,province
+Alborz,Iran,province
+Ardabil,Iran,province
+"Azerbaijan, East",Iran,province
+"Azerbaijan, West",Iran,province
+Bushehr,Iran,province
+Chaharmahal and Bakhtiari,Iran,province
+Fars,Iran,province
+Gilan,Iran,province
+Golestan,Iran,province
+Hamadan,Iran,province
+Hormozgan,Iran,province
+Ilam,Iran,province
+Isfahan,Iran,province
+Kerman,Iran,province
+Kermanshah,Iran,province
+"Khorasan, North",Iran,province
+"Khorasan, Razavi",Iran,province
+"Khorasan, South",Iran,province
+Khuzestan,Iran,province
+Kohgiluyeh and Boyer-Ahmad,Iran,province
+Kurdistan,Iran,province
+Lorestan,Iran,province
+Markazi,Iran,province
+Mazandaran,Iran,province
+Qazvin,Iran,province
+Qom,Iran,province
+Semnan,Iran,province
+Sistan and Baluchestan,Iran,province
+Tehran,Iran,province
+Yazd,Iran,province
+Zanjan,Iran,province
+Al-Anbar,Iraq,governorate
+Babil,Iraq,governorate
+Baghdad,Iraq,governorate
+Basra,Iraq,governorate
+Dhi Qar,Iraq,governorate
+Al-Qādisiyyah,Iraq,governorate
+Diyala,Iraq,governorate
+Duhok,Iraq,governorate
+Erbil,Iraq,governorate
+Karbala,Iraq,governorate
+Kirkuk,Iraq,governorate
+Maysan,Iraq,governorate
+Muthanna,Iraq,governorate
+Najaf,Iraq,governorate
+Ninawa,Iraq,governorate
+Salah Al-Din,Iraq,governorate
+Sulaymaniyah  ,Iraq,governorate
+Wasit,Iraq,governorate
+Dihok,Iraq,governorate
+Silêmanî,Iraq,governorate
+Abruzzo,Italy,region
+Aosta Valley,Italy,region
+Apulia,Italy,region
+Basilicata,Italy,region
+Calabria,Italy,region
+Campania,Italy,region
+Emilia-Romagna,Italy,region
+Friuli-Venezia Giulia,Italy,region
+Lazio,Italy,region
+Liguria,Italy,region
+Lombardy,Italy,region
+Marche,Italy,region
+Molise,Italy,region
+Piedmont,Italy,region
+Sardinia,Italy,region
+Sicily,Italy,region
+Trentino-South Tyrol,Italy,region
+,Italy,region
+Tuscany,Italy,region
+Umbria,Italy,region
+Veneto,Italy,region
+Bas-Sassandra,Côte d’Ivoire,district
+Comoé,Côte d’Ivoire,district
+Denguélé,Côte d’Ivoire,district
+Gôh-Djiboua,Côte d’Ivoire,district
+Lacs,Côte d’Ivoire,district
+Lagunes,Côte d’Ivoire,district
+Montagnes,Côte d’Ivoire,district
+Sassandra-Marahoué,Côte d’Ivoire,district
+Savanes,Côte d’Ivoire,district
+Vallée du Bandama,Côte d’Ivoire,district
+Woroba,Côte d’Ivoire,district
+Yamoussoukro,Côte d’Ivoire,district
+Zanzan,Côte d’Ivoire,district
+Gbôklé,Côte d’Ivoire,region
+Nawa,Côte d’Ivoire,region
+San-Pédro,Côte d’Ivoire,region
+Indénié-Djuablin,Côte d’Ivoire,region
+Sud-Comoé,Côte d’Ivoire,region
+Folon,Côte d’Ivoire,region
+Kabadougou,Côte d’Ivoire,region
+Gôh,Côte d’Ivoire,region
+Lôh-Djiboua,Côte d’Ivoire,region
+Bélier,Côte d’Ivoire,region
+Iffou,Côte d’Ivoire,region
+Moronou,Côte d’Ivoire,region
+N'Zi,Côte d’Ivoire,region
+Agnéby-Tiassa,Côte d’Ivoire,region
+Grands-Ponts,Côte d’Ivoire,region
+La Mé,Côte d’Ivoire,region
+Cavally,Côte d’Ivoire,region
+Guémon,Côte d’Ivoire,region
+Tonkpi,Côte d’Ivoire,region
+Haut-Sassandra,Côte d’Ivoire,region
+Marahoué,Côte d’Ivoire,region
+Bagoué,Côte d’Ivoire,region
+Poro,Côte d’Ivoire,region
+Tchologo,Côte d’Ivoire,region
+Gbêkê,Côte d’Ivoire,region
+Hambol,Côte d’Ivoire,region
+Béré,Côte d’Ivoire,region
+Bafing,Côte d’Ivoire,region
+Worodougou,Côte d’Ivoire,region
+Bounkani,Côte d’Ivoire,region
+Gontougo,Côte d’Ivoire,region
+Hokkaidō,Japan,region
+Tōhoku,Japan,region
+Kantō,Japan,region
+Chūbu,Japan,region
+Kansai,Japan,region
+Chūgoku,Japan,region
+Shikoku,Japan,region
+Kyūshū,Japan,region
+Okinawa,Japan,region
+Aichi,Japan,prefecture
+Akita,Japan,prefecture
+Aomori,Japan,prefecture
+Chiba,Japan,prefecture
+Ehime,Japan,prefecture
+Fukui,Japan,prefecture
+Fukuoka,Japan,prefecture
+Fukushima,Japan,prefecture
+Gifu,Japan,prefecture
+Gunma,Japan,prefecture
+Hiroshima,Japan,prefecture
+Hokkaido,Japan,prefecture
+Hyōgo,Japan,prefecture
+Ibaraki,Japan,prefecture
+Ishikawa,Japan,prefecture
+Iwate,Japan,prefecture
+Kagawa,Japan,prefecture
+Kagoshima,Japan,prefecture
+Kanagawa,Japan,prefecture
+Kōchi,Japan,prefecture
+Kumamoto,Japan,prefecture
+Kyōto,Japan,prefecture
+Mie,Japan,prefecture
+Miyagi,Japan,prefecture
+Miyazaki,Japan,prefecture
+Nagano,Japan,prefecture
+Nagasaki,Japan,prefecture
+Nara,Japan,prefecture
+Niigata,Japan,prefecture
+Ōita,Japan,prefecture
+Okayama,Japan,prefecture
+Okinawa,Japan,prefecture
+Ōsaka,Japan,prefecture
+Saga,Japan,prefecture
+Saitama,Japan,prefecture
+Shiga,Japan,prefecture
+Shimane,Japan,prefecture
+Shizuoka,Japan,prefecture
+Tochigi,Japan,prefecture
+Tokushima,Japan,prefecture
+Tōkyō,Japan,prefecture
+Tottori,Japan,prefecture
+Toyama,Japan,prefecture
+Wakayama,Japan,prefecture
+Yamagata,Japan,prefecture
+Yamaguchi,Japan,prefecture
+Yamanashi,Japan,prefecture
+Attapeu province,Laos,province
+Bokeo province,Laos,province
+Bolikhamxai province,Laos,province
+Champasak province,Laos,province
+Houaphanh province,Laos,province
+Khammouane province,Laos,province
+Luang Namtha province,Laos,province
+Luang Prabang province,Laos,province
+Oudomxay province,Laos,province
+Phongsaly province,Laos,province
+Salavan province,Laos,province
+Savannakhet province,Laos,province
+Vientiane province,Laos,province
+Vientiane Prefecture,Laos,province
+Sainyabuli province,Laos,province
+Sekong province,Laos,province
+Xaisomboun province,Laos,province
+Xiangkhouang province,Laos,province
+Apskritis d'Alytus,Lithuania,apskritis
+Apskritis de Kaunas,Lithuania,apskritis
+Apskritis de Klaipėda,Lithuania,apskritis
+Apskritis de Marijampolė,Lithuania,apskritis
+Apskritis de Panevėžys,Lithuania,apskritis
+Apskritis de Šiauliai,Lithuania,apskritis
+Apskritis de Tauragė,Lithuania,apskritis
+Apskritis de Telšiai,Lithuania,apskritis
+Apskritis d'Utena,Lithuania,apskritis
+Apskritis de Vilnius,Lithuania,apskritis
+Diana,Madagascar,region
+Sava,Madagascar,region
+Itasy,Madagascar,region
+Analamanga,Madagascar,region
+Vakinankaratra,Madagascar,region
+Bongolava,Madagascar,region
+Sofia,Madagascar,region
+Boeny,Madagascar,region
+Betsiboka,Madagascar,region
+Melaky,Madagascar,region
+Alaotra-Mangoro,Madagascar,region
+Atsinanana,Madagascar,region
+Analanjirofo,Madagascar,region
+Amoron'i Mania,Madagascar,region
+Matsiatra Ambony,Madagascar,region
+Fitovinany,Madagascar,region
+Vatovavy,Madagascar,region
+Atsimo-Atsinanana,Madagascar,region
+Ihorombe,Madagascar,region
+Menabe,Madagascar,region
+Atsimo-Andrefana,Madagascar,region
+Androy,Madagascar,region
+Anosy,Madagascar,region
+Dedza,Malawi,district
+Dowa,Malawi,district
+Kasungu,Malawi,district
+Lilongwe,Malawi,district
+Mchinji,Malawi,district
+Nkhotakota,Malawi,district
+Ntcheu,Malawi,district
+Ntchisi,Malawi,district
+Salima,Malawi,district
+Chitipa,Malawi,district
+Karonga,Malawi,district
+Likoma,Malawi,district
+Mzimba,Malawi,district
+Nkhata Bay,Malawi,district
+Rumphi,Malawi,district
+Balaka,Malawi,district
+Blantyre,Malawi,district
+Chikwawa,Malawi,district
+Chiradzulu,Malawi,district
+Machinga,Malawi,district
+Mangochi,Malawi,district
+Mulanje,Malawi,district
+Mwanza,Malawi,district
+Nsanje,Malawi,district
+Thyolo,Malawi,district
+Phalombe,Malawi,district
+Zomba,Malawi,district
+Neno,Malawi,district
+Johor,Malaysia,state
+Kedah,Malaysia,state
+Kelantan,Malaysia,state
+Malacca,Malaysia,state
+Negeri Sembilan,Malaysia,state
+Pahang,Malaysia,state
+Penang,Malaysia,state
+Perak,Malaysia,state
+Perlis,Malaysia,state
+Sabah,Malaysia,state
+Sarawak,Malaysia,state
+Selangor,Malaysia,state
+Terengganu,Malaysia,state
+kuala lumpur,Malaysia,federal territory
+labuan,Malaysia,federal territory
+putrajaya,Malaysia,federal territory
+Kayes,Mali,region
+Sikasso,Mali,region
+Mopti,Mali,region
+Sogou,Mali,region
+Tombouctou,Mali,region
+Gao,Mali,region
+Nioro,Mali,region
+Bougouni,Mali,region
+Kidal,Mali,region
+Taoudenit,Mali,region
+Dioïla,Mali,region
+Ménaka,Mali,region
+Kita,Mali,region
+Gourma,Mali,region
+Koulikouro,Mali,region
+Koutiala,Mali,region
+San,Mali,region
+Douentza,Mali,region
+Goundam,Mali,region
+Bandiagara,Mali,region
+Nara,Mali,region
+Aguascalientes,Mexico,state
+Baja California,Mexico,state
+Baja California Sur,Mexico,state
+Campeche,Mexico,state
+Chiapas,Mexico,state
+Chihuahua,Mexico,state
+Coahuila,Mexico,state
+Colima,Mexico,state
+Durango,Mexico,state
+Guanajuato,Mexico,state
+Guerrero,Mexico,state
+Hidalgo,Mexico,state
+Jalisco,Mexico,state
+México,Mexico,state
+Mexico City,Mexico,state
+Michoacán,Mexico,state
+Morelos,Mexico,state
+Nayarit,Mexico,state
+Nuevo León,Mexico,state
+Oaxaca,Mexico,state
+Puebla,Mexico,state
+Querétaro,Mexico,state
+Quintana Roo,Mexico,state
+San Luis Potosí,Mexico,state
+Sinaloa,Mexico,state
+Sonora,Mexico,state
+Tabasco,Mexico,state
+Tamaulipas,Mexico,state
+Tlaxcala,Mexico,state
+Veracruz,Mexico,state
+Yucatán,Mexico,state
+Zacatecas,Mexico,state
+Anenii Noi,Moldova,district
+Basarabeasca,Moldova,district
+Briceni,Moldova,district
+Cahul,Moldova,district
+Cantemir,Moldova,district
+Călărași,Moldova,district
+Căușeni,Moldova,district
+Cimișlia,Moldova,district
+Criuleni,Moldova,district
+Dondușeni,Moldova,district
+Drochia,Moldova,district
+Dubăsari,Moldova,district
+Edineț,Moldova,district
+Fălești,Moldova,district
+Florești,Moldova,district
+Glodeni,Moldova,district
+Hîncești,Moldova,district
+Ialoveni,Moldova,district
+Leova,Moldova,district
+Nisporeni,Moldova,district
+Ocnița,Moldova,district
+Orhei,Moldova,district
+Rezina,Moldova,district
+Rîșcani,Moldova,district
+Sîngerei,Moldova,district
+Soroca,Moldova,district
+Strășeni,Moldova,district
+Șoldănești,Moldova,district
+Ștefan Vodă,Moldova,district
+Taraclia,Moldova,district
+Telenești,Moldova,district
+Ungheni,Moldova,district
+Arkhangai,Mongolia,aïmag
+Bayan-Ölgii,Mongolia,aïmag
+Bayankhongor,Mongolia,aïmag
+Bulgan,Mongolia,aïmag
+Darkhan-Uul,Mongolia,aïmag
+Dornod,Mongolia,aïmag
+Dornogovi,Mongolia,aïmag
+Dundgovi,Mongolia,aïmag
+ Govi-Altai,Mongolia,aïmag
+Govisümber,Mongolia,aïmag
+Khentii,Mongolia,aïmag
+Khovd,Mongolia,aïmag
+Khövsgöl,Mongolia,aïmag
+Ömnögovi,Mongolia,aïmag
+Orkhon,Mongolia,aïmag
+Övörkhangai,Mongolia,aïmag
+Selenge,Mongolia,aïmag
+Sükhbaatar,Mongolia,aïmag
+Töv,Mongolia,aïmag
+Uvs,Mongolia,aïmag
+Zavkhan,Mongolia,aïmag
+Tanger-Tétouan-Al Hoceïma,Morocco,region
+L'Oriental,Morocco,region
+Fès-Meknès,Morocco,region
+Rabat-Salé-Kénitra,Morocco,region
+Béni Mellal-Khénifra,Morocco,region
+Casablanca-Settat,Morocco,region
+Marrakech-Safi ,Morocco,region
+Drâa-Tafilalet,Morocco,region
+Souss-Massa,Morocco,region
+Guelmim-Oued Noun,Morocco,region
+Laâyoune-Sakia El Hamra,Morocco,region
+Dakhla-Oued Ed-Dahab,Morocco,region
+Cabo Delgado,Mozambique,province
+Gaza,Mozambique,province
+Inhambane,Mozambique,province
+Manica,Mozambique,province
+Maputo City,Mozambique,province
+Maputo,Mozambique,province
+Nampula,Mozambique,province
+Niassa,Mozambique,province
+Sofala,Mozambique,province
+Tete,Mozambique,province
+Zambezia,Mozambique,province
+Drenthe,Netherlands,province
+Flevoland,Netherlands,province
+Friesland,Netherlands,province
+Gelderland,Netherlands,province
+Groningen,Netherlands,province
+Limburg,Netherlands,province
+North Brabant,Netherlands,province
+North Holland,Netherlands,province
+Overijssel,Netherlands,province
+South Holland,Netherlands,province
+Utrecht,Netherlands,province
+Zeeland,Netherlands,province
+Boaco,Nicaragua,department
+Carazo,Nicaragua,department
+Chinandega,Nicaragua,department
+Chontales,Nicaragua,department
+Estelí,Nicaragua,department
+Granada,Nicaragua,department
+Jinotega,Nicaragua,department
+León,Nicaragua,department
+Madriz,Nicaragua,department
+Managua,Nicaragua,department
+Masaya,Nicaragua,department
+Matagalpa,Nicaragua,department
+Nueva Segovia,Nicaragua,department
+Rivas,Nicaragua,department
+Río San Juan,Nicaragua,department
+North Caribbean Coast Autonomous Region,Nicaragua,autonomous region
+South Caribbean Coast Autonomous Region,Nicaragua,autonomous region
+Agadez,Niger,region
+Diffa,Niger,region
+Dosso,Niger,region
+Maradi,Niger,region
+Niamey,Niger,region
+Tahoua,Niger,region
+Tillabéri,Niger,region
+Zinder,Niger,region
+Abia,Nigeria,state
+Adamawa,Nigeria,state
+Akwa Ibom,Nigeria,state
+Anambra,Nigeria,state
+Bauchi,Nigeria,state
+Benue,Nigeria,state
+Borno,Nigeria,state
+Cross River,Nigeria,state
+Delta,Nigeria,state
+Ebonyi,Nigeria,state
+Edo,Nigeria,state
+Ekiti,Nigeria,state
+Enugu,Nigeria,state
+Gombe,Nigeria,state
+Imo,Nigeria,state
+Jigawa,Nigeria,state
+Kaduna,Nigeria,state
+Kano,Nigeria,state
+Katsina,Nigeria,state
+Kebbi,Nigeria,state
+Kogi,Nigeria,state
+Kwara,Nigeria,state
+Lagos,Nigeria,state
+Nasarawa,Nigeria,state
+Niger,Nigeria,state
+Ogun,Nigeria,state
+Ondon,Nigeria,state
+Osun,Nigeria,state
+Oyo,Nigeria,state
+Plateau,Nigeria,state
+Rivers,Nigeria,state
+Sokoto,Nigeria,state
+Taraba,Nigeria,state
+Yobe,Nigeria,state
+Zamfara,Nigeria,state
+Chagang,North Korea,province
+North Hamgyong,North Korea,province
+South Hamgyong,North Korea,province
+North Hwanghae,North Korea,province
+South Hwanghae,North Korea,province
+Kangwon,North Korea,province
+North Pyongan,North Korea,province
+South Pyongan,North Korea,province
+Ryanggang,North Korea,province
+Azad Jammu and Kashmir,Pakistan,region
+Balochistan,Pakistan,region
+Gilgit-Baltistan,Pakistan,region
+Islamabad Capital Territory,Pakistan,region
+Khyber Pakhtunkhwa,Pakistan,region
+Punjab,Pakistan,region
+Sindh,Pakistan,region
+Concepción,Paraguay,department
+San Pedro,Paraguay,department
+Cordillera,Paraguay,department
+Guairá,Paraguay,department
+Caaguazú,Paraguay,department
+Caazapá,Paraguay,department
+Itapúa,Paraguay,department
+Misiones,Paraguay,department
+Paraguarí,Paraguay,department
+Alto Paraná,Paraguay,department
+Central,Paraguay,department
+Ñeembucú,Paraguay,department
+Amambay,Paraguay,department
+Canindeyú,Paraguay,department
+Presidente Hayes,Paraguay,department
+Alto Paraguay,Paraguay,department
+Boquerón,Paraguay,department
+Chachapoyas,Peru,province
+Bagua,Peru,province
+Bongará,Peru,province
+Condorcanqui,Peru,province
+Luya,Peru,province
+Rodríguez de Mendoza,Peru,province
+Utcubamba,Peru,province
+Huaraz,Peru,province
+Aija,Peru,province
+Antonio Raymondi,Peru,province
+Asunción,Peru,province
+Bolognesi,Peru,province
+Carhuaz,Peru,province
+Carlos Fermín Fitzcarrald,Peru,province
+Casma,Peru,province
+Corongo,Peru,province
+Huari,Peru,province
+Huarmey,Peru,province
+Huaylas,Peru,province
+Mariscal Luzuriaga,Peru,province
+Ocros,Peru,province
+Pallasca,Peru,province
+Pomabamba,Peru,province
+Recuay,Peru,province
+Santa,Peru,province
+Sihuas,Peru,province
+Yungay,Peru,province
+Abancay,Peru,province
+Andahuaylas,Peru,province
+Antabamba,Peru,province
+Aymaraes,Peru,province
+Cotabambas,Peru,province
+Chincheros,Peru,province
+Grau,Peru,province
+Arequipa,Peru,province
+Camaná,Peru,province
+Caravelí,Peru,province
+Castilla,Peru,province
+Caylloma,Peru,province
+Condesuyos,Peru,province
+Islay,Peru,province
+La Unión,Peru,province
+Huamanga,Peru,province
+Cangallo,Peru,province
+Huanca Sancos,Peru,province
+Huanta,Peru,province
+La Mar,Peru,province
+Lucanas,Peru,province
+Parinacochas,Peru,province
+Páucar del Sara Sara,Peru,province
+Sucre,Peru,province
+Víctor Fajardo,Peru,province
+Vilcas Huamán,Peru,province
+Cajamarca,Peru,province
+Cajabamba,Peru,province
+Celendín,Peru,province
+Chota,Peru,province
+Contumazá,Peru,province
+Cutervo,Peru,province
+Hualgayoc,Peru,province
+Jaén,Peru,province
+San Ignacio,Peru,province
+San Marcos,Peru,province
+San Miguel,Peru,province
+San Pablo,Peru,province
+Santa Cruz,Peru,province
+Callao,Peru,province
+Cusco,Peru,province
+Acomayo,Peru,province
+Anta,Peru,province
+Calca,Peru,province
+Canas,Peru,province
+Canchis,Peru,province
+Chumbivilcas,Peru,province
+Espinar,Peru,province
+La Convención,Peru,province
+Paruro,Peru,province
+Paucartambo,Peru,province
+Quispicanchi,Peru,province
+Urubamba,Peru,province
+Huancavelica,Peru,province
+Acobamba,Peru,province
+Angaraes,Peru,province
+Castrovirreyna,Peru,province
+Churcampa,Peru,province
+Huaytará,Peru,province
+Tayacaja,Peru,province
+Huánuco,Peru,province
+Ambo,Peru,province
+Dos de Mayo,Peru,province
+Huacaybamba,Peru,province
+Huamalíes,Peru,province
+Leoncio Prado,Peru,province
+Marañón,Peru,province
+Pachitea,Peru,province
+Puerto Inca,Peru,province
+Lauricocha,Peru,province
+Yarowilca,Peru,province
+Ica,Peru,province
+Chincha,Peru,province
+Nazca,Peru,province
+Palpa,Peru,province
+Pisco,Peru,province
+Huancayo,Peru,province
+Concepción,Peru,province
+Chanchamayo,Peru,province
+Jauja,Peru,province
+Junín,Peru,province
+Satipo,Peru,province
+Tarma,Peru,province
+Yauli,Peru,province
+Chupaca,Peru,province
+Trujillo,Peru,province
+Ascope,Peru,province
+Bolívar,Peru,province
+Chepén,Peru,province
+Julcán,Peru,province
+Otuzco,Peru,province
+Pacasmayo,Peru,province
+Pataz,Peru,province
+Sánchez Carrión,Peru,province
+Santiago de Chuco,Peru,province
+Gran Chimú,Peru,province
+Virú,Peru,province
+Chiclayo,Peru,province
+Ferreñafe,Peru,province
+Lambayeque,Peru,province
+Lima,Peru,province
+Huaura,Peru,province
+Barranca,Peru,province
+Cajatambo,Peru,province
+Canta,Peru,province
+Cañete,Peru,province
+Huaral,Peru,province
+Huarochirí,Peru,province
+Oyón,Peru,province
+Yauyos,Peru,province
+Maynas,Peru,province
+Alto Amazonas,Peru,province
+Loreto,Peru,province
+Mariscal Ramón Castilla,Peru,province
+Putumayo,Peru,province
+Requena,Peru,province
+Ucayali,Peru,province
+Datem del Marañón,Peru,province
+Tambopata,Peru,province
+Manú,Peru,province
+Tahuamanu,Peru,province
+Mariscal Nieto,Peru,province
+General Sánchez Cerro,Peru,province
+Ilo,Peru,province
+Pasco,Peru,province
+Daniel Alcídes Carrión,Peru,province
+Oxapampa,Peru,province
+Piura,Peru,province
+Ayabaca,Peru,province
+Huancabamba,Peru,province
+Morropón,Peru,province
+Paita,Peru,province
+Sullana,Peru,province
+Talara,Peru,province
+Sechura,Peru,province
+Puno,Peru,province
+Azángaro,Peru,province
+Carabaya,Peru,province
+Chucuito,Peru,province
+El Collao,Peru,province
+Huancané,Peru,province
+Lampa,Peru,province
+Melgar,Peru,province
+Moho,Peru,province
+San Antonio de Putina,Peru,province
+San Román,Peru,province
+Sandia,Peru,province
+Yunguyo,Peru,province
+Moyobamba,Peru,province
+Bellavista,Peru,province
+El Dorado,Peru,province
+Huallaga,Peru,province
+Lamas,Peru,province
+Mariscal Cáceres,Peru,province
+Picota,Peru,province
+Rioja,Peru,province
+San Martín,Peru,province
+Tocache,Peru,province
+Tacna,Peru,province
+Candarave,Peru,province
+Jorge Basadre,Peru,province
+Tarata,Peru,province
+Tumbes,Peru,province
+Contralmirante Villar,Peru,province
+Zarumilla,Peru,province
+Coronel Portillo,Peru,province
+Atalaya,Peru,province
+Padre Abad,Peru,province
+Purús,Peru,province
+Amazonas,Peru,region
+Ancash,Peru,region
+Apurímac,Peru,region
+Arequipa,Peru,region
+Ayacucho,Peru,region
+Callao,Peru,region
+Cusco,Peru,region
+Huancavelica,Peru,region
+Huánuco,Peru,region
+Ica,Peru,region
+Junín,Peru,region
+La Libertad,Peru,region
+Lambayeque,Peru,region
+Lima,Peru,region
+Loreto,Peru,region
+Moquegua,Peru,region
+Pasco,Peru,region
+Piura,Peru,region
+Puno,Peru,region
+San Martín,Peru,region
+Tacna,Peru,region
+Tumbes,Peru,region
+Ucayali,Peru,region
+Cajamarca,Peru,region
+Madre de Dios,Peru,region
+National Capital Region,Philippines,region
+Cordillera Administrative Region,Philippines,region
+Ilocos Region,Philippines,region
+Cagayan Valley,Philippines,region
+Central Luzon,Philippines,region
+Calabarzon,Philippines,region
+Southwestern Tagalog Region,Philippines,region
+Bicol Region,Philippines,region
+Western Visayas,Philippines,region
+Central Visayas,Philippines,region
+Eastern Visayas,Philippines,region
+Zamboanga Peninsula,Philippines,region
+Northern Mindanao,Philippines,region
+Davao Region,Philippines,region
+Soccsksargen,Philippines,region
+Caraga,Philippines,region
+Bangsamoro,Philippines,region
+Luzon,Philippines,island
+Visayas,Philippines,island
+Mindanao,Philippines,island
+Greater Poland,Poland,voivodeship
+Kuyavia-Pomerania,Poland,voivodeship
+Lesser Poland,Poland,voivodeship
+Łódź,Poland,voivodeship
+Lower Silesia,Poland,voivodeship
+Lublin,Poland,voivodeship
+Lubusz,Poland,voivodeship
+Masovia,Poland,voivodeship
+Opole,Poland,voivodeship
+Podlaskie,Poland,voivodeship
+Pomerania,Poland,voivodeship
+Silesia,Poland,voivodeship
+Subcarpathia,Poland,voivodeship
+Świętokrzyskie,Poland,voivodeship
+Warmia-Masuria,Poland,voivodeship
+West Pomerania,Poland,voivodeship
+Kouilou,Republic Of The Congo,department
+Niari,Republic Of The Congo,department
+Lékoumou,Republic Of The Congo,department
+Bouenza,Republic Of The Congo,department
+Pool,Republic Of The Congo,department
+Plateaux,Republic Of The Congo,department
+Cuvette,Republic Of The Congo,department
+Cuvette-Ouest,Republic Of The Congo,department
+Sangha,Republic Of The Congo,department
+Likouala,Republic Of The Congo,department
+Brazzaville,Republic Of The Congo,department
+Pointe-Noire,Republic Of The Congo,department
+Bacău County,Romania,county
+Botoșani County,Romania,county
+Iași County,Romania,county
+Neamț County,Romania,county
+Suceava County,Romania,county
+Vaslui County,Romania,county
+Brăila County,Romania,county
+Buzău County,Romania,county
+Constanța County,Romania,county
+Galați County,Romania,county
+Tulcea County,Romania,county
+Vrancea County,Romania,county
+Argeș County,Romania,county
+Călărași County,Romania,county
+Dâmbovița County,Romania,county
+Giurgiu County,Romania,county
+Ialomița County,Romania,county
+Prahova County,Romania,county
+Teleorman County,Romania,county
+Dolj County,Romania,county
+Gorj County,Romania,county
+Mehedinți County,Romania,county
+Olt County,Romania,county
+Vâlcea County,Romania,county
+Arad County,Romania,county
+Caraș-Severin County,Romania,county
+Hunedoara County,Romania,county
+Timiș County,Romania,county
+Bihor County,Romania,county
+Bistrița-Năsăud County,Romania,county
+Cluj County,Romania,county
+Maramureș County,Romania,county
+Satu Mare County,Romania,county
+Sălaj County,Romania,county
+Alba County,Romania,county
+Brașov County,Romania,county
+Covasna County,Romania,county
+Harghita County,Romania,county
+Mureș County,Romania,county
+Sibiu County,Romania,county
+Ilfov County,Romania,county
+Bucharest,Romania,county
+Adygea,Russia,republic
+Bashkortostan,Russia,republic
+Buryatia,Russia,republic
+Altai Republic,Russia,republic
+Dagestan,Russia,republic
+Ingushetia,Russia,republic
+Kabardino-Balkaria,Russia,republic
+Kalmykia,Russia,republic
+Karachay-Cherkessia,Russia,republic
+Karelia,Russia,republic
+Komi Republic,Russia,republic
+Mari El,Russia,republic
+Mordovia,Russia,republic
+Sakha (Yakutia),Russia,republic
+North Ossetia–Alania,Russia,republic
+Tatarstan,Russia,republic
+Tuva,Russia,republic
+Udmurtia,Russia,republic
+Khakassia,Russia,republic
+Chechnya,Russia,republic
+Chuvashia,Russia,republic
+Altai Krai,Russia,krai
+Krasnodar Krai,Russia,krai
+Krasnoyarsk Krai,Russia,krai
+Primorsky Krai,Russia,krai
+Stavropol Krai,Russia,krai
+Khabarovsk Krai,Russia,krai
+Amur Oblast,Russia,oblast
+Arkhangelsk Oblast,Russia,oblast
+Astrakhan Oblast,Russia,oblast
+Belgorod Oblast,Russia,oblast
+Bryansk Oblast,Russia,oblast
+Vladimir Oblast,Russia,oblast
+Volgograd Oblast,Russia,oblast
+Vologda Oblast,Russia,oblast
+Voronezh Oblast,Russia,oblast
+Ivanovo Oblast,Russia,oblast
+Irkutsk Oblast,Russia,oblast
+Kaliningrad Oblast,Russia,oblast
+Kaluga Oblast,Russia,oblast
+Kamchatka Krai,Russia,krai
+Kemerovo Oblast,Russia,oblast
+Kirov Oblast,Russia,oblast
+Kostroma Oblast,Russia,oblast
+Kurgan Oblast,Russia,oblast
+Kursk Oblast,Russia,oblast
+Leningrad Oblast,Russia,oblast
+Lipetsk Oblast,Russia,oblast
+Magadan Oblast,Russia,oblast
+Moscow Oblast,Russia,oblast
+Murmansk Oblast,Russia,oblast
+Nizhny Novgorod Oblast,Russia,oblast
+Novgorod Oblast,Russia,oblast
+Novosibirsk Oblast,Russia,oblast
+Omsk Oblast,Russia,oblast
+Orenburg Oblast,Russia,oblast
+Oryol Oblast,Russia,oblast
+Penza Oblast,Russia,oblast
+Perm Krai,Russia,krai
+Pskov Oblast,Russia,oblast
+Rostov Oblast,Russia,oblast
+Ryazan Oblast,Russia,oblast
+Samara Oblast,Russia,oblast
+Saratov Oblast,Russia,oblast
+Sakhalin Oblast,Russia,oblast
+Sverdlovsk Oblast,Russia,oblast
+Smolensk Oblast,Russia,oblast
+Tambov Oblast,Russia,oblast
+Tver Oblast,Russia,oblast
+Tomsk Oblast,Russia,oblast
+Tula Oblast,Russia,oblast
+Tyumen Oblast,Russia,oblast
+Ulyanovsk Oblast,Russia,oblast
+Chelyabinsk Oblast,Russia,oblast
+Zabaykalsky Krai,Russia,krai
+Yaroslavl Oblast,Russia,oblast
+Moscow,Russia,federal city
+Saint Petersburg,Russia,federal city
+Jewish Autonomous Oblast,Russia,autonomous oblast
+Nenets Autonomous Okrug,Russia,autonomous okrug
+Khanty–Mansi Autonomous Okrug – Yugra,Russia,autonomous okrug
+Chukotka Autonomous Okrug,Russia,autonomous okrug
+Yamalo-Nenets Autonomous Okrug,Russia,autonomous okrug
+Kigali,Rwanda,province
+Southern province,Rwanda,province
+Western province,Rwanda,province
+Northern province,Rwanda,province
+Eastern province,Rwanda,province
+Kolubara District,Serbia,district
+Mačva District,Serbia,district
+Moravica District,Serbia,district
+Pomoravlje District,Serbia,district
+Rasina District,Serbia,district
+Raška District,Serbia,district
+Šumadija District,Serbia,district
+Zlatibor District,Serbia,district
+Bor District ,Serbia,district
+Braničevo District ,Serbia,district
+Jablanica District ,Serbia,district
+Nišava District ,Serbia,district
+Pirot District ,Serbia,district
+Pčinja District ,Serbia,district
+Podunavlje District ,Serbia,district
+Toplica District ,Serbia,district
+Zaječar District ,Serbia,district
+Central Banat District ,Serbia,district
+North Bačka District ,Serbia,district
+North Banat District ,Serbia,district
+South Bačka District ,Serbia,district
+South Banat District ,Serbia,district
+Srem District ,Serbia,district
+West Bačka District ,Serbia,district
+Kosovo District ,Serbia,district
+Kosovo-Pomoravlje District ,Serbia,district
+Kosovska Mitrovica District ,Serbia,district
+Peć District ,Serbia,district
+Prizren District ,Serbia,district
+Bratislava,Slovakia,region
+Trnava,Slovakia,region
+Trenčín ,Slovakia,region
+Nitra,Slovakia,region
+Žilina ,Slovakia,region
+Banská Bystrica ,Slovakia,region
+Prešov,Slovakia,region
+Košice ,Slovakia,region
+Eastern Cape,South Africa,province
+Free State,South Africa,province
+Gauteng,South Africa,province
+KwaZulu-Natal,South Africa,province
+Limpopo,South Africa,province
+Mpumalanga,South Africa,province
+North West,South Africa,province
+Northern Cape,South Africa,province
+Western Cape,South Africa,province
+North Chungcheong,South Korea,province
+South Chungcheong,South Korea,province
+Gangwon,South Korea,province
+Gyeonggi,South Korea,province
+North Gyeongsang,South Korea,province
+South Gyeongsang,South Korea,province
+Jeonbuk,South Korea,province
+South Jeolla,South Korea,province
+Jeju,South Korea,province
+Andalusia,Spain,autonomous community
+Aragon,Spain,autonomous community
+Asturias,Spain,autonomous community
+Balearic Islands,Spain,autonomous community
+Basque Country,Spain,autonomous community
+Canary Islands,Spain,autonomous community
+Cantabria,Spain,autonomous community
+Castile and Leﺃ٣n,Spain,autonomous community
+Castillaﻗ°±La Mancha,Spain,autonomous community
+Catalonia,Spain,autonomous community
+Extremadura,Spain,autonomous community
+Galicia,Spain,autonomous community
+La Rioja,Spain,autonomous community
+Madrid,Spain,autonomous community
+Murcia,Spain,autonomous community
+Navarre,Spain,autonomous community
+Valencia,Spain,autonomous community
+Central,Sri Lanka,province
+Eastern ,Sri Lanka,province
+North Central,Sri Lanka,province
+Northern ,Sri Lanka,province
+North Western,Sri Lanka,province
+Sabaragamuwa,Sri Lanka,province
+Southern,Sri Lanka,province
+Uva,Sri Lanka,province
+Western,Sri Lanka,province
+Khartoum,Sudan,state
+North Kordofan,Sudan,state
+Northern,Sudan,state
+Kassala,Sudan,state
+Blue Nile,Sudan,state
+North Darfur,Sudan,state
+South Darfur,Sudan,state
+South Kordofan,Sudan,state
+Gezira,Sudan,state
+White Nile,Sudan,state
+River Nile,Sudan,state
+Red Sea,Sudan,state
+al Qadarif,Sudan,state
+Sennar,Sudan,state
+West Darfur,Sudan,state
+Central Darfur,Sudan,state
+East Darfur,Sudan,state
+West Kordofan,Sudan,state
+Zürich,Switzerland,canton
+Bern,Switzerland,canton
+Lucerne,Switzerland,canton
+Uri,Switzerland,canton
+Schwyz,Switzerland,canton
+Obwalden,Switzerland,canton
+Nidwalden,Switzerland,canton
+Glarus,Switzerland,canton
+Zug,Switzerland,canton
+Fribourg,Switzerland,canton
+Solothurn,Switzerland,canton
+Basel-Stadt,Switzerland,canton
+Basel-Landschaft,Switzerland,canton
+Schaffhausen,Switzerland,canton
+Appenzell Ausserrhoden,Switzerland,canton
+Appenzell Innerrhoden,Switzerland,canton
+St. Gallen,Switzerland,canton
+Grisons,Switzerland,canton
+Aargau,Switzerland,canton
+Thurgau,Switzerland,canton
+Ticino,Switzerland,canton
+Vaud,Switzerland,canton
+Valais,Switzerland,canton
+Neuchâtel,Switzerland,canton
+Geneva,Switzerland,canton
+Jura,Switzerland,canton
+Berne,Switzerland,canton
+Thurgovia,Switzerland,canton
+Tessin,Switzerland,canton
+Graubünden,Switzerland,canton
+St. Gall,Switzerland,canton
+Appenzell Inner-Rhodes,Switzerland,canton
+Appenzell Outer-Rhodes,Switzerland,canton
+Schaffhouse,Switzerland,canton
+Basel-Country,Switzerland,canton
+Basel-City,Switzerland,canton
+Soleure,Switzerland,canton
+Freiburg,Switzerland,canton
+Nidwald,Switzerland,canton
+Obwald,Switzerland,canton
+Zoug,Switzerland,canton
+Aleppo Governorate,Syria,governorate
+Raqqa Governorate,Syria,governorate
+As-Suwayda Governorate,Syria,governorate
+Damascus Governorate,Syria,governorate
+Daraa Governorate,Syria,governorate
+Deir ez-Zor Governorate,Syria,governorate
+Hama Governorate,Syria,governorate
+Al-Hasakah,Syria,governorate
+Homs Governorate,Syria,governorate
+Idlib Governorate,Syria,governorate
+Latakia Governorate,Syria,governorate
+Quneitra Governorate,Syria,governorate
+Rif Dimashq Governorate,Syria,governorate
+Tartus Governorate,Syria,governorate
+ Bangkok,Thailand,province
+Amnat Charoen,Thailand,province
+Ang Thong,Thailand,province
+Bueng Kan,Thailand,province
+Buriram,Thailand,province
+Chachoengsao,Thailand,province
+Chai Nat,Thailand,province
+Chaiyaphum,Thailand,province
+Chanthaburi,Thailand,province
+Chiang Mai,Thailand,province
+Chiang Rai,Thailand,province
+Chonburi,Thailand,province
+Chumphon,Thailand,province
+Kalasin,Thailand,province
+Kamphaeng Phet,Thailand,province
+Kanchanaburi,Thailand,province
+Khon Kaen,Thailand,province
+Krabi,Thailand,province
+Lampang,Thailand,province
+Lamphun,Thailand,province
+Loei,Thailand,province
+Lopburi,Thailand,province
+Mae Hong Son,Thailand,province
+Maha Sarakham,Thailand,province
+Mukdahan,Thailand,province
+Nakhon Nayok,Thailand,province
+Nakhon Pathom,Thailand,province
+Nakhon Phanom,Thailand,province
+Nakhon Ratchasima,Thailand,province
+Nakhon Sawan,Thailand,province
+Nakhon Si Thammarat,Thailand,province
+Nan,Thailand,province
+Narathiwat,Thailand,province
+Nong Bua Lamphu,Thailand,province
+Nong Khai,Thailand,province
+Nonthaburi,Thailand,province
+Pathum Thani,Thailand,province
+Pattani,Thailand,province
+Phang Nga,Thailand,province
+Phatthalung,Thailand,province
+Phayao,Thailand,province
+Phetchabun,Thailand,province
+Phetchaburi,Thailand,province
+Phichit,Thailand,province
+Phitsanulok,Thailand,province
+Phra Nakhon Si Ayutthaya,Thailand,province
+Phrae,Thailand,province
+Phuket,Thailand,province
+Prachinburi,Thailand,province
+Prachuap Khiri Khan,Thailand,province
+Ranong,Thailand,province
+Ratchaburi,Thailand,province
+Rayong,Thailand,province
+Roi Et,Thailand,province
+Sa Kaeo,Thailand,province
+Sakon Nakhon,Thailand,province
+Samut Prakan,Thailand,province
+Samut Sakhon,Thailand,province
+Samut Songkhram,Thailand,province
+Saraburi,Thailand,province
+Satun,Thailand,province
+Sing Buri,Thailand,province
+Sisaket,Thailand,province
+Songkhla,Thailand,province
+Sukhothai,Thailand,province
+Suphan Buri,Thailand,province
+Surat Thani,Thailand,province
+Surin,Thailand,province
+Tak,Thailand,province
+Trang,Thailand,province
+Trat,Thailand,province
+Ubon Ratchathani,Thailand,province
+Udon Thani,Thailand,province
+Uthai Thani,Thailand,province
+Uttaradit,Thailand,province
+Yala,Thailand,province
+Yasothon,Thailand,province
+Adana,Turkey,province
+Adıyaman,Turkey,province
+Afyonkarahisar,Turkey,province
+Ağrı,Turkey,province
+Amasya,Turkey,province
+Ankara,Turkey,province
+Antalya,Turkey,province
+Artvin,Turkey,province
+Aydın,Turkey,province
+Balıkesir,Turkey,province
+Bilecik,Turkey,province
+Bingöl,Turkey,province
+Bitlis,Turkey,province
+Bolu,Turkey,province
+Burdur,Turkey,province
+Bursa,Turkey,province
+Çanakkale,Turkey,province
+Çankırı,Turkey,province
+Çorum,Turkey,province
+Denizli,Turkey,province
+Diyarbakır,Turkey,province
+Edirne,Turkey,province
+Elazığ,Turkey,province
+Erzincan,Turkey,province
+Erzurum,Turkey,province
+Eskişehir,Turkey,province
+Gaziantep,Turkey,province
+Giresun,Turkey,province
+Gümüşhane,Turkey,province
+Hakkâri,Turkey,province
+Hatay,Turkey,province
+Isparta,Turkey,province
+Mersin,Turkey,province
+Istanbul,Turkey,province
+İzmir,Turkey,province
+Kars,Turkey,province
+Kastamonu,Turkey,province
+Kayseri,Turkey,province
+Kırklareli,Turkey,province
+Kırşehir,Turkey,province
+Kocaeli,Turkey,province
+Konya,Turkey,province
+Kütahya,Turkey,province
+Malatya,Turkey,province
+Manisa,Turkey,province
+Kahramanmaraş,Turkey,province
+Mardin,Turkey,province
+Muğla,Turkey,province
+Muş,Turkey,province
+Nevşehir,Turkey,province
+Niğde,Turkey,province
+Ordu,Turkey,province
+Rize,Turkey,province
+Sakarya,Turkey,province
+Samsun,Turkey,province
+Siirt,Turkey,province
+Sinop,Turkey,province
+Sivas,Turkey,province
+Tekirdağ,Turkey,province
+Tokat,Turkey,province
+Trabzon,Turkey,province
+Tunceli,Turkey,province
+Şanlıurfa,Turkey,province
+Uşak,Turkey,province
+Van,Turkey,province
+Yozgat,Turkey,province
+Zonguldak,Turkey,province
+Aksaray,Turkey,province
+Bayburt,Turkey,province
+Karaman,Turkey,province
+Kırıkkale,Turkey,province
+Batman,Turkey,province
+Şırnak,Turkey,province
+Bartın,Turkey,province
+Ardahan,Turkey,province
+Iğdır,Turkey,province
+Yalova,Turkey,province
+Karabük,Turkey,province
+Kilis,Turkey,province
+Osmaniye,Turkey,province
+Düzce,Turkey,province
+Autonomous Republic of Crimea,Ukraine,autonomous republic
+Vinnytsia Oblast,Ukraine,oblast
+Volyn Oblast,Ukraine,oblast
+Dnipropetrovsk Oblast,Ukraine,oblast
+Donetsk Oblast,Ukraine,oblast
+Zhytomyr Oblast,Ukraine,oblast
+Zakarpattia Oblast,Ukraine,oblast
+Zaporizhzhia Oblast,Ukraine,oblast
+Ivano-Frankivsk Oblast,Ukraine,oblast
+Kyiv Oblast,Ukraine,oblast
+Kirovohrad Oblast,Ukraine,oblast
+Luhansk Oblast,Ukraine,oblast
+Lviv Oblast,Ukraine,oblast
+Mykolaiv Oblast,Ukraine,oblast
+Odesa Oblast,Ukraine,oblast
+Poltava Oblast,Ukraine,oblast
+Rivne Oblast,Ukraine,oblast
+Sumy Oblast,Ukraine,oblast
+Ternopil Oblast,Ukraine,oblast
+Kharkiv Oblast,Ukraine,oblast
+Kherson Oblast,Ukraine,oblast
+Khmelnytskyi Oblast,Ukraine,oblast
+Cherkasy Oblast,Ukraine,oblast
+Chernivtsi Oblast,Ukraine,oblast
+Chernihiv Oblast,Ukraine,oblast
+Kyiv,Ukraine,city with special status
+Sevastopol,Ukraine,city with special status
+Alabama,United States Of America,state
+Alaska,United States Of America,state
+Arizona,United States Of America,state
+Arkansas,United States Of America,state
+California,United States Of America,state
+Colorado,United States Of America,state
+Connecticut,United States Of America,state
+Delaware,United States Of America,state
+Florida,United States Of America,state
+Georgia,United States Of America,state
+Hawaii,United States Of America,state
+Idaho,United States Of America,state
+Illinois,United States Of America,state
+Iowa,United States Of America,state
+Kansas,United States Of America,state
+Kentucky,United States Of America,state
+Louisiana,United States Of America,state
+Maine,United States Of America,state
+Maryland,United States Of America,state
+Massachusetts,United States Of America,state
+Michigan,United States Of America,state
+Minnesota,United States Of America,state
+Mississippi,United States Of America,state
+Missouri,United States Of America,state
+Montana,United States Of America,state
+Nevada,United States Of America,state
+New Hampshire,United States Of America,state
+New Jersey,United States Of America,state
+New Mexico,United States Of America,state
+New York,United States Of America,state
+North Carolina,United States Of America,state
+North Dakota,United States Of America,state
+Ohio,United States Of America,state
+Oklahoma,United States Of America,state
+Oregon,United States Of America,state
+Pennsylvania,United States Of America,state
+South Carolina,United States Of America,state
+South Dakota,United States Of America,state
+Tennessee,United States Of America,state
+Texas,United States Of America,state
+Utah,United States Of America,state
+Vermont,United States Of America,state
+Virginia,United States Of America,state
+Washington,United States Of America,state
+West Virginia,United States Of America,state
+Wisconsin,United States Of America,state
+Wyoming ,United States Of America,state
+Nebraska,United States Of America,state
+Rhode Island,United States Of America,state
+Indiana,United States Of America,state
+Karakalpakstan,Uzbekistan,region
+Andijan Region,Uzbekistan,region
+Bukhara Region,Uzbekistan,region
+Jizzakh Region,Uzbekistan,region
+Qashqadaryo Region,Uzbekistan,region
+Navoiy Region,Uzbekistan,region
+Namangan Region,Uzbekistan,region
+Samarqand Region,Uzbekistan,region
+Surxondaryo Region,Uzbekistan,region
+Sirdaryo Region,Uzbekistan,region
+Tashkent Region,Uzbekistan,region
+Fergana Region,Uzbekistan,region
+Xorazm Region,Uzbekistan,region
+Tashkent,Uzbekistan,region
+Andean Region,Venezuela,region
+Capital Region,Venezuela,region
+Central Region,Venezuela,region
+Central-Western Region,Venezuela,region
+Eastern Region,Venezuela,region
+Guayana Region,Venezuela,region
+Insular Region,Venezuela,region
+Llanos Region,Venezuela,region
+Zulian Region,Venezuela,region
+Amazonas,Venezuela,state
+Anzoátegui,Venezuela,state
+Apure,Venezuela,state
+Aragua,Venezuela,state
+Barinas,Venezuela,state
+Bolívar,Venezuela,state
+Carabobo,Venezuela,state
+Cojedes,Venezuela,state
+Delta Amacuro,Venezuela,state
+Falcón,Venezuela,state
+Guárico,Venezuela,state
+La Guaira,Venezuela,state
+Lara,Venezuela,state
+Mérida,Venezuela,state
+Miranda,Venezuela,state
+Monagas,Venezuela,state
+Nueva Esparta,Venezuela,state
+Portuguesa,Venezuela,state
+Sucre,Venezuela,state
+Táchira,Venezuela,state
+Trujillo,Venezuela,state
+Yaracuy,Venezuela,state
+Zulia,Venezuela,state
+Bắc Giang province,Vietnam,province
+Bắc Kạn province,Vietnam,province
+Cao Bằng province,Vietnam,province
+Hà Giang province,Vietnam,province
+Lạng Sơn province,Vietnam,province
+Phú Thọ province,Vietnam,province
+Quảng Ninh province,Vietnam,province
+Thái Nguyên province,Vietnam,province
+Tuyên Quang province,Vietnam,province
+Lào Cai province,Vietnam,province
+Yên Bái province,Vietnam,province
+Điện Biên province,Vietnam,province
+Hòa Bình province,Vietnam,province
+Lai Châu province,Vietnam,province
+Sơn La province,Vietnam,province
+Bắc Ninh province,Vietnam,province
+Hà Nam province,Vietnam,province
+Hải Dương province,Vietnam,province
+Hưng Yên province,Vietnam,province
+Nam Định province,Vietnam,province
+Ninh Bình province,Vietnam,province
+Thái Bình province,Vietnam,province
+Vĩnh Phúc province,Vietnam,province
+Hà Nội city,Vietnam,province
+Hải Phòng city,Vietnam,province
+Hà Tĩnh province,Vietnam,province
+Nghệ An province,Vietnam,province
+Quảng Bình province,Vietnam,province
+Quảng Trị province,Vietnam,province
+Thanh Hóa province,Vietnam,province
+Thừa Thiên-Huế province,Vietnam,province
+Đắk Lắk province,Vietnam,province
+Đắk Nông province,Vietnam,province
+Gia Lai province,Vietnam,province
+Kon Tum province,Vietnam,province
+Lâm Đồng province,Vietnam,province
+Bình Định province,Vietnam,province
+Bình Thuận province,Vietnam,province
+Khánh Hòa province,Vietnam,province
+Ninh Thuận province,Vietnam,province
+Phú Yên province,Vietnam,province
+Quảng Nam province,Vietnam,province
+Quảng Ngãi province,Vietnam,province
+Đà Nẵng city,Vietnam,province
+Bà Rịa–Vũng Tàu province,Vietnam,province
+Bình Dương province,Vietnam,province
+Bình Phước province,Vietnam,province
+Đồng Nai province,Vietnam,province
+Tây Ninh province,Vietnam,province
+Hồ Chí Minh City,Vietnam,province
+An Giang province,Vietnam,province
+Bạc Liêu province,Vietnam,province
+Bến Tre province,Vietnam,province
+Cà Mau province,Vietnam,province
+Đồng Tháp province,Vietnam,province
+Hậu Giang province,Vietnam,province
+Kiên Giang province,Vietnam,province
+Long An province,Vietnam,province
+Sóc Trăng province,Vietnam,province
+Tiền Giang province,Vietnam,province
+Trà Vinh province,Vietnam,province
+Vĩnh Long province,Vietnam,province
+Cần Thơ city,Vietnam,province
+Hanoi,Vietnam,municipality
+Ho Chi Minh City,Vietnam,municipality
+Da Nang,Vietnam,municipality
+Haiphong,Vietnam,municipality
+Cần Thơ,Vietnam,municipality
+Bulawayo,Zimbabwe,province
+Harare,Zimbabwe,province
+Manicaland,Zimbabwe,province
+Mashonaland Central,Zimbabwe,province
+Mashonaland East,Zimbabwe,province
+Mashonaland West,Zimbabwe,province
+Masvingo,Zimbabwe,province
+Matabeleland North,Zimbabwe,province
+Matabeleland South,Zimbabwe,province
+Midlands,Zimbabwe,province
+Una-Sana Canton,Bosnia and Herzegovina,canton
+Posavina Canton,Bosnia and Herzegovina,canton
+Tuzla Canton,Bosnia and Herzegovina,canton
+Zenica-Doboj Canton,Bosnia and Herzegovina,canton
+Bosnian-Podrinje Canton Goražde,Bosnia and Herzegovina,canton
+Central Bosnia Canton,Bosnia and Herzegovina,canton
+Herzegovina-Neretva Canton,Bosnia and Herzegovina,canton
+West Herzegovina Canton,Bosnia and Herzegovina,canton
+Sarajevo Canton,Bosnia and Herzegovina,canton
+Canton 10,Bosnia and Herzegovina,canton
+Bijeljina,Bosnia and Herzegovina,municipality
+Prijedor,Bosnia and Herzegovina,municipality
+Doboj,Bosnia and Herzegovina,municipality
+Istočno Sarajevo,Bosnia and Herzegovina,municipality
+Zvornik,Bosnia and Herzegovina,municipality
+Gradiška,Bosnia and Herzegovina,municipality
+Teslić,Bosnia and Herzegovina,municipality
+Prnjavor,Bosnia and Herzegovina,municipality
+Laktaši,Bosnia and Herzegovina,municipality
+Trebinje,Bosnia and Herzegovina,municipality
+Derventa,Bosnia and Herzegovina,municipality
+Novi Grad,Bosnia and Herzegovina,municipality
+Modriča,Bosnia and Herzegovina,municipality
+Kozarska Dubica,Bosnia and Herzegovina,municipality
+Pale,Bosnia and Herzegovina,municipality
+Bratunac,Bosnia and Herzegovina,municipality
+Kotor Varoš,Bosnia and Herzegovina,municipality
+Foča,Bosnia and Herzegovina,municipality
+Srbac,Bosnia and Herzegovina,municipality
+Šamac,Bosnia and Herzegovina,municipality
+Mrkonjić Grad,Bosnia and Herzegovina,municipality
+Brod,Bosnia and Herzegovina,municipality
+Ugljevik,Bosnia and Herzegovina,municipality
+Čelinac,Bosnia and Herzegovina,municipality
+Lopare,Bosnia and Herzegovina,municipality
+Istočna Ilidža,Bosnia and Herzegovina,municipality
+Srebrenica,Bosnia and Herzegovina,municipality
+Nevesinje,Bosnia and Herzegovina,municipality
+Sokolac,Bosnia and Herzegovina,municipality
+Vlasenica,Bosnia and Herzegovina,municipality
+Milići,Bosnia and Herzegovina,municipality
+Bileća,Bosnia and Herzegovina,municipality
+Rogatica,Bosnia and Herzegovina,municipality
+Višegrad,Bosnia and Herzegovina,municipality
+Istočno Novo Sarajevo,Bosnia and Herzegovina,municipality
+Šipovo,Bosnia and Herzegovina,municipality
+Kneževo,Bosnia and Herzegovina,municipality
+Gacko,Bosnia and Herzegovina,municipality
+Rudo,Bosnia and Herzegovina,municipality
+Stanari,Bosnia and Herzegovina,municipality
+Šekovići,Bosnia and Herzegovina,municipality
+Petrovo,Bosnia and Herzegovina,municipality
+Ribnik,Bosnia and Herzegovina,municipality
+Osmaci,Bosnia and Herzegovina,municipality
+Kostajnica,Bosnia and Herzegovina,municipality
+Pelagićevo,Bosnia and Herzegovina,municipality
+Čajniče,Bosnia and Herzegovina,municipality
+Vukosavlje,Bosnia and Herzegovina,municipality
+Donji Žabar,Bosnia and Herzegovina,municipality
+Han Pijesak,Bosnia and Herzegovina,municipality
+Ljubinje,Bosnia and Herzegovina,municipality
+Novo Goražde,Bosnia and Herzegovina,municipality
+Oštra Luka,Bosnia and Herzegovina,municipality
+Berkovići,Bosnia and Herzegovina,municipality
+Trnovo,Bosnia and Herzegovina,municipality
+Kalinovik,Bosnia and Herzegovina,municipality
+Krupa na Uni,Bosnia and Herzegovina,municipality
+Jezero,Bosnia and Herzegovina,municipality
+Istočni Stari Grad,Bosnia and Herzegovina,municipality
+Petrovac,Bosnia and Herzegovina,municipality
+Kupres,Bosnia and Herzegovina,municipality
+Istočni Mostar,Bosnia and Herzegovina,municipality
+Istočni Drvar,Bosnia and Herzegovina,municipality
+Blagoevgrad,Bulgaria,province
+Burgas,Bulgaria,province
+Dobrich,Bulgaria,province
+Gabrovo,Bulgaria,province
+Haskovo,Bulgaria,province
+Kardzhali,Bulgaria,province
+Kyustendil,Bulgaria,province
+Lovech,Bulgaria,province
+Montana,Bulgaria,province
+Pazardzhik,Bulgaria,province
+Pernik,Bulgaria,province
+Pleven,Bulgaria,province
+Plovdiv,Bulgaria,province
+Razgrad,Bulgaria,province
+Ruse,Bulgaria,province
+Shumen,Bulgaria,province
+Silistra,Bulgaria,province
+Sliven,Bulgaria,province
+Smolyan,Bulgaria,province
+Sofia City,Bulgaria,province
+Sofia Province,Bulgaria,province
+Stara Zagora,Bulgaria,province
+Targovishte,Bulgaria,province
+Varna,Bulgaria,province
+Veliko Tarnovo,Bulgaria,province
+Vidin,Bulgaria,province
+Vratsa,Bulgaria,province
+Yambol,Bulgaria,province
+Sughd Region ,Tajikistan,region
+Districts under Republic Subordination,Tajikistan,district
+Khatlon Region,Tajikistan,region
+Gorno-Badakhshan Autonomous Region,Tajikistan,autonomous region
+Dushanbe,Tajikistan,capital city
