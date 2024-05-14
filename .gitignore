@@ -6,8 +6,9 @@ suivi_requetes.ods
 figures/resultats/
 collected_data/
 analysis/
-R/clustering_map_scatterpies.qmd
-R/clustering_correlations.qmd
+input_data/ignore
+clustering_map_scatterpies.qmd
+clustering_correlations.qmd
 rainette_plot_edited.qmd
-R/localness.qmd
-R/specificity.qmd
+localness.qmd
+specificity.qmd
