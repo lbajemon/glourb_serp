@@ -3,7 +3,7 @@
 .RData
 .Ruserdata
 suivi_requetes.ods
-0_figures/resultats/
+figures/resultats/
 2_get_data/
 3_frequency/
 4_clustering/
