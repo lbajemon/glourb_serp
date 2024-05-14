@@ -1,0 +1,235 @@
+---
+title: "Search Engine Pages Results: Clustering results on maps"
+format: html
+editor: visual
+author: Liolia Bajemon
+---
+
+Set-up
+
+```{r}
+library(leaflet)
+library(leaflet.extras)
+library(leaflet.providers)
+library(leaflegend)
+library(ggplot2)
+library(scatterpie)
+library(tmaptools)
+```
+
+Read data
+
+```{r read_data}
+data = read.csv("4_clustering/selection_50_cities/results_clustering6.csv") %>% 
+  mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", ".")))
+
+# only keep europe 
+data_europe = data %>% subset(continent == "EU")
+```
+
+```{r def_class}
+# define a class name and a color for each class
+tib_classes = tibble::tribble(~class, ~class_name, ~color, 
+                              "class_1", "résultats non significatifs", "white",
+                              "class_2", "internet", "#e7298a", 
+                              "class_3", "réseaux sociaux", "#BCBD22FF",
+                              "class_4", "résultats non significatifs", "white",
+                              "class_5", "loisirs", "#fb9a99",
+                              "class_6", "culture, patrimoine", "#e31a1c",
+                              "class_7", "tourisme, voyage", "#b15928",
+                              "class_8", "enjeu portuaire/côtier", "#33a02c",
+                              "class_9", "ouvrages hydrauliques", "#17BECFFF",
+                              "class_10", "localisation géographique", "#ffd92f",
+                              "class_11", "écoulement", "#b2df8a" ,
+                              "class_12", "informations descriptives, généralités", "#6a3d9a",
+                              "class_13", "hydrologie", "#a6cee3",
+                              "class_14", "ressource en eau", "#1f78b4",
+                              "class_15", "scientifique/universitaire", "#ff7f00")
+```
+
+##### **b. Calculation of the specificity scores based on the clustering**
+
+```{r specificity_score_clustering}
+# calculate the specifity scores
+spec_score = mixr::tidy_specificities(serp_segments,
+                                cityname,
+                                class_name)
+
+# instead, get the maximum specifity score for each city and its associated class
+serp_max = spec_score %>% 
+  group_by(cityname) #%>% 
+  filter(spec == max(spec, na.rm = TRUE)) 
+colnames(serp_max) = c("urban_aggl", "class_name", "spec", "n")
+
+# and write it in our original df 
+df_spec = left_join(data_city_river, serp_max, by = "urban_aggl") 
+df_spec = df_spec %>% 
+  mutate(Longitude = str_replace_all(Longitude, ",", ".")) %>% 
+  mutate(Latitude = str_replace_all(Latitude, ",", ".")) %>% 
+  mutate(Longitude = as.numeric(Longitude)) %>% 
+  mutate(Latitude = as.numeric(Latitude))
+
+# for cities with specificity scores < 2, the results are not adequate (Pincemin, 2023)
+df_spec = df_spec %>% 
+  mutate(classe = case_when(
+    spec < 2 ~ "résultats non significatifs",
+    spec >= 2 ~ class_name)
+    )
+df_spec = df_spec %>% 
+  mutate(classe = str_replace_all(classe, "outliers", "résultats non significatifs"))
+```
+
+Finally, we can plot the results on a map:
+
+```{r map_clusters}
+# and plot the results on a map 
+
+# define palette
+f_pal <- colorFactor(palette = c("#6a3d9a",
+                                 "#17BECFFF",
+                                 "#ff7f00",
+                                 "#a6cee3", 
+                                 "#1f78b4", 
+                                 "#b2df8a", 
+                                 "#fb9a99",
+                                 "#ffd92f", 
+                                 "#33a02c",
+                                 "#e7298a",
+                                 "#b15928", 
+                                 "#e31a1c",
+                                 "white",
+                                 "#BCBD22FF"
+                                 ), 
+                     levels = c("informations descriptives, généralités", 
+                               "ouvrages hydrauliques",    
+                               "scientifique/universitaire", 
+                               "hydrologie", 
+                               "ressource en eau", 
+                               "écoulement", 
+                               "loisirs", 
+                               "localisation géographique", 
+                               "enjeu portuaire/côtier", 
+                               "internet", 
+                               "tourisme, voyage", 
+                               "culture, patrimoine",
+                               "résultats non significatifs",
+                               "réseaux sociaux"
+                              )) 
+# define title
+tag.map.title <- tags$style(HTML("
+  .leaflet-control.map-title { 
+    transform: translate(-50%,20%);
+    position: topright;
+    left: 50%;
+    text-align: center;
+    padding-left: 10px; 
+    padding-right: 10px; 
+    background: rgba(50, 111, 168,0.5);
+    #font-weight: bold;
+    font-size: 18px;
+    color: white;
+  }
+"))
+title <- tags$div(
+  tag.map.title, HTML("<td align=justify><b>Les sujets ressortant sur les pages de résultats de moteur de recherche (SERP)</b><em><br> (requête de type 'ville AND rivière' et score de spécificité > 2)</em></td>"))
+
+leaf <- leaflet(data = df_spec, options = leafletOptions(zoomControl = TRUE, minZoom = 1, maxZoom = 5)) %>% 
+  addProviderTiles("CartoDB.PositronNoLabels") %>% 
+  addCircleMarkers(~Longitude, 
+                   ~Latitude, 
+                   color = "black",
+                   radius = 2.5) %>% 
+  addCircleMarkers(~Longitude, 
+                   ~Latitude,
+                   label = df_spec$urban_aggl,
+                   color = ~f_pal(df_spec$classe),
+                   opacity = 1, 
+                   radius = 2) %>% 
+  # add title
+  addControl(title, position = "topright") %>% 
+  # add legend
+  addLegend(title = NULL, pal = f_pal, values = ~df_spec$classe, opacity = 1, position = "bottomleft") %>% 
+  addScaleBar(position = "bottomright", 
+              options = scaleBarOptions(metric = TRUE, imperial = FALSE))                           
+```
+
+##### **c. A city and its clusters**
+
+Instead of calculating the specificity score, we can also look at a given city and see the represented clusters.
+
+```{r clusters_by_city}
+serp_absolu = spec_score
+# replace NA values by 0, i.e. no snippet falls in this cluster
+serp_absolu[is.na(serp_absolu)] <- 0
+
+# put the colors of each class in the df
+tib_colors = tib_clusters[-4,-1] # one class corresponds to one colour
+serp_test = left_join(serp_absolu, tib_colors, by = "class_name", relationship = "many-to-many") 
+colnames(serp_absolu) = c("cityname", "class_name", "spec", "n", "couleur")
+  
+ma_ville = "Rosario"
+mon_plot = subset(serp_absolu, serp_absolu$cityname == ma_ville) %>% # our data
+    mutate(class_name = fct_reorder(class_name, n)) %>% # rearrange in decreasing order
+    ggplot(aes(x = class_name, y = n, fill = class_name)) + 
+    geom_col(show.legend = FALSE) +
+    scale_fill_manual(values = c("#6a3d9a",
+                                 "#17BECFFF",
+                                 "#ff7f00",
+                                 "#a6cee3", 
+                                 "#1f78b4", 
+                                 "#b2df8a", 
+                                 "#fb9a99",
+                                 "#ffd92f", 
+                                 "#33a02c",
+                                 "#e7298a",
+                                 "#b15928", 
+                                 "#e31a1c",
+                                 "white",
+                                 "#BCBD22FF"
+                                 ), breaks = c("informations descriptives, généralités", 
+                               "ouvrages hydrauliques",    
+                               "scientifique/universitaire", 
+                               "hydrologie", 
+                               "ressource en eau", 
+                               "écoulement", 
+                               "tourisme (activités)", 
+                               "localisation géographique", 
+                               "enjeu portuaire/côtier", 
+                               "internet", 
+                               "tourisme (voyage)", 
+                               "tourisme (culturel)",
+                               "résultats non significatifs", "réseaux sociaux"))+
+    coord_flip() + # flip x and y coordinates 
+    labs(x = "",
+         y = "nombre de snippets") +
+    ggtitle(paste("Discours sur l'eau à", ma_ville)) +
+    theme_bw()
+```
+
+### Map with pie charts
+
+```{r}
+# define palette (colors are from colorbrewer - Pastel1)
+colors = get_brewer_pal("Pastel1", 7)
+
+# define base map
+world = map_data("world") 
+# focus on Europe
+europe = subset(world, region %in% c("Albania", "Andorra", "Armenia", "Austria", "Azerbaijan", "Belarus", "Belgium", "Bosnia and Herzegovina", "Bulgaria","Croatia", "Cyprus", "Czechia","Denmark","Estonia","Finland","France","Georgia", "Germany", "Greece","Hungary","Iceland", "Ireland", "Italy","Kazakhstan", "Kosovo", "Latvia","Liechtenstein",  "Lithuania", "Luxembourg","Malta","Moldova","Monaco","Montenegro", "Macedonia", "Netherlands","Norway","Poland","Portugal","Romania", "Russia","San Marino","Serbia","Slovakia","Slovenia","Spain","Sweden","Switzerland","Turkey","Ukraine","UK","Vatican")) # get countries for each continent: https://warin.ca/posts/rcourse-datavisualizationwithr-maps/ 
+
+ggplot(europe, aes(x = long, y = lat, group = group)) + # base map 
+  geom_polygon(fill = 'white', color = 'black') + # colors of base map 
+  geom_scatterpie(aes(x = longitude, y = latitude, r = 1), data = data_europe,
+                           cols = c("cl1","cl2","cl3","cl4","cl5","cl6","clNA"), color = NA) + # plot scatterpies  
+  scale_fill_manual(values = colors) + # specify colors 
+  coord_fixed(xlim = c(-10, 55), ylim = c(35,65)) + # fix limit coordinates
+  theme(panel.background = element_rect(fill = "#F8F8F8"),
+        panel.border = element_rect(fill = NA, color = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_blank(),
+        axis.title = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank())
+```

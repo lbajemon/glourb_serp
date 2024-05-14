@@ -1,0 +1,396 @@
+---
+title: "Search Engine Pages Results: Lemma occurrence calculation"
+format: html
+editor: visual
+author: "Liolia Bajemon & Lise Vaudor"
+output: rmdformats::<material>
+---
+
+```{r setup}
+library(tidyverse)
+library(httr)
+library(jsonlite)
+library(tidytext)
+library(forcats)
+library(ggplot2)
+library(ggpattern)
+library(mixr)
+library(remotes)
+library(mixr)
+library(polyglotr)
+```
+
+## Description
+
+Thanks to the ![](https://dka575ofm4ao0.cloudfront.net/pages-transactional_logos/retina/211386/logo_color_transparent_background.png){width="105" height="17"} API ([access link](https://get.valueserp.com/try-it-free/)), data relative to Google searches have been gathered (see this first [document](https://github.com/lbajemon/glourb_serp)) for approximately 300 combinations of agglomerations and rivers. This document aims to conduct a first analysis on the resulting data, by calculating the number of occurrences of each lemma.
+
+```{r retrieve_data}
+data_city_river = read.csv("1_input/data_city_river.csv")
+```
+
+## Clean data
+
+The aim is to get the number of lemmas occurrence for each of our combinations. We will use an English lexicon, which indicates the lemma for each word (e.g. "is" becomes "be" and "rivers" becomes "river"):
+
+```{r get_lexicon}
+lexen = get_lexicon("en")
+
+country_names = data_city_river[,5] %>% #keep only the country names
+  unique() %>%
+  strsplit(split = " ") %>% # split the name of the country if necessary (e.g. "Republic of the Congo" gives "Republic" "of "the" "Congo")
+  unlist() %>% 
+  as_tibble() %>% # convert to tibble
+  set_names("word") %>% 
+  mutate(word = str_replace_all(word, "\\(\\)", "")) %>% # remove special char
+  mutate(word = str_replace_all(word, ",", "")) %>% 
+  mutate(word = str_replace_all(word, "\\(", "")) %>% 
+  mutate(word = str_replace_all(word, "\\)", "")) %>% 
+  mutate(word = str_replace_all(word, "[.]", "")) %>% 
+  mutate(word = tolower(word)) %>% 
+  # remove a few words
+  subset(word != c("the", "republic", "of", "and", "autonomous", "south", "north", "central")) %>% 
+  # add a few country names which have been split
+  rbind("vietnam") %>% 
+  rbind("ivory") %>% 
+  rbind("ivoire")
+```
+
+#### 1. In English
+
+First let's deal with the data resulting from an English research query:
+
+```{r def_get_words}
+get_words = function(fid, cityname, rivername){
+  
+  ## First, get dataframe with results
+  df = read.csv(glue::glue("2_get_data/english/clean_data/clean_{fid}.csv")) 
+  
+  # get all forms of rivername and cityname to remove them from the snippets
+  # for example with "N'Djaména" 
+  cityname_r1 = tolower(stringi::stri_trans_general(cityname, "latin-ascii")) # n'djamena
+  cityname_r2 = tolower(gsub('[[:punct:] ]+', ' ', cityname)) # n djaména
+  cityname_r3 = tolower(gsub('[[:punct:] ]+', ' ', stringi::stri_trans_general(cityname, "latin-ascii"))) # n djamena
+  cityname_r4 = tolower(gsub('[[:punct:] ]+', '', cityname)) # ndjaména
+  cityname_r5 = tolower(gsub('[[:punct:] ]+', '', stringi::stri_trans_general(cityname, "latin-ascii"))) # ndjamena
+  rivername_r1 = tolower(stringi::stri_trans_general(rivername, "latin-ascii")) 
+  rivername_r2 = tolower(gsub('[[:punct:] ]+', ' ', rivername)) 
+  rivername_r3 = tolower(gsub('[[:punct:] ]+', ' ', stringi::stri_trans_general(rivername, "latin-ascii"))) 
+  rivername_r4 = tolower(gsub('[[:punct:] ]+', '', rivername)) 
+  rivername_r5 = tolower(gsub('[[:punct:] ]+', '', stringi::stri_trans_general(rivername, "latin-ascii"))) 
+  # combine everything in a df
+  names_r = data.frame(matrix(ncol = 1, nrow = 0))
+  names_r = names_r %>% 
+    rbind(cityname_r1, cityname_r2, cityname_r3, cityname_r4, cityname_r5, rivername_r1, rivername_r2, rivername_r3, rivername_r4, rivername_r5) 
+  colnames(names_r) = "word"
+  names_r = names_r %>% 
+    mutate(word = strsplit(word, " ")) %>% 
+    unnest(word)  
+  names_r = names_r %>% 
+    mutate(word = strsplit(word, split = ";", fixed = TRUE)) %>% 
+    unnest(word) %>% 
+    unique()
+  
+  ## Try and get all proper nouns
+  proper_fid = df %>% 
+    # deal with special characters
+    # e.g. Rhône becomes Rhone 
+    mutate(trans_snippet = stringi::stri_trans_general(trans_snippet, "latin-ascii")) %>% 
+    # we consider the words starting with a capital letter
+    mutate(word = str_extract_all(snippet, "[A-Z][a-z]*")) %>% 
+    select(word) %>% 
+    tidyr::unnest(cols = c(word)) %>% # get one row per word
+    mutate(basis = str_to_lower(word)) %>% 
+    group_by(word, basis)  %>% 
+    dplyr::summarise(n = n()) %>% # group by words
+    arrange(desc(n)) %>% 
+    # see if these capitalized words appear (uncapitalized) in the lexicon
+    left_join(lexen, by = c("basis" = "word")) %>% 
+    # if not, then we can probably consider they are proper nouns
+    filter(is.na(type)) %>% 
+    select(word, n) 
+
+  ## Now, we consider all words
+  df_words = df %>% 
+    unnest_tokens(word, trans_snippet, to_lower = TRUE) %>% # everything to lowercase
+    # get lemma of each word
+    left_join(lexen, by = "word") %>% 
+    group_by(lemma) %>% 
+    dplyr::summarise(n = n()) %>% 
+    arrange(desc(n)) %>% 
+    select(word = lemma, n) %>% 
+    na.omit() %>% 
+    # remove proper nouns
+    anti_join(proper_fid, by = "word") %>%  
+    # remove the words corresponding to days or months
+    filter(!(word %in% c("jan","feb","mar","apr","may","jun",
+                     "jul","aug","sep","oct","nov","dec",
+                     "january","february","march","april",
+                     "june","july","august","september",
+                     "october","november","december",
+                     "monday","tuesday","wednesday",
+                     "thursday","friday","saturday","sunday"))) %>% 
+    # remove stop words
+    anti_join(stop_words, by = "word") %>% 
+    # remove country names
+    anti_join(country_names, by = "word") %>% 
+    # remove river and city names
+    anti_join(names_r, by = "word") %>% 
+    arrange(desc(n)) %>% 
+    # remove solitary letters
+    mutate(word = gsub("\\b[a-zA-Z]\\b", "", word)) %>% 
+    # remove empty rows
+    subset(word != "") %>% 
+    na.omit()
+  
+  # save the results  
+  readr::write_csv(df_words,
+                   glue::glue("3_occurence/english/lemma_freq/word_{fid}.csv"))
+  return()
+}
+```
+
+Now let's run the function:
+
+```{r, run_get_words}
+data_city_river %>% 
+  mutate(data = purrr::pmap(list(fid = FID,
+                                 cityname = urban_aggl_en,
+                                rivername = main_river),
+                            get_words))
+```
+
+#### 2. In the local language(s)
+
+It's basically the same process as for the query in English:
+
+```{r def_get_words_hl}
+get_words_hl = function(fid, cityname, rivername, hl){
+  
+  ## First, get dataframe with results
+  df = read.csv(glue::glue("2_get_data/hl/clean_data/clean_{fid}_{hl}.csv")) 
+  
+  # get all forms of rivername and cityname to remove them from the snippets
+  # for example with "N'Djaména" 
+  cityname_r1 = tolower(stringi::stri_trans_general(cityname, "latin-ascii")) # n'djamena
+  cityname_r2 = tolower(gsub('[[:punct:] ]+', ' ', cityname)) # n djaména
+  cityname_r3 = tolower(gsub('[[:punct:] ]+', ' ', stringi::stri_trans_general(cityname, "latin-ascii"))) # n djamena
+  cityname_r4 = tolower(gsub('[[:punct:] ]+', '', cityname)) # ndjaména
+  cityname_r5 = tolower(gsub('[[:punct:] ]+', '', stringi::stri_trans_general(cityname, "latin-ascii"))) # ndjamena
+  rivername_r1 = tolower(stringi::stri_trans_general(rivername, "latin-ascii")) 
+  rivername_r2 = tolower(gsub('[[:punct:] ]+', ' ', rivername)) 
+  rivername_r3 = tolower(gsub('[[:punct:] ]+', ' ', stringi::stri_trans_general(rivername, "latin-ascii"))) 
+  rivername_r4 = tolower(gsub('[[:punct:] ]+', '', rivername)) 
+  rivername_r5 = tolower(gsub('[[:punct:] ]+', '', stringi::stri_trans_general(rivername, "latin-ascii"))) 
+  # combine everything in a df
+  names_r = data.frame(matrix(ncol = 1, nrow = 0))
+  names_r = names_r %>% 
+    rbind(cityname_r1, cityname_r2, cityname_r3, cityname_r4, cityname_r5, rivername_r1, rivername_r2, rivername_r3, rivername_r4, rivername_r5) 
+  colnames(names_r) = "word"
+  names_r = names_r %>% 
+    mutate(word = strsplit(word, " ")) %>% 
+    unnest(word)  
+  names_r = names_r %>% 
+    mutate(word = strsplit(word, split = ";", fixed = TRUE)) %>% 
+    unnest(word) %>% 
+    unique()
+  
+  ## Try and get all proper nouns
+  proper_fid = df %>% 
+    # deal with special characters
+    # e.g. Rhône becomes Rhone 
+    mutate(trans_snippet = stringi::stri_trans_general(trans_snippet, "latin-ascii")) %>% 
+    # we consider the words starting with a capital letter
+    mutate(word = str_extract_all(snippet, "[A-Z][a-z]*")) %>% 
+    select(word) %>% 
+    tidyr::unnest(cols = c(word)) %>% # get one row per word
+    mutate(basis = str_to_lower(word)) %>% 
+    group_by(word, basis)  %>% 
+    dplyr::summarise(n = n()) %>% # group by words
+    arrange(desc(n)) %>% 
+    # see if these capitalized words appear (uncapitalized) in the lexicon
+    left_join(lexen, by = c("basis" = "word")) %>% 
+    # if not, then we can probably consider they are proper nouns
+    filter(is.na(type)) %>% 
+    select(word, n) 
+
+  ## Now, we consider all words
+  df_words = df %>% 
+    unnest_tokens(word, trans_snippet, to_lower = TRUE) %>% # everything to lowercase
+    # get lemma of each word
+    left_join(lexen, by = "word") %>% 
+    group_by(lemma) %>% 
+    dplyr::summarise(n = n()) %>% 
+    arrange(desc(n)) %>% 
+    select(word = lemma, n) %>% 
+    na.omit() %>% 
+    # remove proper nouns
+    anti_join(proper_fid, by = "word") %>%  
+    # remove the words corresponding to days or months
+    filter(!(word %in% c("jan","feb","mar","apr","may","jun",
+                     "jul","aug","sep","oct","nov","dec",
+                     "january","february","march","april",
+                     "june","july","august","september",
+                     "october","november","december",
+                     "monday","tuesday","wednesday",
+                     "thursday","friday","saturday","sunday"))) %>% 
+    # remove stop words
+    anti_join(stop_words, by = "word") %>% 
+    # remove country names
+    anti_join(country_names, by = "word") %>% 
+    # remove river and city names
+    anti_join(names_r, by = "word") %>% 
+    arrange(desc(n)) %>% 
+    # remove solitary letters
+    mutate(word = gsub("\\b[a-zA-Z]\\b", "", word)) %>% 
+    # remove empty rows
+    subset(word != "") %>% 
+    na.omit()
+  
+  # save the results  
+  readr::write_csv(df_words,
+                   glue::glue("3_frequency/hl/lemma_freq/word_{fid}_{hl}.csv"))
+  return()
+}
+```
+
+```{r run_get_words_hl}
+
+#### define in which language we will run the functions
+# the languages used in a city are in the 9th to 14th columns
+
+for(i in 1:6) {
+  n_hl = 7 + i 
+  data_subset = filter(data_city_river, ((data_city_river[, n_hl] != "no data") & ((data_city_river[, n_hl] != "en") | data_city_river[, 7] != "us")))
+  data = select(.data = data_subset, c(1:7, n_hl, 14, 21))
+  colnames(data) = c("fid", "latitude", "longitude", "urban_aggl", "country_en", "country_fr", "gl", "hl", "cityname", "rivername")
+
+data %>% 
+  mutate(data = purrr::pmap(list(fid = fid,
+                                 cityname = cityname,
+                                 rivername = rivername,
+                                 hl = hl),
+                            get_words_hl))
+  }
+```
+
+### Plot results
+
+Finally let's display our results for all the combinations:
+
+#### 1. In English
+
+```{r show_results}
+show_results = function(fid, cityname, rivername, urban_aggl){
+  
+  # read the data
+  freq = read.csv(file = glue::glue("3_occurence/english/lemma_freq/word_{fid}.csv"))
+  requete = paste("Requête : « ", rivername, " AND ", cityname, " »", sep = "")
+  requete = str_replace_all(requete, ";", " OR ")
+  
+  # select the data we want to display
+  freq_cut = freq[freq$n > 1,] # only show the words which appear at least twice
+  freq_cut = freq_cut[1:30,] # only display 30 words so it's more readable
+ 
+  # make the plot
+  myplot = freq_cut %>% # our data
+    mutate(word = fct_reorder(word, n)) %>% # rearrange in decreasing order
+    ggplot(mapping = aes(x = word,
+                         y = n)) + 
+    geom_col(fill = "#beaed4", position = "stack") +
+    coord_flip() + # flip x and y coordinates 
+    labs(x = "",
+         y = "fréquence",
+         caption = requete) +
+    ggtitle(urban_aggl) +
+    theme_bw(base_family = "CenturySch")
+
+  # save the plot
+  ggsave(filename = paste("plot_",fid,".png"), plot = myplot, path = "3_frequency/english/plots/francais/", scale = 1)
+  return()
+} 
+```
+
+```{r run_show_results}
+data_city_river %>% 
+  mutate(data = purrr::pmap(list(fid = FID,
+                                 cityname = urban_aggl_en,
+                                 rivername = main_river, 
+                                 urban_aggl = urban_aggl),
+                            show_results))
+```
+
+#### 2. In the local language(s)
+
+```{r show_results_hl}
+show_results_hl = function(cityname, rivername, hl){
+  
+  # if the file already exists, the function is not executed
+  file = glue::glue("3_occurence/hl/plots/francais/{cityname}_{hl}.png")
+  if(!file.exists(file)){
+  
+  # get the table containing all the languages
+  data_language = read.csv("1_input/languages_glourb_code.csv", sep = ";")
+  # and select the name of the language we are interested in 
+  language = data_language[data_language["code"] == hl, 1]
+    
+  # read the data
+  freq = read.csv(file = glue::glue("3_occurence/hl/lemma_freq/word_{cityname}_{hl}.csv"))
+  
+  # select the data we want to display
+  freq_cut = freq[freq$n > 1,] # only show the words which appear at least twice
+  freq_cut = freq_cut[1:30,] # only display 20 words so it's more readable
+ 
+  # retrieve the translated words
+   city_hl = polyglotr::google_translate(cityname, target_language = hl, source_language = "en") 
+   river_and_rivername = paste(rivername, " river", sep ="")
+   river_hl = polyglotr::google_translate(river_and_rivername, target_language = hl, source_language = "en") 
+  
+  png(file = glue::glue("3_occurence/hl/plots/francais/{cityname}_{hl}.png", sep=""), res = 100) # indicate the path to save the plot 
+  
+  # make the plot
+  myplot = freq_cut %>% # our data
+    mutate(word = fct_reorder(word, n)) %>% # rearrange in decreasing order
+    ggplot(mapping = aes(x = word, # create the plot
+                         y = n, 
+                         fill = (geoname == "TRUE"))) + 
+    geom_col() +
+    scale_fill_manual("Lieu", values = c("lightsalmon", "yellowgreen")) +
+    coord_flip() + # flip x and y coordinates 
+    labs(title = paste("Requête : « ", river_hl, " AND ", city_hl, " »", sep = ""), 
+    subtitle = paste("(Nom de la rivière et nom de la ville en ", language, ")", sep = ""),
+         x = "lemme",
+         y = "fréquence"
+    ) + 
+    theme_classic() + 
+    theme(plot.subtitle = element_text(face = "italic"))
+  
+  print(myplot) # display the plot
+  dev.off() # Close the plot and save it 
+  
+  return(myplot)
+  } 
+}
+```
+
+```{r run_show_results_hl}
+
+#### define in which language we will run the functions
+# the languages used in a city are in the 9th to 14th columns
+
+for(i in 9:14) {
+  # only select the cities which have the ith language we're interested in
+  # e.g. the select which have a fourth language (hl4)
+  data_subset = filter(data_city_river, (!is.na(data_city_river[,i])) & (data_city_river[,i] != ""))
+  # then only keep the column containing the ith language we're interested in
+  # e.g. hl4 
+  data = select(.data = data_subset, 1:8, i)  
+  hl = data[,9]
+
+#### RESULTS
+data %>% 
+  mutate(data = purrr::pmap(list(cityname = cityname,
+                               rivername = rivername,
+                               hl = hl),
+                         show_results_hl))
+  }
+```

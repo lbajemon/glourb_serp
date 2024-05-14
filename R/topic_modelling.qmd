@@ -1,0 +1,66 @@
+---
+title: "SERP: topic modelling"
+author: "Liolia Bajemon"
+format: html
+editor: visual
+---
+
+#### Set-up
+
+```{r}
+library(topicmodels)
+library(tm)
+library(tidyr)
+library(ggplot2)
+library(dplyr)
+```
+
+```{r topic_modelling}
+
+# read data
+dataset = read.csv("2_get_data/english/df_tokenized_snippets.csv")
+mycorpus = corpus(dataset, text_field = "tokenized")
+dfm = dfm(mycorpus)
+
+# tidy data (= one row per word)
+data_tidy = tidy(dfm)
+
+# cast document term matrix from tidied data
+dtm = data_tidy %>% 
+  cast_dtm(document, term, count)
+
+# topic modelling
+data_lda = LDA(dtm, k = 10, control = list(seed = 1545))
+
+# topics probabilities
+data_topics = tidy(data_lda, matrix = "beta")
+
+# plot most common terms
+data_top_terms <- data_topics %>%
+  group_by(topic) %>%
+  slice_max(beta, n = 20) %>% 
+  ungroup() %>%
+  arrange(topic, -beta)
+
+plot = data_top_terms %>% 
+  mutate(term = reorder_within(term, beta, topic)) %>% 
+  ggplot(aes(beta, term, fill = factor(topic))) + 
+  geom_col(show.legend = FALSE) + 
+  facet_wrap(~ topic, scales = "free") +
+  scale_y_reordered()
+```
+
+*source:* <https://www.tidytextmining.com/topicmodeling>
+
+#### Find sentiments (positive and negative):
+
+```{r}
+
+# find sentiments
+data_sentiments = data_tidy %>% 
+  inner_join(get_sentiments("bing"), by = c(term = "word")) %>% 
+  count(document, sentiment, wt = count) %>% 
+  pivot_wider(names_from = sentiment, values_from = n, values_fill = 0) %>% 
+  mutate(sentiment = positive - negative) %>% 
+  arrange(sentiment)
+```
