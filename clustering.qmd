@@ -78,11 +78,13 @@ run_dhc = function(df, dfmatrix, n_class, min_members, corpus){
 # plot
   plot = rainette_plot(
     dhc, dfmatrix, k,
-    n_terms = 20,
+    n_terms = 3,
     free_scales = FALSE,
     measure = "chi2",
     show_negative = FALSE,
-    text_size = 12
+    text_size = 12,
+    cluster_label = c("Internet", "Hydrography", "Classe 3"),
+    colors = c("red","slateblue","forestgreen")
   )
   ggsave(glue::glue("analysis/clustering/clustering_k{k}.png"), plot, width = 500, height = 250, units = "mm", limitsize = FALSE)
 
@@ -138,7 +140,8 @@ summary_clusters = function(df){
 
 ```{r run_functions}
 # read datasets
-data_city_river = read.csv("input_data/data_city_river.csv")
+data_city_river = read.csv(path, sep = ",", header = TRUE, stringsAsFactors = FALSE) 
+coucou = read.csv("input_data/data_city_river.csv")
 df = read.csv("collected_data/english/df_tokenized_snippets.csv") %>% 
   # remove the tokenized snippets which include locations
   # through trial and error we found better results without including the locations
