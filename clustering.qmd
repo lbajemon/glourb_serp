@@ -26,8 +26,11 @@ library(tokenizers)
 library(lexicon)
 library(dplyr)
 library(quanteda)
+install.packages("rainette", repos = "https://juba.r-universe.dev")
 library(rainette)
 library(rlist)
+library(tmaptools)
+library(ggplot2)
 set.seed(1204) # set seed to get reproductible results
 ```
 
@@ -62,7 +65,7 @@ calc_dtm = function(tokens){
 #### b. Apply clustering
 
 ```{r dhc, warning = FALSE, message = FALSE}
-run_dhc = function(df, dfmatrix, n_class, min_members, corpus){
+run_dhc = function(df, dfmatrix, n_class, min_members, corpus, mylabels, mycolors){
 
   # df: original dataset
   # dfmatrix: the document feature matrix calculated beforehand
@@ -78,20 +81,20 @@ run_dhc = function(df, dfmatrix, n_class, min_members, corpus){
 # plot
   plot = rainette_plot(
     dhc, dfmatrix, k,
-    n_terms = 3,
+    n_terms = 30,
     free_scales = FALSE,
-    measure = "chi2",
+    measure = "frequency",
     show_negative = FALSE,
     text_size = 12,
-    cluster_label = c("Internet", "Hydrography", "Classe 3"),
-    colors = c("red","slateblue","forestgreen")
+    cluster_label = mylabels, 
+    colors = mypalette
   )
   ggsave(glue::glue("analysis/clustering/clustering_k{k}.png"), plot, width = 500, height = 250, units = "mm", limitsize = FALSE)
 
   # save the results (i.e. most frequent terms for each cluster)
   groups = cutree_rainette(dhc, k = n_class)
   groups_stats = rainette_stats(groups, dfmatrix)
-  list.save(groups_stats, glue::glue("4_clustering/resultats_statistiques_k{k}.rds"))
+  list.save(groups_stats, glue::glue("analysis/clustering/resultats_statistiques_k{k}.rds"))
   
   # for each element of the corpus (i.e. each snippet)
   # write its class according to the clustering
@@ -140,8 +143,7 @@ summary_clusters = function(df){
 
 ```{r run_functions}
 # read datasets
-data_city_river = read.csv(path, sep = ",", header = TRUE, stringsAsFactors = FALSE) 
-coucou = read.csv("input_data/data_city_river.csv")
+data_city_river = read.csv("input_data/data_city_river.csv", sep = ",")
 df = read.csv("collected_data/english/df_tokenized_snippets.csv") %>% 
   # remove the tokenized snippets which include locations
   # through trial and error we found better results without including the locations
@@ -163,10 +165,15 @@ dfmatrix = calc_dtm(corpus)
   # these levels have been found through trial and error 
 
 # apply the DHC
-# through trial and error, we find that the best k number in this case is 18
-clusters_18 = run_dhc(df, dfmatrix, 18, 500, corpus)
-# and 6 if we want less details
-clusters_6 = run_dhc(df, dfmatrix, 6, 500, corpus)
+# through trial and error, we find that the best k number in this case is 18 and 6 if we want less details
+# let's define the cluster names and their color. We advise to run the run_dhc function a first time with mylabels = NULL and mypalette = NULL and then to define labels according to the results
+mylabels = NULL 
+mypalette = NULL
+clusters_18 = run_dhc(df, dfmatrix, 18, 500, corpus, mylabels, mypalette)
+
+mylabels = c("Hydrographie", "Localisation", "Réseau et infrastructures", "Connaissances et gestion", "Tourisme et loisirs", "Internet")
+mypalette = get_brewer_pal("Set2", 6)
+clusters_6 = run_dhc(df, dfmatrix, 6, 500, corpus, mylabels, mypalette)
 
 # summarise results for k = 6
 summary_6 = summary_clusters(clusters_6) %>% 
