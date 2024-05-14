@@ -4,6 +4,8 @@
 .Ruserdata
 suivi_requetes.ods
 figures/resultats/
-2_get_data/
-3_frequency/
-4_clustering/
+collected_data/
+analysis/
+R/clustering_map_scatterpies.qmd
+R/clustering_correlations.qmd
+
