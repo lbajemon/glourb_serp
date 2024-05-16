@@ -116,15 +116,6 @@ data_city_river = data_city_river %>%
     mutate(river_hl4 = str_replace_all(river_hl4, ";", " OR ")) %>% 
     mutate(river_hl5 = str_replace_all(river_hl5, ";", " OR ")) %>% 
     mutate(river_hl6 = str_replace_all(river_hl6, ";", " OR ")) 
-
-# in the value SERP API, the language code for chinese (simplified) is zh-cn. Let's update our data table:
-data_city_river = data_city_river %>% 
-  mutate(hl1 = str_replace_all(hl1, "zh", "zh-cn")) %>% 
-  mutate(hl2 = str_replace_all(hl2, "zh", "zh-cn")) %>% 
-  mutate(hl3 = str_replace_all(hl3, "zh", "zh-cn")) %>% 
-  mutate(hl4 = str_replace_all(hl4, "zh", "zh-cn")) %>% 
-  mutate(hl5 = str_replace_all(hl5, "zh", "zh-cn")) %>% 
-  mutate(hl6 = str_replace_all(hl6, "zh", "zh-cn"))
 ```
 
 ## Collection of data
