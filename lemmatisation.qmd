@@ -58,7 +58,7 @@ data_city_river = data_city_river %>%
   mutate(hl6 = str_replace_all(hl6, "zh", "zh-cn"))
 
 lexicon_en = get_lexicon("en") %>% 
-  rbind(read.csv("input_data/missing_words_lexicon_en2.csv"))
+  rbind(read.csv("input_data/ignore/missing_words_lexicon_en2.csv"))
 ```
 
 Now, let's define multiple tables containing words we want to remove or keep, e.g. stop words, country names, city names, etc.
