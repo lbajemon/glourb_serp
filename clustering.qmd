@@ -30,7 +30,10 @@ library(rainette)
 library(rlist)
 library(tmaptools)
 library(ggplot2)
+library(shiny)
 set.seed(1204) # set seed to get reproductible results
+
+data_city_river = read.csv("input_data/data_city_river.csv", sep = ",")
 ```
 
 ### 1. Read corpus
@@ -51,7 +54,7 @@ read_tokens = function(corpus){
 
 The tokenized snippets are already quite short, so we can skip the step of splitting the text in segments (using `split_segments`) and move on to the calculation of the document-feature matrix (dfm). The dfm is a mathematical matrix describing for each term, its frequency in each document. In rows are the documents (i.e. one row per snippet) and in columns are the terms.
 
-### 2. Clustering
+### 2. Define functions for clustering
 
 #### a. Calculate the DFM
 
@@ -144,13 +147,14 @@ summary_clusters = function(df){
 
 ### 3. Run functions
 
-#### a. For results in English 
+#### a. For results in English
 
 First, let's read our data, which corresponds to all the "tokenized snippets" for the queries in English (see [here](https://github.com/lbajemon/glourb_serp/blob/main/lemmatisation.qmd)). There are two different tokenized snippets for each element: one including locations (e.g. "France, "Lyon", *etc.*) and one excluding them. Through trial and error, we find that in this case it is better to exclude them from the corpus. For the calculation of the document-feature matrix, we remove features which appear in less than 10 documents and which appear less than 200 times.
 
 ```{r read_data_en}
+
 # read datasets
-data_city_river = read.csv("input_data/data_city_river.csv", sep = ",")
+
 df = read.csv("collected_data/english/df_tokenized_snippets.csv") %>% 
   subset(select = -12) %>%  # remove locations column
   dplyr::rename(tokenized = tokenized_noloc) %>% # rename column
@@ -245,8 +249,6 @@ write.csv(dataset, "analysis/clustering/summary_8_en_noloc.csv", row.names = FAL
 Like for the English results, there are two different tokenized snippets for each element: one including locations (e.g. "France, "Lyon", *etc.*) and one excluding them. We find that both cases are interesting. For example, the results excluding the locations show a cluster about the landscape and nature, while the results including them show a cluster about casualties. For the calculation of the document-feature matrix, we remove features which appear in less than 10 documents and which appear less than 200 times.
 
 ```{r read_data_hl1}
-data_city_river = read.csv("input_data/data_city_river.csv", sep = ",")
-
 df_loc = read.csv("collected_data/hl/df_tokenized_hl1.csv") %>% 
   dplyr::rename(seg_id = snippet_id) %>% # rename doc id 
   group_by(fid) %>% 
@@ -402,3 +404,156 @@ dataset = read.csv("input_data/clustering_300.csv") %>%
 ```
 
 #### c. For results in all local languages
+
+Now we will apply a clustering to all the results found from the queries in all local languages (up to 6 per city).
+
+```{r read_data_hl}
+df_loc = read.csv("collected_data/hl/df_tokenized_all.csv") %>% 
+  dplyr::rename(seg_id = snippet_id) %>% # rename doc id 
+  group_by(fid) %>% 
+  dplyr::mutate(n = n()) %>% # count number of snippets per city 
+  ungroup() %>% 
+  subset(!is.na(tokenized)) # remove empty values
+df_noloc = read.csv("collected_data/hl/df_tokenized_all.csv") %>%
+  dplyr::rename(seg_id = snippet_id) %>% # rename doc id 
+  group_by(fid) %>% 
+  dplyr::mutate(n = n()) %>% # count number of snippets per city 
+  ungroup() %>% 
+  subset(!is.na(tokenized_noloc)) # remove empty values
+
+corpus_loc = read_corpus(df_loc, text_field = "tokenized", docid_field = "seg_id")
+tokens_loc = read_tokens(corpus_loc)
+corpus_noloc = read_corpus(df_noloc, text_field = "tokenized_noloc", docid_field = "seg_id")
+tokens_noloc = read_tokens(corpus_noloc)
+
+dfmatrix_loc = calc_dtm(tokens_loc)
+dfmatrix_noloc = calc_dtm(tokens_noloc)
+```
+
+The optimal numbers of clusters are 15 (including locations, more details), 17 (excluding locations, more details) and ... (less details).
+
+##### c.1. 15 and 18 clusters
+
+```{r 15_18_clusters_hl}
+# with locations
+mylabels = NULL 
+mypalette = NULL
+clusters_15_loc = run_dhc(df_loc, dfmatrix_loc, 15, 500, tokens_loc, mylabels, mypalette, path = "analysis/clustering/clustering_all_hl_k15_loc.png", measure = "chi2", filename = "15_all_hl_loc")
+
+# summarise results
+summary_15_loc = summary_clusters(clusters_15_loc)
+data_city_river = read.csv("input_data/data_city_river.csv") %>% 
+  left_join(summary_15_loc, by = "fid")
+# and save them
+write.csv(data_city_river, "analysis/clustering/summary_15_all_hl_loc.csv")
+
+# without locations
+mylabels = NULL 
+mypalette = NULL
+clusters_17_noloc = run_dhc(df_noloc, dfmatrix_noloc, 17, 500, tokens_noloc, mylabels, mypalette, path = "analysis/clustering/clustering_all_hl_k17_noloc.png", measure = "chi2", filename = "17_all_hl_noloc")
+
+# summarise results
+summary_17_noloc = summary_clusters(clusters_17_noloc)
+data_city_river = read.csv("input_data/data_city_river.csv") %>% 
+  left_join(summary_17_noloc, by = "fid")
+# and save them
+write.csv(data_city_river, "analysis/clustering/summary_17_all_hl_noloc.csv")
+```
+
+##### c.2. 8 clusters
+
+```{r 8_clusters_hl}
+# loc
+mylabels = c("Académique", "Politique et aménagement", "Pêche et déchets", "Inondation", "Transports et déplacements", "Hydrographie", "Localisation", "Navigation", "Tourisme et internet", "Outlier")
+mypalette = get_brewer_pal("Set2", 10)
+clusters_10_loc = run_dhc(df_loc, dfmatrix_loc, 10, 500, tokens_loc, mylabels, mypalette, path = "analysis/clustering/clustering_all_hl_k10_loc.png", measure = "chi2", filename = "10_all_hl_loc")
+
+# summarise results for k = 10
+summary_10_loc = summary_clusters(clusters_10_loc) %>% 
+  separate(fid, c("fid", "supp_fid"), sep = "_") %>% 
+  group_by(fid) %>% 
+  dplyr::mutate(n = n()) %>% 
+  ungroup() %>% 
+  group_by(fid) %>% 
+  dplyr::mutate(cl1 = sum(as.numeric(cl_1))) %>% 
+  dplyr::mutate(cl2 = sum(as.numeric(cl_2))) %>%
+  dplyr::mutate(cl3 = sum(as.numeric(cl_3))) %>%
+  dplyr::mutate(cl4 = sum(as.numeric(cl_4))) %>%
+  dplyr::mutate(cl5 = sum(as.numeric(cl_5))) %>%
+  dplyr::mutate(cl6 = sum(as.numeric(cl_6))) %>%
+  dplyr::mutate(cl7 = sum(as.numeric(cl_7))) %>%
+  dplyr::mutate(cl8 = sum(as.numeric(cl_8))) %>%
+  dplyr::mutate(cl9 = sum(as.numeric(cl_9))) %>%
+  dplyr::mutate(cl10 = sum(as.numeric(cl_10))) %>%
+  dplyr::mutate(clNA = sum(as.numeric(cl_NA))) %>% 
+  select(-c("supp_fid", "cl_1", "cl_2", "cl_3", "cl_4", "cl_5", "cl_6", "cl_7", "cl_8", "cl_9", "cl_10", "cl_NA")) %>% 
+  unique() %>% 
+  mutate(cl1 = cl1/n) %>% 
+  mutate(cl2 = cl2/n) %>% 
+  mutate(cl3 = cl3/n) %>% 
+  mutate(cl4 = cl4/n) %>% 
+  mutate(cl5 = cl5/n) %>% 
+  mutate(cl6 = cl6/n) %>% 
+  mutate(cl7 = cl7/n) %>% 
+  mutate(cl8 = cl8/n) %>% 
+  mutate(cl9 = cl9/n) %>% 
+  mutate(cl10 = cl10/n) %>%  
+  mutate(clNA = clNA/n) %>% 
+  select(-"n") %>% 
+  mutate(fid = as.numeric(fid))
+  
+# keep nb of snippets per city
+nb_snippets = clusters_10_loc[,c(1,13)] %>% 
+  unique() %>% 
+  mutate(fid = as.numeric(fid))
+
+dataset = read.csv("input_data/clustering_300.csv") %>%
+  left_join(summary_10_loc, by = "fid") %>% 
+  left_join(nb_snippets, by = "fid") %>% 
+  write.csv("analysis/clustering/summary_10_all_hl_loc.csv", row.names = FALSE)
+  
+# no loc
+mylabels = c("Internet", "Outlier", "Hydrographie", "Localisation", "Réseaux et ville", "Politique et aménagement", "Inondation", "Outlier")
+mypalette = get_brewer_pal("Set2", 8)
+clusters_8_noloc = run_dhc(df_noloc, dfmatrix_noloc, 8, 500, tokens_noloc, mylabels, mypalette, path = "analysis/clustering/clustering_all_hl_k8_noloc.png", measure = "chi2", filename = "8_all_hl_noloc")
+
+# summarise results
+summary_8_noloc = summary_clusters(clusters_8_noloc) %>% 
+  separate(fid, c("fid", "supp_fid"), sep = "_") %>% 
+  group_by(fid) %>% 
+  dplyr::mutate(n = n()) %>% 
+  ungroup() %>% 
+  group_by(fid) %>% 
+  dplyr::mutate(cl1 = sum(as.numeric(cl_1))) %>% 
+  dplyr::mutate(cl2 = sum(as.numeric(cl_2))) %>%
+  dplyr::mutate(cl3 = sum(as.numeric(cl_3))) %>%
+  dplyr::mutate(cl4 = sum(as.numeric(cl_4))) %>%
+  dplyr::mutate(cl5 = sum(as.numeric(cl_5))) %>%
+  dplyr::mutate(cl6 = sum(as.numeric(cl_6))) %>%
+  dplyr::mutate(cl7 = sum(as.numeric(cl_7))) %>%
+  dplyr::mutate(cl8 = sum(as.numeric(cl_8))) %>%
+  dplyr::mutate(clNA = sum(as.numeric(cl_NA))) %>% 
+  select(-c("supp_fid", "cl_1", "cl_2", "cl_3", "cl_4", "cl_5", "cl_6", "cl_7", "cl_8", "cl_NA")) %>% 
+  unique() %>% 
+  mutate(cl1 = cl1/n) %>% 
+  mutate(cl2 = cl2/n) %>% 
+  mutate(cl3 = cl3/n) %>% 
+  mutate(cl4 = cl4/n) %>% 
+  mutate(cl5 = cl5/n) %>% 
+  mutate(cl6 = cl6/n) %>% 
+  mutate(cl7 = cl7/n) %>% 
+  mutate(cl8 = cl8/n) %>% 
+  mutate(clNA = clNA/n) %>% 
+  select(-"n") %>% 
+  mutate(fid = as.numeric(fid))
+  
+# keep nb of snippets per city
+nb_snippets = clusters_10_noloc[,c(1,13)] %>% 
+  unique() %>% 
+  mutate(fid = as.numeric(fid))
+
+dataset = read.csv("input_data/clustering_300.csv") %>%
+  left_join(summary_10_noloc, by = "fid") %>% 
+  left_join(nb_snippets, by = "fid") %>% 
+  write.csv("analysis/clustering/summary_10_hl1_noloc.csv", row.names = FALSE)
+```
