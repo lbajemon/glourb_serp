@@ -412,7 +412,7 @@ df = df %>%
 
 No data is available for the cities which have a 6th language (2 cities in South Africa).
 
-#### Compilation 7: Combine all results in local languages 
+#### Compilation 7: Combine all results in local languages
 
 ##### Combine all tokens
 
