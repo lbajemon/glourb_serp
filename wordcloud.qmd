@@ -1,0 +1,36 @@
+---
+title: "Make a wordcloud"
+format: html
+editor: visual
+---
+
+### Set up
+
+```{r packages}
+library(wordcloud)
+library(tidyverse)
+library(quanteda)
+```
+
+### Read data
+
+```{r read_data}
+df = read.csv("collected_data/english/df_tokenized_snippets.csv") %>% 
+  subset(select = -12) %>%  # remove locations column
+  dplyr::rename(tokenized = tokenized_noloc) %>% # rename column
+  dplyr::rename(seg_id = snippet_id) %>% # rename doc id 
+  group_by(fid) %>% 
+  dplyr::mutate(n = n()) %>% # count number of snippets per city 
+  ungroup() %>% 
+  subset(!is.na(tokenized)) # remove empty values
+
+# read corpus
+corpus = read_corpus(df, text_field = "tokenized", docid_field = "seg_id")
+```
+
+### Make the wordcloud
+
+```{r make_wordcloud}
+
+wordcloud(corpus, max.words = 200, colors = brewer.pal(8, "Set2"),  rot.per=0) 
+```
