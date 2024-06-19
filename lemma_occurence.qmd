@@ -394,3 +394,14 @@ data %>%
                          show_results_hl))
   }
 ```
+
+### Example: Lyon
+
+```{r read_lyon_data}
+df_tokens_en = read.csv("collected_data/english/df_tokens.csv")
+df_lyon_en = df_tokens_en %>% 
+  filter(df_tokens_en$urban_aggl == "Lyon")
+df_tokens_hl = read.csv("collected_data/hl/df_tokens_all_hl.csv")
+df_lyon_hl = df_tokens_hl %>% 
+  filter(df_tokens_hl$urban_aggl == "Lyon")
+```
