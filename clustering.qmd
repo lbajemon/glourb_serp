@@ -1,5 +1,5 @@
 ---
-title: "Search Engine Pages Results: Clustering"
+title: "Search Engine Pages Results: Clustering and co-occurrences"
 format: html
 editor: visual
 author: "Liolia Bajemon"
@@ -12,6 +12,8 @@ The aim of this document is to do a clusterisation on a corpus.
 Our corpus consists of snippets (or "rich snippets", i.e. the first lines extracted from a search engine pages results - SERP) extracted from multiple queries on Google. For 303 combinations of a city and its river(s), a {rivername} AND {cityname} type query was ran, in each official language of the given city. Each query was ran 4 times over 4 months, to reduce the eventual variability due to special events.
 
 This method uses the [rainette package](https://juba.github.io/rainette/), which is based on a variant of the Reinert textual clustering method. This classification method is used for short text segments, which applies to our case, the snippets being approximately thirty words long.
+
+After analyzing the corpus and each clusters qualitatively, we find that some words seem to stand out from some clusters. Let's calculate their co-occurence, i.e. their association with other words. For example, for the cluster "land planning" (see [here](https://github.com/lbajemon/glourb_serp/blob/main/clustering.qmd) for more details on the clustering), the word "development" stands out. To do this, we will use Claire Tissot's method which is detailed [here](https://clairetissotsemiotique.wordpress.com/comment-fr/#commentfR1) (last visited on 13/06/2024).
 
 ### Set-up
 
@@ -31,9 +33,19 @@ library(rlist)
 library(tmaptools)
 library(ggplot2)
 library(shiny)
+library(FactoMineR)
+library(quanteda.textplots)
 set.seed(1204) # set seed to get reproductible results
 
 data_city_river = read.csv("input_data/data_city_river.csv", sep = ",")
+```
+
+```{r def_palette}
+# def palette
+mypalette = get_brewer_pal("Set3", 9) 
+mypalette[2] = "#e6ab02" # replace pale yellow 
+mypalette[9] = "#bc80bd" # replace gray
+big_palette = c(mypalette, mypalette)
 ```
 
 ### 1. Read corpus
@@ -93,7 +105,7 @@ run_dhc = function(df, dfmatrix, n_class, min_members, corpus, mylabels, mycolor
     show_negative = FALSE,
     text_size = 12,
     cluster_label = mylabels, 
-    colors = mypalette
+    colors = mycolors
   )
   ggsave(path, plot, width = 500, height = 250, units = "mm", limitsize = FALSE)
 
@@ -173,6 +185,7 @@ dfmatrix = calc_dtm(tokens)
 
 # we suggest to try multiple number of clusters and minimum split members 
 # and choose what adapts best to your data
+
 dhc = rainette(dfmatrix, k = 20, min_split_members = 500)
 rainette_explor(dhc, dfmatrix, corpus)
 ```
@@ -186,7 +199,7 @@ We will apply two clusterisations with two different numbers of clusters: one fo
 # apply the DHC
 mylabels = NULL 
 mypalette = NULL
-clusters_18 = run_dhc(df, dfmatrix, 18, 500, tokens, mylabels, mypalette, path = "analysis/clustering/clustering_en_k18_noloc.png", measure = "frequency", filename = "18_en_noloc")
+clusters_18 = run_dhc(df, dfmatrix, 18, 500, tokens, mylabels, big_palette, path = "analysis/clustering/clustering_en_k18_noloc.png", measure = "frequency", filename = "18_en_noloc")
 
 # summarise results
 summary_18 = summary_clusters(clusters_18)
@@ -200,8 +213,6 @@ write.csv(data_city_river, "analysis/clustering/summary_18_en_noloc.csv")
 
 ```{r 8_clusters_en}
 mylabels = c("Hydrographie", "Localisation", "Réseaux et infrastructures", "Académique", "Connaissances et gestion", "Aménagement", "Tourisme et loisirs", "Internet")
-mypalette = get_brewer_pal("Set3", 8) 
-mypalette[2] = "#e6ab02" # replace pale yellow 
 clusters_8 = run_dhc(df, dfmatrix, 8, 500, tokens, mylabels, mypalette, path = "analysis/clustering/clustering_en_k8_noloc.png", measure = "frequency", filename = "8_en_noloc")
 
 # summarise results
@@ -247,6 +258,54 @@ dataset = read.csv(("input_data/clustering_300.csv")) %>%
   left_join(summary_8, by = "fid") %>% 
   left_join(nb_snippets, by = "fid") 
 write.csv(dataset, "analysis/clustering/summary_8_en_noloc.csv", row.names = FALSE)
+```
+
+##### a.3. Co-occurrences
+
+```{r cooccurrence_english}
+
+dhc = rainette(dfmatrix, k = 8, min_split_members = 500, min_segment_size = 0)
+
+# associate clusters to our data
+docvars(corpus)$cluster = cutree_rainette(dhc, k = 8, criterion = "chi2")
+docvars(dfmatrix)$cluster = docvars(corpus)$cluster
+docvars(tokens)$cluster = docvars(corpus)$cluster
+
+# let's plot the text network for the word "flow" in the 1st cluster (hydrography):
+tokCluster = tokens_subset(tokens, cluster == 1) # select a cluster
+tokWord = tokens_keep(tokCluster, "flow", window = 3) # select a word and a window
+tokWord = fcm(tokWord)
+featCl = names(topfeatures(tokWord, 30))
+net = fcm_select(tokWord, pattern = featCl)
+plot = textplot_network(net, edge_color = mypalette[1])
+ggsave("analysis/cooccurrence/en_8_hydrography_flow.png", plot, width = 7, height = 4)
+
+# for the word "bridge" in the 3rd cluster (network and infrastructures):
+tokCluster = tokens_subset(tokens, cluster == 3) # select a cluster
+tokWord = tokens_keep(tokCluster, "bridge", window = 3) # select a word and a window
+tokWord = fcm(tokWord)
+featCl = names(topfeatures(tokWord, 30))
+net = fcm_select(tokWord, pattern = featCl)
+plot = textplot_network(net, edge_color = mypalette[3])
+ggsave("analysis/cooccurrence/en_8_network_bridge.png", plot, width = 7, height = 4)
+
+# for the word "development" in the 6th cluster (land planning):
+tokCluster = tokens_subset(tokens, cluster == 6) # select a cluster
+tokWord = tokens_keep(tokCluster, "development", window = 3) # select a word and a window
+tokWord = fcm(tokWord)
+featCl = names(topfeatures(tokWord, 50))
+net = fcm_select(tokWord, pattern = featCl)
+plot = textplot_network(net, edge_color = mypalette[6])
+ggsave("analysis/cooccurrence/en_8_planning_development.png", plot, width = 7, height = 4)
+
+# for the word "download" in the 8th cluster (internet):
+tokCluster = tokens_subset(tokens, cluster == 8) # select a cluster
+tokWord = tokens_keep(tokCluster, "download", window = 3) # select a word and a window
+tokWord = fcm(tokWord)
+featCl = names(topfeatures(tokWord, 40))
+net = fcm_select(tokWord, pattern = featCl)
+plot = textplot_network(net, edge_color = mypalette[8])
+ggsave("analysis/cooccurrence/en_8_internet_download.png", plot, width = 7, height = 4)
 ```
 
 #### b. For results in the first local language
@@ -303,7 +362,7 @@ write.csv(data_city_river, "analysis/clustering/summary_18_hl1_loc.csv")
 # without locations
 mylabels = NULL 
 mypalette = NULL
-clusters_18_noloc = run_dhc(df_noloc, dfmatrix_noloc, 18, 500, tokens_noloc, mylabels, mypalette, path = "analysis/clustering/clustering_hl1_k18_noloc.png", measure = "chi2", filename = "18_hl1_noloc")
+clusters_18_noloc = run_dhc(df_noloc, dfmatrix_noloc, 18, 500, tokens_noloc, mylabels, big_palette, path = "analysis/clustering/clustering_hl1_k18_noloc.png", measure = "chi2", filename = "18_hl1_noloc")
 
 # summarise results
 summary_18_noloc = summary_clusters(clusters_18_noloc)
@@ -499,7 +558,6 @@ write.csv(data_city_river, "analysis/clustering/summary_15_all_hl_loc.csv", row.
 ##### c.2. 17 clusters: without locations
 
 ```{r 17_clusters_all_hl}
-
 dhc_noloc = rainette(dfmatrix_noloc, 17, min_split_members = 500, min_segment_size = 0)
 
 # plot
@@ -512,7 +570,8 @@ plot_noloc = rainette_plot(
   measure = "chi2",
   show_negative = FALSE,
   text_size = 12,
-  cluster_label = c("Internet et \ntourisme", "Outlier", "Hydrographie", "Distance", "Localisation \nrégion/pays", "Localisation \nville", "Traffic routier", "Outlier", "Gouvernement, \npolitique", "Energie, \nindustrie", "Aménagement, \ngestion et \npollution", "Culture, \nloisirs", "Infrastructures, \nréseaux", "Milieu \nuniversitaire, \nqualité de l'eau", "Pertes et \nvictimes", "Inondation", "Outlier")
+  cluster_label = c("Internet et \ntourisme", "Outlier", "Hydrographie", "Distance", "Localisation \nrégion/pays", "Localisation \nville", "Traffic routier", "Outlier", "Gouvernement, \npolitique", "Energie, \nindustrie", "Aménagement, \ngestion et \npollution", "Culture, \nloisirs", "Infrastructures, \nréseaux", "Milieu \nuniversitaire, \nqualité de l'eau", "Pertes et \nvictimes", "Inondation", "Outlier"),
+  colors = big_palette
   )
 ggsave("analysis/clustering/clustering_all_hl_k17_noloc.png", plot_noloc, width = 500, height = 250, units = "mm", limitsize = FALSE)
 
@@ -559,7 +618,7 @@ plot_loc = rainette_plot(
   show_negative = FALSE,
   text_size = 12,
   cluster_label = c("Outlier \n(vidéos)", "Tourisme, \nInternet", "Victimes", "Outlier \n(réseaux sociaux)", "Gestion, \naménagement, \npollution", "Inondation", "Outlier", "Hydrographie", "Localisation"),
-  colors = get_brewer_pal("Set2", 9)
+  colors = mypalette
   )
 ggsave("analysis/clustering/clustering_all_hl_k9_loc.png", plot_loc, width = 500, height = 250, units = "mm", limitsize = FALSE)
 
@@ -635,4 +694,26 @@ data_city_river = read.csv("input_data/data_city_river.csv") %>%
   left_join(summary_10_noloc, by = "fid")
 # and save them
 write.csv(data_city_river, "analysis/clustering/summary_10_all_hl_noloc.csv", row.names = FALSE)
+```
+
+##### c.5. Co-occurrences
+
+```{r cooccurrence_all_hl}
+
+dhc = rainette(dfmatrix_noloc, k = 17, min_split_members = 500, min_segment_size = 0)
+rainette_plot(dhc, dfmatrix_noloc, 17)
+
+# associate clusters to our data
+docvars(corpus_noloc)$cluster = cutree_rainette(dhc, k = 17, criterion = "chi2")
+docvars(dfmatrix_noloc)$cluster = docvars(corpus_noloc)$cluster
+docvars(tokens_noloc)$cluster = docvars(corpus_noloc)$cluster
+
+# let's plot the text network for the 10th cluster (water resource):
+tokCluster = tokens_subset(tokens_noloc, cluster == 10) # select a cluster
+tokWord = tokens_keep(tokCluster, "water", window = 10) # select a word and a window
+tokWord = fcm(tokWord)
+featCl = names(topfeatures(tokWord, 50))
+net = fcm_select(tokWord, pattern = featCl)
+plot = textplot_network(net, edge_color = big_palette[10])
+ggsave("analysis/cooccurrence/hl_17_cl10_water.png", plot, width = 10, height = 4)
 ```
