@@ -1,0 +1,137 @@
+---
+title: "Make gradient maps"
+format: html
+editor: visual
+---
+
+### Set-up
+
+```{r packages}
+library(tidyverse)
+library(tmaptools) # for get_brewer_pal
+library(leaflet)
+library(leaflet.extras)
+library(htmltools) # for legend and title
+library(htmlwidgets) # for saving as html page
+```
+
+```{r read_data}
+data = read.csv("analysis/clustering/summary_8_en_noloc.csv") %>% 
+  mutate(latitude = str_replace_all(latitude, ",", ".")) %>% 
+  mutate(longitude = str_replace_all(longitude, ",", ".")) %>% 
+  mutate(longitude = as.numeric(longitude)) %>% 
+  mutate(latitude = as.numeric(latitude))
+```
+
+### Make maps
+
+#### English corpus
+
+Let's define the function for the clusters resulting from the English corpus:
+
+```{r def_make_leaflet}
+
+make_leaflet = function(df, ncol, classname){
+
+  # def color palette
+  f_pal = colorNumeric(palette = get_brewer_pal("RdPu", 10), domain = c(0, 100))
+  
+  # def title
+  tag.map.title = tags$style(HTML("
+    .leaflet-control.map-title { 
+      transform: translate(-50%,20%);
+      position: fixed !important;
+      left: 50%;
+      text-align: center;
+      padding-left: 10px; 
+      padding-right: 10px; 
+      background: none !important;
+      border: none !important;
+      box-shadow: none !important;
+      font-weight: bold;
+      font-size: 28px;
+    }
+  "))
+  title = tags$div(tag.map.title, HTML("9 clusters, résultats en anglais<br>L. Bajemon, juin 2024"))
+    
+  leaf = leaflet(data = df, options = leafletOptions(zoomControl = TRUE, minZoom = 1, maxZoom = 5)) %>%
+    addProviderTiles(providers$CartoDB.VoyagerNoLabels) %>% 
+    addCircleMarkers(~longitude, 
+                     ~latitude,
+                     opacity = 1,
+                     radius = 2.5,
+                     color = "black") %>% # add a black outline
+    addCircleMarkers(~longitude, 
+                     ~latitude,
+                     label = paste0(df$urban_aggl," - ",round(df[,ncol],2),"%"),
+                     opacity = 1,
+                     radius = 1.5,
+                     color = ~f_pal(df[,ncol])) %>% # add gradient colours
+    addControl(title, position = "bottomleft") %>% 
+    addLegend(title = paste0("% de snippets dans le <br>cluster « ", classname, " »"), pal = f_pal, values = ~df[,ncol], opacity = 1, position = "bottomleft") 
+  
+  saveWidget(leaf, file = glue::glue('analysis/gradient_map/carte_gradient_8en_{classname}.html'))
+}
+```
+
+Now let's make maps for each of our clusters (n = 9, including NA):
+
+```{r run_make_leaflet}
+make_leaflet(df = data, ncol = 11, classname = "hydrographie")
+make_leaflet(df = data, ncol = 12, classname = "localisation")
+make_leaflet(df = data, ncol = 13, classname = "réseaux et infrastructures")
+make_leaflet(df = data, ncol = 14, classname = "académique")
+make_leaflet(df = data, ncol = 15, classname = "connaissances et gestion")
+make_leaflet(df = data, ncol = 16, classname = "aménagement")
+make_leaflet(df = data, ncol = 17, classname = "tourisme et loisirs")
+make_leaflet(df = data, ncol = 18, classname = "internet")
+make_leaflet(df = data, ncol = 19, classname = "NA")
+```
+
+#### Local languages corpus
+
+Let's do the same thing, but for the clusters resulting from the local languages corpus:
+
+```{r def_make_leaflet_hl1}
+make_leaflet = function(df, ncol, classname){
+
+  # def color palette
+  f_pal = colorNumeric(palette = get_brewer_pal("RdPu", 10), domain = c(0, 100))
+  
+  # def title
+  tag.map.title = tags$style(HTML("
+    .leaflet-control.map-title { 
+      transform: translate(-50%,20%);
+      position: fixed !important;
+      left: 50%;
+      text-align: center;
+      padding-left: 10px; 
+      padding-right: 10px; 
+      background: none !important;
+      border: none !important;
+      box-shadow: none !important;
+      font-weight: bold;
+      font-size: 28px;
+    }
+  "))
+  title = tags$div(tag.map.title, HTML("9 clusters, résultats en anglais<br>L. Bajemon, juin 2024"))
+    
+  leaf = leaflet(data = df, options = leafletOptions(zoomControl = TRUE, minZoom = 1, maxZoom = 5)) %>%
+    addProviderTiles(providers$CartoDB.VoyagerNoLabels) %>% 
+    addCircleMarkers(~longitude, 
+                     ~latitude,
+                     opacity = 1,
+                     radius = 2.5,
+                     color = "black") %>% # add a black outline
+    addCircleMarkers(~longitude, 
+                     ~latitude,
+                     label = paste0(df$urban_aggl," - ",round(df[,ncol],2),"%"),
+                     opacity = 1,
+                     radius = 1.5,
+                     color = ~f_pal(df[,ncol])) %>% # add gradient colours
+    addControl(title, position = "bottomleft") %>% 
+    addLegend(title = paste0("% de snippets dans le <br>cluster « ", classname, " »"), pal = f_pal, values = ~df[,ncol], opacity = 1, position = "bottomleft") 
+  
+  saveWidget(leaf, file = glue::glue('analysis/gradient_map/carte_gradient_8en_{classname}.html'))
+}
+```
