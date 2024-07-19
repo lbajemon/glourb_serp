@@ -42,7 +42,7 @@ df = data.frame(data_city_river[,c(1,2, 21)]) %>%
   mutate(data = map(path, read.csv)) %>% # read the data for each city
   unnest(data) %>%  # create a row for each token for each city, i.e. over 287 000 rows
   mutate(snippet_id = paste0(fid, "_", position)) # create a unique id for each snippet
-df = df[,c(1:3,5:11,29,30,34,35,43)]
+df = df[,c(1:3,5:11,26,31,32,43)]
 write.csv(df, "collected_data/english/df_tokens.csv", row.names = FALSE)
 ```
 
@@ -69,7 +69,7 @@ df_compile = data.frame(data_city_river[,c(1,2)]) %>%
   left_join(tokenized_snippets_loc, by = "snippet_id", keep = FALSE)
 
 # simplify the resulting dataframe and save it
-df_compile = df_compile[,c(1:2,4:10,28,36:38)]
+df_compile = df_compile[,c(1:2,4:10,25,36:38)]
 colnames(df_compile) = c("fid","urban_aggl","position","title","link","domain","displayed_link","snippet","english","trans_snippet","snippet_id","tokenized","tokenized_noloc")
 write.csv(df_compile, "collected_data/english/df_tokenized_snippets.csv", row.names = FALSE)
 
@@ -140,11 +140,11 @@ df = df %>%
   mutate(data = map(path, read.csv)) %>% 
   unnest(data) %>% # create a row for each token for each city
   mutate(snippet_id = paste0(fid, "_", position)) # create a unique id for each snippet
-df = df[,c(1:5,8:13,25,30,31,48)]
+df = df[,c(1:5,8:13,28,33,34,48)]
 write.csv(df, "collected_data/hl/df_tokens_hl1.csv", row.names = FALSE)
 ```
 
-Results have been found for 365 queries, out of 372.
+Results have been found for 369 queries, out of 372.
 
 ##### Combine tokenized snippets
 
@@ -171,7 +171,7 @@ df_compile = data.frame(data_city_river[,c(1,2,7,8,21)]) %>%
   left_join(tokenized_snippets_loc, by = "snippet_id", keep = FALSE)
 
 # simplify the resulting dataframe and save it
-df_compile = df_compile[,c(1:5,8:13,25,42:44)]
+df_compile = df_compile[,c(1:5,8:13,28,42:44)]
 
 colnames(df_compile) = c("fid","urban_aggl","gl","hl","river","position","title","link","domain","displayed_link","snippet","trans_snippet","snippet_id","tokenized","tokenized_noloc")
 write.csv(df_compile, "collected_data/hl/df_tokenized_hl1.csv", row.names = FALSE)
@@ -203,7 +203,7 @@ df = df %>%
   mutate(data = map(path, read.csv)) %>% 
   unnest(data) %>% # create a row for each token for each city
   mutate(snippet_id = paste0(fid, "_", position)) # create a unique id for each snippet
-df = df[,c(1:5,8:13,26,31,32,46)]
+df = df[,c(1:5,8:13,25,30,31,46)]
 write.csv(df, "collected_data/hl/df_tokens_hl2.csv", row.names = FALSE)
 ```
 
@@ -226,7 +226,7 @@ df_compile = data.frame(data_city_river[,c(1,2,7,9,21)]) %>%
   left_join(tokenized_snippets, by = "snippet_id", keep = FALSE) %>% 
   left_join(tokenized_snippets_loc, by = "snippet_id", keep = FALSE)
 
-df_compile = df_compile[,c(1:5,8:13,26,40:42)]
+df_compile = df_compile[,c(1:5,8:13,25,40:42)]
 
 colnames(df_compile) = c("fid","urban_aggl","gl","hl","river","position","title","link","domain","displayed_link","snippet","trans_snippet","snippet_id","tokenized","tokenized_noloc")
 write.csv(df_compile, "collected_data/hl/df_tokenized_hl2.csv", row.names = FALSE)
@@ -307,7 +307,7 @@ df = df %>%
   unnest(data) %>% 
   mutate(snippet_id = paste0(fid, "_", position)) 
 
-df = df[,c(1:5,8:13,27,32,33,43)]
+df = df[,c(1:5,8:13,26,31,32,42)]
 write.csv(df, "collected_data/hl/df_tokens_hl4.csv", row.names = FALSE)
 ```
 
@@ -330,7 +330,7 @@ df_compile = data.frame(data_city_river[,c(1,2,7,11,21)]) %>%
   left_join(tokenized_snippets, by = "snippet_id", keep = FALSE) %>% 
   left_join(tokenized_snippets_loc, by = "snippet_id", keep = FALSE)
 
-df_compile = df_compile[,c(1:5,8:13,27,37:39)]
+df_compile = df_compile[,c(1:5,8:13,26,36:38)]
 
 colnames(df_compile) = c("fid","urban_aggl","gl","hl","river","position","title","link","domain","displayed_link","snippet","trans_snippet","snippet_id","tokenized","tokenized_noloc")
 write.csv(df_compile, "collected_data/hl/df_tokenized_hl4.csv", row.names = FALSE)
