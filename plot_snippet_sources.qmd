@@ -1,0 +1,137 @@
+---
+title: "How are the snippets produced?"
+author: "Liolia Bajemon"
+format: html
+editor: visual
+---
+
+### Description
+
+The aim of this document is to generate plots illustrating the way snippets are produced for a few study cases.
+
+We already have tables containing SERP results, resulting from multiple queries of the type "river and city". It is assumed that snippets, which appear in SERP, correspond to short extracts of a given website. To verify this hypothesis, it is necessary to check manually whether snippets are truly extracts from websites or made otherwise, *e.g.* by AI. We selected a few cities (n = XXX) and verified this hypothesis for each snippet (m = 100). We came up with diverse explanations:
+
+-   The snippet corresponds to the 1st sentence of the page;
+
+-   The snippet is an extract from the page, but not the 1st sentence;
+
+-   The snippet has been suggested in the metadata of the website ("description"). This has been found by doing a right click on the page and displaying its source code;
+
+-   The snippet comes from another page, which is related to this page thanks to a hyperlink;
+
+-   The source of the snippet is unknown;
+
+-   There is no snippet.
+
+### Set-up
+
+First, let's retrieve our data and load some packages.
+
+```{r set_up}
+library(tidyverse)
+```
+
+#### Calculation of the number of occurrences
+
+```{r n_occ}
+n_occ = function(df){
+  df = df %>% 
+    # replace NA values    
+    mutate(snippet_from = replace_na(snippet_from, "Pas de snippet")) %>% 
+    # put everything in lower case
+    mutate(snippet_from = str_to_lower(snippet_from)) %>% 
+    group_by(snippet_from) %>%  
+    count(snippet_from)
+}
+```
+
+```{r plot}
+plot_snip = function(df, fichier, nb_snip, soustitre){
+   
+  # rearrange df by decreasing order
+  df$snippet_from = with(df, reorder(snippet_from, n))
+  
+  plot = df %>% 
+    ggplot(mapping = aes(x = snippet_from,
+                         y = n)) +
+    geom_col(position = "stack", fill = "#8dd3c7") +
+    coord_flip() + # flip x and y coordinates 
+    labs(title = paste0("Origine des snippets (n = ", nb_snip,")"), 
+         subtitle = soustitre,
+         x = "",
+         y = "nombre de snippets",
+         caption = "L. Bajemon, juillet 2024") +
+    theme_bw() +
+    theme(legend.position = "right",
+          plot.caption.position = "plot")
+    
+  ggsave(filename = fichier, plot = plot, width = 7, height = 5, units = "in")
+}
+```
+
+#### Types of websites
+
+```{r n_typo}
+n_typo = function(df){
+  df = df %>% 
+    # group by value
+    group_by(type) %>%  
+    # count number of values for each group
+    count(type)
+  }
+```
+
+```{r plot_typo}
+plot_typo = function(df, fichier, nb_snip, soustitre){
+   
+  # rearrange df by decreasing order
+  df$type = with(df, reorder(type, n))
+  
+  plot = df %>% 
+    ggplot(mapping = aes(x = type,
+                         y = n)) +
+    geom_col(position = "stack", fill = "#b3de69") +
+    labs(title = paste0("Types de sites Internet (n = ", nb_snip,")"), 
+         subtitle = soustitre, 
+         x = "",
+         y = "nombre de sites",
+         caption = "L. Bajemon, juillet 2024") +
+    coord_flip() + # flip x and y coordinates 
+    theme_bw() +
+    theme(legend.position = "right",
+          plot.caption.position = "plot") 
+  
+  ggsave(filename = fichier, plot = plot, width = 7, height = 5, units = "in")
+}
+```
+
+### Run functions
+
+```{r run}
+# run functions for origin of snippets
+plot_snip(n_occ(read.csv("analysis/critical/lyon_rhone_EN.csv")), "analysis/critical/snippets_from_lyon_en.png", nrow(read.csv("analysis/critical/lyon_rhone_EN.csv")), "Requête en anglais : Rhône river and Lyon")
+plot_snip(n_occ(read.csv("analysis/critical/lyon_rhone_FR.csv")), "analysis/critical/snippets_from_lyon_fr.png", nrow(read.csv("analysis/critical/lyon_rhone_FR.csv")), "Requête en français : fleuve Rhône et Lyon")
+plot_snip(n_occ(read.csv("analysis/critical/montreal_st-laurent_FR.csv")), "analysis/critical/snippets_from_montreal_fr.png", nrow(read.csv("analysis/critical/montreal_st-laurent_FR.csv")), "Requête en français : fleuve Saint-Laurent et Montréal")
+plot_snip(n_occ(read.csv("analysis/critical/montreal_st-laurent_EN.csv")), "analysis/critical/snippets_from_montreal_en.png", nrow(read.csv("analysis/critical/montreal_st-laurent_EN.csv")), "Requête en anglais : Saint Lawrence river and Montréal")
+plot_snip(n_occ(read.csv("analysis/critical/ahmedabad_sabarmati_EN.csv")), "analysis/critical/snippets_from_ahmedabad_en.png", nrow(read.csv("analysis/critical/ahmedabad_sabarmati_EN.csv")), "Requête en anglais : Sabarmati river and Ahmedabad")
+plot_snip(n_occ(read.csv("analysis/critical/ahmedabad_sabarmati_HI.csv")), "analysis/critical/snippets_from_ahmedabad_hi.png", nrow(read.csv("analysis/critical/ahmedabad_sabarmati_HI.csv")), "Requête en hindi (fleuve Sabarmati et Ahmedabad)")
+plot_snip(n_occ(read.csv("analysis/critical/denver_south-platte_en.csv")), "analysis/critical/snippets_from_denver_en.png", nrow(read.csv("analysis/critical/denver_south-platte_en.csv")), "Requête en anglais : South Platte river and Denver")
+plot_snip(n_occ(read.csv("analysis/critical/abomey-calavi_oueme_EN.csv")), "analysis/critical/snippets_from_abomey_en.png", nrow(read.csv("analysis/critical/abomey-calavi_oueme_EN.csv")), "Requête en anglais : Ouémé river and Abomey-Calavi")
+plot_snip(n_occ(read.csv("analysis/critical/abomey-calavi_oueme_FR.csv")), "analysis/critical/snippets_from_abomey_fr.png", nrow(read.csv("analysis/critical/abomey-calavi_oueme_FR.csv")), "Requête en français : fleuve Ouémé et Abomey-Calavi")
+plot_snip(n_occ(read.csv("analysis/critical/ufa_belaya_EN.csv")), "analysis/critical/snippets_from_ufa_en.png", nrow(read.csv("analysis/critical/ufa_belaya_EN.csv")), "Requête en anglais : Belaya river and Ufa")
+plot_snip(n_occ(read.csv("analysis/critical/ufa_belaya_RU.csv")), "analysis/critical/snippets_from_ufa_ru.png", nrow(read.csv("analysis/critical/ufa_belaya_RU.csv")), "Requête en russe : rivière Belaya et Ufa")
+
+
+# run functions for types of websites
+plot_typo(n_typo(read.csv("analysis/critical/lyon_rhone_EN.csv")), "analysis/critical/typologie_lyon_en.png", nrow(read.csv("analysis/critical/lyon_rhone_EN.csv")), "Requête en anglais : Rhône river and Lyon")
+plot_typo(n_typo(read.csv("analysis/critical/lyon_rhone_FR.csv")), "analysis/critical/typologie_lyon_fr.png", nrow(read.csv("analysis/critical/lyon_rhone_FR.csv")), "Requête en français : fleuve Rhône et Lyon")
+plot_typo(n_typo(read.csv("analysis/critical/montreal_st-laurent_FR.csv")), "analysis/critical/typologie_montreal_fr.png", nrow(read.csv("analysis/critical/montreal_st-laurent_FR.csv")), "Requête en français : fleuve Saint-Laurent et Montréal")
+plot_typo(n_typo(read.csv("analysis/critical/montreal_st-laurent_EN.csv")), "analysis/critical/typologie_montreal_en.png", nrow(read.csv("analysis/critical/montreal_st-laurent_EN.csv")), "Requête en anglais : Saint Lawrence river and Montreal")
+plot_typo(n_typo(read.csv("analysis/critical/ahmedabad_sabarmati_EN.csv")), "analysis/critical/typologie_ahmedabad_en.png", nrow(read.csv("analysis/critical/ahmedabad_sabarmati_EN.csv")), "Requête en anglais : Sabarmati river and Ahmedabad")
+plot_typo(n_typo(read.csv("analysis/critical/ahmedabad_sabarmati_HI.csv")), "analysis/critical/typologie_ahmedabad_hi.png", nrow(read.csv("analysis/critical/ahmedabad_sabarmati_HI.csv")), "Requête en hindi (fleuve Sabarmati et Ahmedabad)")
+plot_typo(n_typo(read.csv("analysis/critical/denver_south-platte_en.csv")), "analysis/critical/typologie_denver_en.png", nrow(read.csv("analysis/critical/denver_south-platte_en.csv")), "Requête en anglais : South Platte river and Denver")
+plot_typo(n_typo(read.csv("analysis/critical/abomey-calavi_oueme_EN.csv")), "analysis/critical/typologie_abomey_en.png", nrow(read.csv("analysis/critical/abomey-calavi_oueme_EN.csv")), "Requête en anglais : Ouémé river and Abomey-Calavi")
+plot_typo(n_typo(read.csv("analysis/critical/abomey-calavi_oueme_FR.csv")), "analysis/critical/typologie_abomey_fr.png", nrow(read.csv("analysis/critical/abomey-calavi_oueme_FR.csv")), "Requête en français : fleuve Ouémé et Abomey-Calavi")
+plot_typo(n_typo(read.csv("analysis/critical/ufa_belaya_RU.csv")), "analysis/critical/typologie_ufa_ru.png", nrow(read.csv("analysis/critical/ufa_belaya_RU.csv")), "Requête en russe : rivière Belaya et Ufa")
+plot_typo(n_typo(read.csv("analysis/critical/ufa_belaya_EN.csv")), "analysis/critical/typologie_ufa_en.png", nrow(read.csv("analysis/critical/ufa_belaya_EN.csv")), "Requête en anglais : Belaya river and Ufa")
+```
