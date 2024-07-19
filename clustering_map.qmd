@@ -1,5 +1,5 @@
 ---
-title: "Search Engine Pages Results: Clustering results on maps"
+title: "Search Engine Pages Results: Plot clustering results on maps"
 format: html
 editor: visual
 author: Liolia Bajemon
@@ -15,69 +15,75 @@ library(leaflegend)
 library(ggplot2)
 library(scatterpie)
 library(tmaptools)
+library(tidyverse)
 ```
 
-Read data
+### Read data
 
 ```{r read_data}
-data = read.csv("analysis/clustering/selection_50_cities/results_clustering6.csv") %>% 
+data = read.csv("analysis/clustering/summary_8_en_noloc.csv") %>% 
   mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
-  mutate(latitude = as.numeric(str_replace_all(latitude, ",", ".")))
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) %>% 
+  select(-biome, -clco, -climate)
 
-# only keep europe 
-data_europe = data %>% subset(continent == "EU")
-```
-
-```{r def_class}
-# define a class name and a color for each class
-tib_classes = tibble::tribble(~class, ~class_name, ~color, 
-                              "class_1", "résultats non significatifs", "white",
-                              "class_2", "internet", "#e7298a", 
-                              "class_3", "réseaux sociaux", "#BCBD22FF",
-                              "class_4", "résultats non significatifs", "white",
-                              "class_5", "loisirs", "#fb9a99",
-                              "class_6", "culture, patrimoine", "#e31a1c",
-                              "class_7", "tourisme, voyage", "#b15928",
-                              "class_8", "enjeu portuaire/côtier", "#33a02c",
-                              "class_9", "ouvrages hydrauliques", "#17BECFFF",
-                              "class_10", "localisation géographique", "#ffd92f",
-                              "class_11", "écoulement", "#b2df8a" ,
-                              "class_12", "informations descriptives, généralités", "#6a3d9a",
-                              "class_13", "hydrologie", "#a6cee3",
-                              "class_14", "ressource en eau", "#1f78b4",
-                              "class_15", "scientifique/universitaire", "#ff7f00")
+# find max cluster  
+col_classe = c("cl1", "cl2", "cl3", "cl4", "cl5", "cl6", "cl7", "cl8", "clNA")
+data$classe <- apply(data[,col_classe], 1, function(row){
+  col_classe[which.max(row)]
+})
 ```
 
 ##### **b. Calculation of the specificity scores based on the clustering**
 
 ```{r specificity_score_clustering}
 # calculate the specifity scores
-spec_score = mixr::tidy_specificities(serp_segments,
-                                cityname,
-                                class_name)
 
-# instead, get the maximum specifity score for each city and its associated class
+# read data
+df = read.csv("analysis/clustering/classified_snippets_8_en_noloc.csv") %>% 
+  mutate(cl = paste0("cluster_", cluster)) 
+
+spec_score = mixr::tidy_specificities(df,
+                                fid,
+                                cl)
+
+# get the maximum specifity score for each city and its associated class
 serp_max = spec_score %>% 
-  group_by(cityname) #%>% 
-  filter(spec == max(spec, na.rm = TRUE)) 
-colnames(serp_max) = c("urban_aggl", "class_name", "spec", "n")
+  group_by(fid) %>% 
+  filter(spec == max(spec, na.rm = TRUE)) %>% 
+  rename(spec_max = spec, n_max = n, cl_max = cl)
 
-# and write it in our original df 
-df_spec = left_join(data_city_river, serp_max, by = "urban_aggl") 
-df_spec = df_spec %>% 
-  mutate(Longitude = str_replace_all(Longitude, ",", ".")) %>% 
-  mutate(Latitude = str_replace_all(Latitude, ",", ".")) %>% 
-  mutate(Longitude = as.numeric(Longitude)) %>% 
-  mutate(Latitude = as.numeric(Latitude))
+serp_min = spec_score %>% 
+  group_by(fid) %>% 
+  filter(spec == min(spec, na.rm = TRUE)) %>% 
+  mutate(n = replace_na(n, 0)) %>% 
+  rename(spec_min = spec, n_min = n, cl_min = cl)
 
+# join with data_city_river dataset
+data_city_river = read.csv("input_data/data_city_river.csv")
+data_city_river = data_city_river %>% 
+  left_join(serp_max, by = "fid") %>% 
+  left_join(serp_min, by = "fid") %>% 
+  mutate(longitude = str_replace_all(longitude, ",", ".")) %>% 
+  mutate(latitude = str_replace_all(latitude, ",", ".")) %>% 
+  mutate(longitude = as.numeric(longitude, digits = 5)) %>% 
+  mutate(latitude = as.numeric(latitude, digits = 5)) 
+  
 # for cities with specificity scores < 2, the results are not adequate (Pincemin, 2023)
-df_spec = df_spec %>% 
-  mutate(classe = case_when(
-    spec < 2 ~ "résultats non significatifs",
-    spec >= 2 ~ class_name)
-    )
-df_spec = df_spec %>% 
-  mutate(classe = str_replace_all(classe, "outliers", "résultats non significatifs"))
+data_city_river = data_city_river %>% 
+  mutate(cl_max = case_when(
+    spec_max < 2 ~ "cluster_NA",
+    spec_max >= 2 ~ cl_max)
+    ) %>% 
+  mutate(classname = case_when(
+    cl_max == "cluster_1" ~ "Hydrographie",
+    cl_max == "cluster_2" ~ "Localisation",
+    cl_max == "cluster_3" ~ "Réseaux et infrastructures",
+    cl_max == "cluster_4" ~ "Académique",
+    cl_max == "cluster_5" ~ "Connaissances et gestion",
+    cl_max == "cluster_6" ~ "Aménagement",
+    cl_max == "cluster_7" ~ "Tourisme et loisirs",
+    cl_max == "cluster_8" ~ "Internet",
+    cl_max == "cluster_NA" ~ "Résultats non significatifs (classe NA)"))
 ```
 
 Finally, we can plot the results on a map:
@@ -86,35 +92,18 @@ Finally, we can plot the results on a map:
 # and plot the results on a map 
 
 # define palette
-f_pal <- colorFactor(palette = c("#6a3d9a",
-                                 "#17BECFFF",
-                                 "#ff7f00",
-                                 "#a6cee3", 
-                                 "#1f78b4", 
-                                 "#b2df8a", 
-                                 "#fb9a99",
-                                 "#ffd92f", 
-                                 "#33a02c",
-                                 "#e7298a",
-                                 "#b15928", 
-                                 "#e31a1c",
-                                 "white",
-                                 "#BCBD22FF"
-                                 ), 
-                     levels = c("informations descriptives, généralités", 
-                               "ouvrages hydrauliques",    
-                               "scientifique/universitaire", 
-                               "hydrologie", 
-                               "ressource en eau", 
-                               "écoulement", 
-                               "loisirs", 
-                               "localisation géographique", 
-                               "enjeu portuaire/côtier", 
-                               "internet", 
-                               "tourisme, voyage", 
-                               "culture, patrimoine",
-                               "résultats non significatifs",
-                               "réseaux sociaux"
+mypalette = get_brewer_pal("Set3", 9) 
+
+f_pal <- colorFactor(palette = mypalette, 
+                     levels = c("Hydrographie",
+                               "Localisation",    
+                               "Réseaux et infrastructures", 
+                               "Académique", 
+                               "Connaissances et gestion", 
+                               "Aménagement", 
+                               "Tourisme et loisirs", 
+                               "Internet", 
+                               "Résultats non significatifs (classe NA)"
                               )) 
 # define title
 tag.map.title <- tags$style(HTML("
@@ -132,26 +121,78 @@ tag.map.title <- tags$style(HTML("
   }
 "))
 title <- tags$div(
-  tag.map.title, HTML("<td align=justify><b>Les sujets ressortant sur les pages de résultats de moteur de recherche (SERP)</b><em><br> (requête de type 'ville AND rivière' et score de spécificité > 2)</em></td>"))
+  tag.map.title, HTML("<td align=justify><b>Les discours sur les rivières dans les pages de résultats de moteur de recherche</b><em><br> (requête en anglais de type 'ville AND rivière')</em></td>"))
 
-leaf <- leaflet(data = df_spec, options = leafletOptions(zoomControl = TRUE, minZoom = 1, maxZoom = 5)) %>% 
-  addProviderTiles("CartoDB.PositronNoLabels") %>% 
-  addCircleMarkers(~Longitude, 
-                   ~Latitude, 
-                   color = "black",
-                   radius = 2.5) %>% 
-  addCircleMarkers(~Longitude, 
-                   ~Latitude,
-                   label = df_spec$urban_aggl,
-                   color = ~f_pal(df_spec$classe),
+leaf <- leaflet(data = data_city_river, options = leafletOptions(zoomControl = TRUE, minZoom = 1, maxZoom = 5)) %>% 
+  addProviderTiles("CartoDB.VoyagerNoLabels") %>% 
+  addCircleMarkers(~longitude, 
+                   ~latitude,
+                   label = data_city_river$urban_aggl,
+                   color = ~f_pal(data_city_river$classname),
+                   opacity = 1, 
+                   radius = 0.5*data_city_river$spec_max) %>% 
+  # add title
+  addControl(title, position = "topright") %>% 
+  # add legend
+  addLegend(title = "Classe", pal = f_pal, values = ~data_city_river$classname, opacity = 1, position = "bottomleft") %>% 
+  addScaleBar(position = "bottomright", 
+              options = scaleBarOptions(metric = TRUE, imperial = FALSE)) %>% 
+  addLegendSize(title = "Score de spécificité", values = ~data_city_river$spec*0.5, color = "black", shape = "circle", baseSize = 4)
+```
+
+Plot le max :
+
+```{r plot_max}
+data = read.csv("analysis/clustering/summary_8_en_noloc.csv") %>% 
+  mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) %>% 
+  select(-biome, -clco, -climate)
+
+# find max cluster  
+col_classe = c("cl1", "cl2", "cl3", "cl4", "cl5", "cl6", "cl7", "cl8", "clNA")
+data$classe <- apply(data[,col_classe], 1, function(row){
+  col_classe[which.max(row)]
+})
+data = data %>% 
+ mutate(classname = case_when(
+    classe == "cl1" ~ "Hydrographie",
+    classe == "cl2" ~ "Localisation",
+    classe == "cl3" ~ "Réseaux et infrastructures",
+    classe == "cl4" ~ "Académique",
+    classe == "cl5" ~ "Connaissances et gestion",
+    classe == "cl6" ~ "Aménagement",
+    classe == "cl7" ~ "Tourisme et loisirs",
+    classe == "cl8" ~ "Internet",
+    classe == "clNA" ~ "Résultats non significatifs"))
+
+mypalette = get_brewer_pal("Set3", 9) 
+mypalette[2] = "#e6ab02"
+f_pal <- colorFactor(palette = mypalette, 
+                     levels = c("Hydrographie",
+                               "Localisation",    
+                               "Réseaux et infrastructures", 
+                               "Académique", 
+                               "Connaissances et gestion", 
+                               "Aménagement", 
+                               "Tourisme et loisirs", 
+                               "Internet", 
+                               "Résultats non significatifs"
+                              )) 
+
+leaf <- leaflet(data = data, options = leafletOptions(zoomControl = TRUE, minZoom = 1, maxZoom = 5)) %>% 
+  addProviderTiles("CartoDB.VoyagerNoLabels") %>% 
+ addCircleMarkers(~longitude, 
+                   ~latitude,
+                   label = data$urban_aggl,
+                   color = ~f_pal(data$classname),
                    opacity = 1, 
                    radius = 2) %>% 
   # add title
   addControl(title, position = "topright") %>% 
   # add legend
-  addLegend(title = NULL, pal = f_pal, values = ~df_spec$classe, opacity = 1, position = "bottomleft") %>% 
+  addLegend(title = "Classe", pal = f_pal, values = ~data$classname, opacity = 1, position = "bottomleft") %>% 
   addScaleBar(position = "bottomright", 
-              options = scaleBarOptions(metric = TRUE, imperial = FALSE))                           
+              options = scaleBarOptions(metric = TRUE, imperial = FALSE))
 ```
 
 ##### **c. A city and its clusters**
@@ -205,4 +246,20 @@ mon_plot = subset(serp_absolu, serp_absolu$cityname == ma_ville) %>% # our data
          y = "nombre de snippets") +
     ggtitle(paste("Discours sur l'eau à", ma_ville)) +
     theme_bw()
+```
+
+##### d. AFC
+
+```{r}
+library(FactoMineR)
+
+# keep only quantitative columns
+data_afc = data[,c(2,8:16)] 
+# put urban_aggl column in row names 
+data_afc2 = data_afc[,-1]
+rownames(data_afc2) = data_afc[,1]
+data_afc = data_afc2
+
+resultat = PCA(data_afc)
+explor::explor(resultat)
 ```
