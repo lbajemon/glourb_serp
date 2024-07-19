@@ -88,8 +88,7 @@ data_city_river = data_city_river %>%
     mutate(city_hl4 = str_replace_all(city_hl4, ";", " OR ")) %>% 
     mutate(city_hl5 = str_replace_all(city_hl5, ";", " OR ")) %>% 
     mutate(city_hl6 = str_replace_all(city_hl6, ";", " OR ")) %>% 
-    mutate(river_en = str_replace_all(river_en, ";", " OR ")) %>% 
-    distinct(data_city_river$urban_aggl, .keep_all = TRUE)
+    distinct(urban_aggl, .keep_all = TRUE)
 ```
 
 ## Collection of data
@@ -278,9 +277,12 @@ get_serp_data_hl = function(fid, cityname, gl, hl, google_domain){
 
   file = glue::glue("collected_data/water_resource/hl/raw_data/{fid}_{hl}.RDS")
          if(!file.exists(file)){
+           if(hl == "zh-cn"){google_hl = "zh-CN"}
+           else {google_hl = hl}
+      
 
     # let's define our query with a parameters list
-           water = polyglotr::google_translate("water", target_language = hl, source_language = "en")
+           water = polyglotr::google_translate("water", target_language = google_hl, source_language = "en")
     
            q = paste0(water, " AND (", cityname, ")") # our query
     
@@ -357,14 +359,14 @@ translate_snippet = function(fid, hl){
       }
       
       else{
-        
+
     ## remove the URL which are inside the snippets
     # they cause an error in Google translate
       df_hl = df_hl %>% 
         mutate(snippet = str_replace_all(snippet, "http:", " ")) %>% 
         mutate(snippet = str_replace_all(snippet, "https:", " ")) %>% 
-        mutate(snippet = str_replace_all(snippet, "%", " "))
-    
+        mutate(snippet = str_replace_all(snippet, "%", " ")) 
+      
     snippet_hl = df_hl[["snippet"]] # create a subset of the snippets and convert it to a vector 
     df_translated = data.frame() # create an empty dataframe object
   
@@ -409,13 +411,6 @@ translate_snippet = function(fid, hl){
 We will run all the functions for each of our combinations and for each language of said combinations.
 
 ```{r run_functions}
-
-# replace some language codes in the table 
-data_city_river = data_city_river %>% 
-  mutate(hl1 = str_replace_all(hl1, "zh-cn", "zh-CN")) %>% 
-  mutate(hl1 = str_replace_all(hl1, "mni", "mni-Mtei")) %>% 
-  mutate(hl2 = str_replace_all(hl2, "arz", "no data")) %>% 
-  mutate(hl3 = str_replace_all(hl3, "po", "pl"))
 
 #### PREPARE DATA
 # define in which language we will run the functions
