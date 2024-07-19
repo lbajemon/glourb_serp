@@ -1,0 +1,475 @@
+---
+title: "Search Engine Pages Results: Collect data 'flood and city'"
+format: html
+editor: visual
+author: "Liolia Bajemon & Lise Vaudor"
+---
+
+```{r load_packages, results = 'hide', warning = FALSE, message = FALSE}
+library(tidyverse)
+library(httr)
+library(jsonlite)
+library(tidytext)
+library(remotes)
+remotes::install_github("lvaudor/mixr") # for the lexicon
+remotes::install_github("Tomeriko96/polyglotr", force = TRUE) # for translations
+```
+
+## Description
+
+The aim of this document is to use the ![](https://dka575ofm4ao0.cloudfront.net/pages-transactional_logos/retina/211386/logo_color_transparent_background.png){width="105" height="17"} API ([access link](https://get.valueserp.com/try-it-free/)) to collect data relative to Google searches. SERP stands for Search Engine Results Pages and corresponds to the pages displayed in response to a query on a search engine, e.g. Google.
+
+After running queries corresponding to combinations of "{river} AND {city name}, we will run queries regarding the water resource, with combinations of "water AND {city name}".
+
+## Set-up
+
+```{r get_api_key}
+value_serp_api_key = Sys.getenv("VALUE_SERP")
+```
+
+We will create a table containing all the considered cities, as well as additional information, with the following variables:
+
+-   FID: (internal) Identifier of the city.
+
+-   latitude, longitude: Geographic coordinates of the city.
+
+-   urban_aggl: Common name of the city.
+
+-   country_en: The English name of the country in which the study area is located.
+
+-   country_fr: The French name of the country in which the study area is located.
+
+-   gl: A 2-letters code corresponding to the country in which the study area is located and from which the Google search is presumably run.
+
+-   hl1, hl2, hl3, hl4, hl5, hl6: A 2-letters code corresponding to the language(s) of the country (ISO 639-1, see [here](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes)). It has to answer to two conditions: 1. to be supported by Google Translate and 2. to be stated as an "official language", a "national language" or to be a "lingua franca" or a widely spoken language. (*note: in Philippines, the official languages are filipino and cebuano. But those languages are not available on Value SERP, so we put tagalog, tl, instead)*
+
+-   city_en: The name of our study area in English. It can be multiple names or spellings.
+
+-   city_hl1, ..., city_hl6: The name of our study area in the local language(s).
+
+-   river_en: The English name(s) of the main river(s) of the city. It is identified based on hydrologic criteria, famous characteristics, remote sensing images, institutional data or crowdsourced platforms data, such as OpenStreetMap or Wikipedia.
+
+-   river_hl1, ..., river_hl6: The name(s) of the main river(s) of the city in the local language(s).
+
+-   multiple_rivers: A boolean indicating whether multiple main rivers are considered at the same time (e.g. when there is a major confluence).
+
+-   river_position: A three levels variable indicating roughly the position of the river in relation to the city (far, adjacent, inside).
+
+-   sub_continent: Division of the cities by sub-continent (used for reducing the size of the shapefiles)
+
+-   clima: climate zone (GEnS, Metzger et al. 2013 - extracted from BasinATLAS level 06)
+
+-   clco: land cover class ([GLC2000, Bartholomé & Belward, 2005](https://forobs.jrc.ec.europa.eu/glc2000) - extracted from BasinATLAS level 06)
+
+-   biome: terrestrial biome ([TEOW, Dinerstein et al. 2017](https://ecoregions.appspot.com/) - extracted from BasinATLAS level 06)
+
+-   tld: Top-level domain of the country, *e.g.* 'fr' for France.
+
+-   google_domain: The Google domain of the country, *e.g.* 'google.fr' for France (see [here](https://fr.wikipedia.org/wiki/Liste_des_domaines_de_Google)).
+
+We will read the file containing all the considered {city name} + {river name} combinations and arrange it.
+
+```{r read_data}
+data_city_river = read.csv("input_data/data_city_river.csv")
+
+# get the tld and google domain for each country
+data_google_domain = read.csv("input_data/country_code_internet.csv")
+data_google_domain = subset(data_google_domain, select = c("gl", "tld", "google_domain"))
+# and put it in our table
+data_city_river = left_join(data_city_river, data_google_domain, by = "gl", relationship = "many-to-many")
+# note: there is no google domain for Iran, Soudan, Syria and North Korea, so we put google.com instead
+
+#  format the data for the search queries, i.e. put "OR" instead of ";"
+data_city_river = data_city_river %>% 
+    mutate(city_en = str_replace_all(city_en, ";", " OR ")) %>% 
+    mutate(city_hl1  = str_replace_all(city_hl1, ";", " OR ")) %>% 
+    mutate(city_hl2 = str_replace_all(city_hl2, ";", " OR ")) %>% 
+    mutate(city_hl3 = str_replace_all(city_hl3, ";", " OR ")) %>% 
+    mutate(city_hl4 = str_replace_all(city_hl4, ";", " OR ")) %>% 
+    mutate(city_hl5 = str_replace_all(city_hl5, ";", " OR ")) %>% 
+    mutate(city_hl6 = str_replace_all(city_hl6, ";", " OR ")) %>% 
+    distinct(urban_aggl, .keep_all = TRUE)
+```
+
+## Collection of data
+
+### 1. In English
+
+First, we will collect the data in English for all the cities, using the Value SERP API.
+
+#### 1.1. Collect raw data
+
+Let's define a function `get_serp_data()` which collects SERP results for a given city name:
+
+```{r def_get_serp_data_en}
+get_serp_data = function(fid, cityname){
+    file = glue::glue("collected_data/floods/english/raw_data/{fid}.rds")
+    
+          if(!file.exists(file)){
+          # Parameters list
+            q = paste0("flood AND (", cityname,")") # our query
+            params = list(
+              `api_key` = value_serp_api_key,
+              `q` = q,
+              `hl` = "en",
+              `num` = 100
+              )
+            
+            print(q)
+            
+          # q : the search query
+          # hl : language code, here english
+          # num : number of result asked
+          # google_domain : the Google domain used to run the query, google.com by default
+            
+          # ask for the data
+          res <- httr::GET(url = 'https://api.valueserp.com/search', query = params)
+          saveRDS(res, file = file)
+          
+    } # if the file already exists no API request is carried out
+}
+```
+
+The query results are saved in a directory "data/en/data_RDS/" (and are not re-generated unless the corresponding .RDS files are suppressed).
+
+Now let's run the function for each of our combinations.
+
+```{r run_get_serp_data_en}
+data_city_river %>% 
+  mutate(data = purrr::pmap(list(fid = fid,
+                                 cityname = city_en
+                               ),
+                          get_serp_data))
+```
+
+#### 1.2. Clean raw data
+
+Let's convert the raw data to a text format so it's readable.
+
+```{r def_get_serp_tibble}
+get_serp_tibble = function(fid){
+  
+  file = glue::glue("collected_data/floods/english/raw_data_text/raw_{fid}.csv")
+
+    if(!file.exists(file)){
+# translate to string
+    res = readRDS(file = glue::glue("collected_data/floods/english/raw_data/{fid}.rds"))
+    res_text <- httr::content(res, "text")
+    
+    # translate to a more readable format
+    res_json <- jsonlite::fromJSON(res_text, flatten = TRUE)
+    res_tib = res_json[["organic_results"]]
+    if(is.null(res_tib)){
+      res_tib = tibble::tibble("Result" = "NoData")
+      fid = paste0(fid, "_nodata")
+    }
+    readr::write_csv(res_tib,
+                     glue::glue("collected_data/floods/english/raw_data_text/raw_{fid}.csv"))
+    return(res_tib)
+  }
+}
+```
+
+```{r run_get_serpentine_tibble, results = 'hide', warning = FALSE, message = FALSE}
+data_city_river %>% 
+  mutate(data = purrr::map(fid, get_serp_tibble))
+```
+
+Here we may notice that some snippets are not in English. Let's translate the snippets so that they are all in English and they can be analyzed.
+
+```{r def_translate_snippets}
+translate_snippets = function(fid){
+
+  file = glue::glue("collected_data/floods/english/clean_data/clean_{fid}.csv")
+  
+  if(!file.exists(file)){
+    df = read.csv(glue::glue("collected_data/floods/english/raw_data_text/raw_{fid}.csv"))
+    
+  ### CLEAN 
+  ## remove the URL because they cause an error with google translate 
+  df = df %>% 
+    mutate(snippet = str_replace_all(snippet, "http://", " ")) %>% 
+    mutate(snippet = str_replace_all(snippet, "https://", " ")) %>% 
+    mutate(snippet = str_replace_all(snippet, "%", " ")) %>% 
+    mutate(snippet = str_replace_all(snippet, "://", " "))
+
+  ### TRANSLATION
+  ## translate the snippets which are not in English
+  ## and mark them for further analysis  
+  
+  # add a new column 
+  df = df %>% 
+    add_column(english = TRUE, .after = "snippet")
+
+  for(i in 1:nrow(df)){
+    # detect the language
+    snippet_to_trans = df$snippet[i]
+    
+    lang = polyglotr::language_detect(snippet_to_trans) 
+    
+    # check if the language is english or not 
+    condition = (lang == "en")
+    
+    # update to false if not  
+    df$english[i] = condition
+    
+    # update to "NA" if there is no snippet
+    if (is.na(snippet_to_trans)){df$english[i] = 'NA'}
+  }
+  
+    # translate to English
+  
+    snippets_vector = df[["snippet"]] # create a subset of the snippets and convert it to a vector 
+    df_translated = data.frame() # create an empty dataframe object
+  
+    # translate each element of the vector (i.e. each snippet)
+    for (i in 1:nrow(df)){
+      text = snippets_vector[i]
+      if(!is.na(text)){ 
+      snippet_en = polyglotr::google_translate(text, "en", "auto") # translate the snippet 
+      df_translated = rbind(df_translated, snippet_en) # add it to the dataframe
+      }
+      else{
+        df_translated = rbind(df_translated, "NA")
+        # this avoids the NA values to be translated to "THAT" 
+      }
+    }
+  
+  # rename the resulting column
+  colnames(df_translated) = c("trans_snippet")
+  
+  # add the position of the snippet to the dataframe
+  position = 1:nrow(df_translated)
+  df_translated$position <- position
+  
+  # now we can bind the translated snippets to the original dataframe 
+  final_df = merge(df, df_translated, by = "position")
+  
+  # show a snippet
+  print(final_df$trans_snippet[1])
+  
+  ### SAVE 
+  # write the results in a new file
+  readr::write_csv(final_df,
+                   glue::glue("collected_data/floods/english/clean_data/clean_{fid}.csv"))
+  }
+}
+```
+
+```{r run_translate_snippets}
+data_city_river %>% 
+  mutate(data = purrr::map(fid,
+                          translate_snippets))
+```
+
+### 2. In the local language(s)
+
+Now, using the same principle, we will collect data in the language(s) of the country from which we are presumably running the query.
+
+In many countries, more than one language is used (e.g. Switzerland, India, Niger, *etc.)* so the script will be ran for multiple languages (as long as they are supported by Google Translate), in order to compare the results. More precisely the official language might be different depending on the region. Here, the goal is to get an overview of the subjects mentioned by the **local** population, therefore we will use the official languages of the region where the city is located, when possible. For example, in Dehli, the official languages are English, Hindi, Punjabi and Urdu.
+
+We will define all the needed functions and then we will run them for each of the languages.
+
+#### 2.1. Collect raw data
+
+```{r def_get_serp_data_hl}
+get_serp_data_hl = function(fid, cityname, gl, hl, google_domain){
+
+  file = glue::glue("collected_data/floods/hl/raw_data/{fid}_{hl}.RDS")
+         if(!file.exists(file)){
+           if(hl == "zh-cn"){google_hl = "zh-CN"}
+           else {google_hl = hl}
+      
+
+    # let's define our query with a parameters list
+           if(google_hl == "de")
+             {flood = "Überschwemmung"}
+           else{
+             flood = polyglotr::google_translate("flood", target_language = google_hl, source_language = "en")}
+    
+           q = paste0(flood, " AND (", cityname, ")") # our query
+    
+           # the rivername and cityname in input are already 
+    
+           # translated in the local language (hl)
+            
+           params = list(
+                    `api_key` = value_serp_api_key,
+                    `q` = q,
+                    `gl` = gl,
+                    `hl` = hl,
+                    `num` = 100,
+                    google_domain = google_domain
+            )
+           print(params)
+              # q : the search query
+              # gl : 2 letter country code 
+              # hl : language code
+              # num : number of result asked
+              # google_domain : the Google domain used to run the query, google.com by default
+              # ask for the data
+           res <- httr::GET(url = 'https://api.valueserp.com/search', query = params)
+           saveRDS(res, file = file)
+          # if the file already exists no API request is carried out
+    }
+}
+```
+
+This function will change the format of our raw data so it's readable:
+
+```{r def_get_serp_tibble_hl}
+get_serp_tibble_hl = function(fid, hl){
+# translate to string
+  
+    file = glue::glue("collected_data/floods/hl/raw_data_text/raw_{fid}_{hl}.csv")
+    
+    if(!file.exists(file)){
+      res = readRDS(file = glue::glue("collected_data/floods/hl/raw_data/{fid}_{hl}.RDS"))
+      res_text <- httr::content(res, "text")
+    
+      # translate to a more readable format
+      res_json <- jsonlite::fromJSON(res_text, flatten = TRUE)
+      res_tib = res_json[["organic_results"]]
+      if(is.null(res_tib)){res_tib = tibble::tibble("Result" = "NoData")}
+      readr::write_csv(res_tib,
+                       glue::glue("collected_data/floods/hl/raw_data_text/raw_{fid}_{hl}.csv"))
+      
+      return(res_tib)
+        }
+}
+```
+
+#### 2.2. Clean raw data
+
+Now let's clean and translate the snippets in English
+
+```{r def_translate_snippet}
+translate_snippet = function(fid, hl){
+
+  # if the file already exists, the function is not executed
+  
+  file1 = glue::glue("collected_data/floods/hl/clean_data/clean_{fid}_{hl}.csv")
+  file2 = glue::glue("collected_data/floods/hl/clean_data/nodata_{fid}_{hl}.csv")
+  
+  if(!file.exists(file1) & !file.exists(file2)){
+    if(file.exists(glue::glue("collected_data/floods/hl/raw_data_text/raw_{fid}_{hl}.csv"))){
+      df_hl= read.csv(file = glue::glue("collected_data/floods/hl/raw_data_text/raw_{fid}_{hl}.csv")) 
+     
+      # check if data has been found beforehand
+      if(df_hl[1,1] == "NoData"){
+        print(paste0("No data, fid = ",fid, ", hl = ",hl))
+        write.csv(df_hl, glue::glue("collected_data/floods/hl/clean_data/nodata_{fid}_{hl}.csv"))
+      }
+      
+      else{
+
+    ## remove the URL which are inside the snippets
+    # they cause an error in Google translate
+      df_hl = df_hl %>% 
+        mutate(snippet = str_replace_all(snippet, "http:", " ")) %>% 
+        mutate(snippet = str_replace_all(snippet, "https:", " ")) %>% 
+        mutate(snippet = str_replace_all(snippet, "%", " ")) 
+      
+    snippet_hl = df_hl[["snippet"]] # create a subset of the snippets and convert it to a vector 
+    df_translated = data.frame() # create an empty dataframe object
+  
+    # translate each element of the vector (i.e. each snippet)
+    for (i in 1:nrow(df_hl)){
+      text = snippet_hl[i]
+      if(!is.na(text)){ 
+        snippet_en = polyglotr::google_translate(text, "en", "auto") # translate the snippet 
+        df_translated = rbind(df_translated, snippet_en) # add it to the dataframe
+      }
+     else{
+        df_translated = rbind(df_translated, "NA")
+        # this avoids the NA values to be translated to "THAT"
+     }
+        }
+    
+  # rename the resulting column
+  colnames(df_translated) = c("trans_snippet")
+  
+  # add the position of the snippet to the dataframe
+  position = 1:nrow(df_hl)
+  df_translated$position <- position
+  
+  # now we can bind the translated snippets to the original dataframe 
+  final_df = merge(df_hl, df_translated, by = "position")
+  
+  # remove the special characters (é, è, à, ü, ö, etc.) from place names or names of persons snip_en = stringi::stri_trans_general(snip_en, "latin-ascii")
+  
+  write.csv(final_df, glue::glue("collected_data/floods/hl/clean_data/clean_{fid}_{hl}.csv"))
+      }
+    }
+    else{
+      print(paste0("no raw data, fid: ", fid, ", hl: ", hl))
+    }
+  }
+  return(0)
+}
+```
+
+#### 2.3. Run the functions
+
+We will run all the functions for each of our combinations and for each language of said combinations.
+
+```{r run_functions}
+
+#### PREPARE DATA
+# define in which language we will run the functions
+
+for(i in 1:6) {
+  # only select the cities which have the ith language we're interested in
+  n_hl = 7 + i # the hl columns are beginning after the 7th column 
+  # if the language is english and the country is the usa
+  # do not keep it as the query has already been ran in this language and with the domain .com
+  data_subset = filter(data_city_river, ((data_city_river[, n_hl] != "no data") & ((data_city_river[, n_hl] != "en") | data_city_river[, 7] != "us")))
+  
+  # as well as the river and city names in the corresponding language
+  # e.g. hl4, city_hl4 and main_river_hl4 
+  n_city_hl = 14 + i # the city names are after the 14th column
+
+  # if the name in the local language is not available, do not select this row
+  data_subset = filter(data_subset, (data_subset[, n_city_hl] != "no data"))
+  
+  data = select(.data = data_subset, c(1:7, n_hl, n_city_hl, 34, 35))
+  
+  # rename the columns
+  colnames(data) = c("fid", "latitude", "longitude", "urban_aggl", "country_en", "country_fr", "gl", "hl", "cityname", "tld", "google_domain")
+
+#### COLLECT DATA
+# use value SERP API
+
+data %>% 
+  mutate(data = purrr::pmap(list(fid = fid,
+                                 cityname = cityname,
+                                 gl = gl,
+                                 hl = hl,
+                                 google_domain = google_domain),
+                            get_serp_data_hl))
+
+# transform the data from .rds to .txt
+data %>% 
+  mutate(data = purrr::pmap(list(fid = fid,
+                                 hl = hl),
+                            get_serp_tibble_hl))
+}
+  
+#### CLEAN AND TRANSLATE DATA
+
+# redo the same procedure for selecting the language
+# this ensures that we first collect all the necessary data on the same day
+# and then proceed to clean and translate it later
+for(i in 1:6) {
+  n_hl = 7 + i 
+  data_subset = filter(data_city_river, ((data_city_river[, n_hl] != "no data") & ((data_city_river[, n_hl] != "en") | data_city_river[, 7] != "us")))
+  n_city_hl = 14 + i 
+  data = select(.data = data_subset, c(1:7, n_hl, n_city_hl, 34, 35))
+  colnames(data) = c("fid", "latitude", "longitude", "urban_aggl", "country_en", "country_fr", "gl", "hl", "cityname", "tld", "google_domain")
+
+data %>%
+  mutate(data = purrr::pmap(list(fid = fid,
+                                 hl = hl),
+                            translate_snippet))
+}
+```
