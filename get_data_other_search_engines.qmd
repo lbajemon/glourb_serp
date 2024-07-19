@@ -1,0 +1,419 @@
+---
+title: "Search Engine Pages Results: Collect data with other search engines"
+format: html
+editor: visual
+author: "Liolia Bajemon & Lise Vaudor"
+---
+
+## Description
+
+The aim of this document is to use the Serp API ([access link](https://serpapi.com/)) to collect data relative to Bing searches, Yahoo searches and Baidu searches. After collecting SERP data from Google, we will try to do the same on these search engines, to compare the results.
+
+Here, our queries correspond to a sample of 11 combinations of {city name} + {river} (out of 372). We will run the queries in English and for a single river.
+
+## Set-up
+
+#### Load packages
+
+```{r load_packages, results = 'hide', warning = FALSE, message = FALSE}
+library(tidyverse)
+library(httr)
+library(jsonlite)
+library(remotes)
+remotes::install_github("lvaudor/mixr") # for the lexicon
+remotes::install_github("Tomeriko96/polyglotr", force = TRUE) # for translations
+```
+
+#### Authentication
+
+1.  Create an account on the Serp API. Your private key is displayed in the "Api key" section.
+
+2.  Open your R environment
+
+    ```{r save_api_key, results = 'hide', warning = FALSE, message = FALSE}
+    usethis::edit_r_environ()
+    ```
+
+3.  Write this line in your R environment :
+
+serp_api = "copy_here_your_VALUE_SERP_API_key"
+
+4.  Now you can access your key from any of your scripts :
+
+```{r get_api_key}
+serp_api_key = Sys.getenv("serp_api")
+```
+
+#### Read data
+
+We will read the file containing all the considered {city name} + {river name} combinations and arrange it.
+
+```{r data}
+# read data
+data_city_river_11 = read.csv("input_data/data_city_river_11.csv", sep = ";")
+
+# visualise data
+data_city_river_11
+
+#  format the data for the search queries, i.e. put "OR" instead of ";" to indicate multiple cities or rivers: 
+# also replace - by OR
+data_city_river = data_city_river_11 %>% 
+    mutate(city_en = str_replace_all(city_en, ";", " OR ")) %>% 
+    mutate(city_hl1  = str_replace_all(city_hl1, ";", " OR ")) %>% 
+    mutate(city_hl2 = str_replace_all(city_hl2, ";", " OR ")) %>% 
+    mutate(city_hl3 = str_replace_all(city_hl3, ";", " OR ")) %>% 
+    mutate(city_hl4 = str_replace_all(city_hl4, ";", " OR ")) %>% 
+    mutate(city_hl5 = str_replace_all(city_hl5, ";", " OR ")) %>% 
+    mutate(city_hl6 = str_replace_all(city_hl6, ";", " OR ")) %>% 
+    mutate(river_en = str_replace_all(river_en, ";", " OR ")) %>% 
+    mutate(river_hl1 = str_replace_all(river_hl1, ";", " OR ")) %>% 
+    mutate(river_hl2 = str_replace_all(river_hl2, ";", " OR ")) %>% 
+    mutate(river_hl3 = str_replace_all(river_hl3, ";", " OR ")) %>% 
+    mutate(river_hl4 = str_replace_all(river_hl4, ";", " OR ")) %>% 
+    mutate(river_hl5 = str_replace_all(river_hl5, ";", " OR ")) %>% 
+    mutate(river_hl6 = str_replace_all(river_hl6, ";", " OR ")) 
+```
+
+## Collection of data
+
+Different parameters must be entered for each search engine. The parameters can be examined on [https://serpapi.com/playground](https://serpapi.com/playground?engine=baidu&q=Coffee).
+
+#### Bing searches
+
+```{r def_get_serp_data_en}
+get_serp_data_bing = function(fid, cityname, rivername){
+    file = glue::glue("collected_data/bing/{fid}.rds")
+    
+          if(!file.exists(file)){
+          # Parameters list
+            q = paste0("(", rivername, ") + (", cityname, ")") # our query
+            
+            params = list(
+              engine = "bing",
+              q = q,
+              mkt = "en-US",
+              api_key = serp_api_key,
+              count = 50
+            )
+            
+                # ask for the data
+          res <- httr::GET(url = 'https://serpapi.com/search', query = params)
+
+          if (status_code(res) == 200) {
+            # convert in JSON
+            results <- content(res, as = "text")
+            results <- fromJSON(results)
+  
+            # convert to dataframe 
+            # keeping only results in the list called "organic_results" 
+          
+            if ("organic_results" %in% names(results)) {
+              df <- as.data.frame(results$organic_results)
+    
+            # Convert lists to char
+            df <- data.frame(lapply(df, function(x) {
+              if (is.list(x)) {
+                sapply(x, toString)
+              } else {
+                x
+              }
+              }))
+    
+    # save the results
+    write.csv(df, glue::glue("collected_data/bing/{fid}.csv", row.names = FALSE))
+    }
+            }
+          }
+    } # if the file already exists no API request is carried out
+```
+
+Now let's run the function for each of our combinations and for each of our three search engines.
+
+```{r run_get_serp_data_bing}
+data_city_river %>% 
+  mutate(data = purrr::pmap(list(fid = fid,
+                                 cityname = city_en,
+                                 rivername = river_en
+                                 ),
+                            get_serp_data))
+```
+
+#### Yahoo searches
+
+```{r def_get_serp_data__yahoo}
+get_serp_data_yahoo = function(fid, cityname, rivername){
+    file = glue::glue("collected_data/yahoo/{fid}.rds")
+    
+          if(!file.exists(file)){
+          # Parameters list
+            q = paste0("(", rivername, ") + (", cityname, ")") # our query
+            
+            params = list(
+              engine = "yahoo",
+              p = q,
+              vl = "lang_en",
+              vc = "us",
+              api_key = serp_api_key
+            )
+            
+                # ask for the data
+          res <- httr::GET(url = 'https://serpapi.com/search', query = params)
+
+          if (status_code(res) == 200) {
+            # convert in JSON
+            results <- content(res, as = "text")
+            results <- fromJSON(results)
+  
+            # convert to dataframe 
+            # keeping only results in the list called "organic_results" 
+          
+            if ("organic_results" %in% names(results)) {
+              df <- as.data.frame(results$organic_results)
+    
+            # Convert lists to char
+            df <- data.frame(lapply(df, function(x) {
+              if (is.list(x)) {
+                sapply(x, toString)
+              } else {
+                x
+              }
+              }))
+    
+    # save the results
+    write.csv(df, glue::glue("collected_data/yahoo/{fid}.csv", row.names = FALSE))
+    }
+            }
+          }
+    } # if the file already exists no API request is carried out
+```
+
+```{r run_get_serp_data_yahoo}
+data_city_river %>% 
+  mutate(data = purrr::pmap(list(fid = fid,
+                                 cityname = city_en,
+                                 rivername = river_en
+                                 ),
+                            get_serp_data_yahoo))
+# bug with mutate so we will run the remaining queries by hand
+get_serp_data_yahoo(625, "Nha Trang", "Cái River")
+get_serp_data_yahoo(212, "Wuhan", "Yangtze river")
+get_serp_data_yahoo("554_a", "Ufa", "Belaya river")
+get_serp_data_yahoo(839, "Montreal", "Saint Lawrence river")
+get_serp_data_yahoo("832_a", "Lyon", "Rhone river")
+get_serp_data_yahoo("951_1", "Denver", "South Platte river")
+get_serp_data_yahoo("536_a", "N'Djaména", "Chari river")
+
+# also a bug with ahmedabad, a different code was written below
+```
+
+```{r query_ahmedabad}
+# bug with ahmedabad, code given by chat gpt to solve the problem: 
+
+params <- list(
+  engine = "yahoo",
+  p = "Ahmedabad + sabarmati river",
+  api_key = serp_api_key, 
+  vl = "lang_en",
+  vc = "us"
+)
+
+url <- "https://serpapi.com/search"
+response <- GET(url, query = params)
+
+  if ("organic_results" %in% names(results)) {
+    organic_results <- results$organic_results
+    
+    # Inspecter la structure des résultats
+    print("Structure des résultats organiques:")
+    str(organic_results)
+    
+    # Normaliser les résultats en ajoutant des colonnes manquantes
+    organic_results <- lapply(organic_results, function(x) {
+      # Convertir en dataframe et ajouter des colonnes manquantes
+      df <- as.data.frame(t(unlist(x)), stringsAsFactors = FALSE)
+      return(df)
+    })
+    
+    # Forcer toutes les colonnes à être des caractères
+    organic_results <- lapply(organic_results, function(df) {
+      data.frame(lapply(df, as.character), stringsAsFactors = FALSE)
+    })
+    
+    # Combiner les résultats en un seul dataframe
+    df <- bind_rows(organic_results)
+    
+    # Écrire le dataframe dans un fichier CSV
+    write.csv(df, "results.csv", row.names = FALSE)
+    
+    print("Les résultats ont été enregistrés dans 'results.csv'")
+  } else {
+    print("La structure des résultats n'est pas celle attendue.")
+  }
+else {
+  print(paste("Error:", status))
+  print(content(response, as = "text", encoding = "UTF-8"))
+}
+```
+
+#### Baidu searches
+
+The Baidu searches will only be ran on three Chinese cities: Xuanwei, Wuhan and Huaibei.
+
+##### Get data
+
+```{r def_get_serp_data_baidu}
+get_serp_data_baidu = function(params, fid){
+  res <- httr::GET(url = 'https://serpapi.com/search', query = params)
+
+  if (status_code(res) == 200) {
+    # convert in JSON
+    results <- content(res, as = "text")
+    results <- fromJSON(results)
+  
+    # convert to dataframe 
+    # keeping only results in the list called "organic_results" 
+          
+    if ("organic_results" %in% names(results)) {
+      df <- as.data.frame(results$organic_results)
+    
+      # Convert lists to char
+      df <- data.frame(lapply(df, function(x) {
+      if (is.list(x)) {
+        sapply(x, toString)
+        } 
+        else {
+          x
+          }
+        }))
+    # save the results
+      write.csv(df, glue::glue("collected_data/baidu/{fid}.csv", row.names = FALSE))
+    }
+  }
+  }
+```
+
+```{r run_get_serp_data_baidu}
+
+# HUAIBEI
+ params = list(
+              engine = "baidu", 
+              q = "淮北市 濉河", # query
+              ct = 1, # language
+              api_key = serp_api_key, 
+              rn = 100, # nb of results
+              device = "desktop", 
+              f = 8 # normal search type
+            )
+ get_serp_data_baidu(params, fid = 108)
+ 
+ # WUHAN
+ params = list(
+              engine = "baidu", 
+              q = "武汉市 长江", # query
+              ct = 1, # language
+              api_key = serp_api_key, 
+              rn = 100, # nb of results
+              device = "desktop", 
+              f = 8 # normal search type
+            )
+ get_serp_data_baidu(params, fid = 212)
+ 
+# XUANWEI
+ params = list(
+              engine = "baidu", 
+              q = "宣威市 北盘江", # query
+              ct = 1, # language
+              api_key = serp_api_key, 
+              rn = 100, # nb of results
+              device = "desktop", 
+              f = 8 # normal search type
+            )
+ get_serp_data_baidu(params, fid = 319)
+```
+
+##### Translate data
+
+Now let's translate the results from Chinese to English:
+
+```{r def_translate_snip}
+translate_snip = function(df){
+  snippet_hl = df[["snippet"]] # create a subset of the snippets and convert it to a vector 
+  df_translated = data.frame() # create an empty dataframe object
+  
+  # translate each element of the vector (i.e. each snippet)
+  for (i in 1:nrow(df)){
+    text = snippet_hl[i]
+    if(!is.na(text)){ 
+      snippet_en = polyglotr::google_translate(text, "en", "auto") # translate the snippet 
+      df_translated = rbind(df_translated, snippet_en) # add it to the dataframe
+      }
+    else{
+      df_translated = rbind(df_translated, "NA")
+      # this avoids the NA values to be translated to "THAT"
+   }
+      }
+  # rename the resulting column
+  colnames(df_translated) = c("trans_snippet")
+  
+  # add the position of the snippet to the dataframe
+  position = 1:nrow(df)
+  df_translated$position <- position
+
+  return(df_translated)
+  }
+```
+
+```{r def_translate_title}
+translate_title = function(df){
+  title_hl = df[["title"]] # create a subset of the snippets and convert it to a vector 
+  df_translated = data.frame() # create an empty dataframe object
+  
+  # translate each element of the vector (i.e. each snippet)
+  for (i in 1:nrow(df)){
+    text = title_hl[i]
+    if(!is.na(text)){ 
+      title_en = polyglotr::google_translate(text, "en", "auto") # translate the snippet 
+      df_translated = rbind(df_translated, title_en) # add it to the dataframe
+      }
+    else{
+      df_translated = rbind(df_translated, "NA")
+      # this avoids the NA values to be translated to "THAT"
+   }
+      }
+  # rename the resulting column
+  colnames(df_translated) = c("trans_title")
+  
+  # add the position of the snippet to the dataframe
+  position = 1:nrow(df)
+  df_translated$position <- position
+  
+  return(df_translated)
+}
+```
+
+```{r translate}
+huaibei = read.csv("collected_data/baidu/108.csv")
+wuhan = read.csv("collected_data/baidu/212.csv")
+xuanwei = read.csv("collected_data/baidu/319.csv")
+
+huaibei_title = translate_title(huaibei)
+huaibei_snip = translate_snip(huaibei)
+huaibei = huaibei %>% 
+  left_join(huaibei_title, by = "position") %>% 
+  left_join(huaibei_snip, by = "position")
+write.csv(huaibei, "collected_data/baidu/huaibei.csv")
+
+wuhan_title = translate_title(wuhan)
+wuhan_snip = translate_snip(wuhan)
+wuhan = wuhan %>% 
+  left_join(wuhan_title, by = "position") %>% 
+  left_join(wuhan_snip, by = "position")
+write.csv(wuhan, "collected_data/baidu/wuhan.csv")
+
+xuanwei_title = translate_title(xuanwei)
+xuanwei_snip = translate_snip(xuanwei)
+xuanwei = xuanwei %>% 
+  left_join(xuanwei_title, by = "position") %>% 
+  left_join(xuanwei_snip, by = "position")
+write.csv(xuanwei, "collected_data/baidu/xuanwei.csv")
+```
