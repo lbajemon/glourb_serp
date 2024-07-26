@@ -11,7 +11,6 @@ The aim of this document is to lemmatise and clean our snippets.
 
 ```{r load_packages, results = 'hide', warning = FALSE, message = FALSE}
 library(tidyverse)
-library(tidytext)
 library(mixr) # for the lexicon
 library(polyglotr) # for translation
 ```
@@ -67,7 +66,7 @@ In particular, we will try to define a list of locations, including city names, 
 
 ```{r}
 # stop words (words which are too common)
-stop_words = stop_words 
+stop_words = tidytext::stop_words 
 
 # days and months
 dates = data.frame(word = c("jan","feb","mar","apr","may","jun", "jul","aug","sep","oct","nov","dec", "january","february","march","april", "june","july","august","september", "october","november","december", "monday","tuesday","wednesday", "thursday","friday","saturday","sunday")) 
@@ -298,7 +297,8 @@ lemmatisation_hl = function(fid, cityname, rivername, hl){
                      values_to = "word")
       # delete the first columns which doesn't interest us
         fid_names = fid_names[,2] %>% 
-          unique()
+          unique() %>% 
+          rbind("river")
 
       # clean data
       df_clean = df %>% 
