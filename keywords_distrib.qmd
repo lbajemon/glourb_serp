@@ -5,6 +5,10 @@ editor: visual
 author: "Liolia Bajemon"
 ---
 
+### Description
+
+This document aims at representing on a map the distribution of a given keyword in our corpus (see <https://github.com/lbajemon/glourb_serp/blob/main/compilation.qmd>). For example, riverfronts and waterfronts are mentioned in almost 200 cities. The idea is to plot the number of mentions of this keyword in each city. For example, it is mentioned in 91 pages in Ahmedabad (India).
+
 ### Set up
 
 ```{r packages}
@@ -38,7 +42,7 @@ corpus = read.csv("collected_data/combined_all_tokens.csv")
 
 ### Major keywords
 
-W
+We have selected three thematics which seem important in our corpus: riverfronts and waterfronts, climate change and global warming, and water scarcity/shortage.
 
 #### Riverfront
 
@@ -260,16 +264,17 @@ leaf = leaflet(data = data, options = leafletOptions(zoomControl = TRUE, minZoom
                    ~latitude,
                    label = paste0(data$urban_aggl,", ", data$n),
                    color = "#fc8d62",
-                   opacity = 1,
-                   radius = 0.5*data$n) %>% 
+                   opacity = 0.5*data$n) %>% 
   addControl(title, position = "topright") 
 saveWidget(leaf, file = "occurrence_climate_change_leaflet.html")
 ```
 
-Now let's make a function which produces a map and a diagram based on a given keyword.
+### Define general function
 
-```{r}
-keyword_map = function(motCle, maCouleur, monTitre){
+Now let's make a general function which produces a map and a diagram based on a given keyword.
+
+```{r def_keyword_map}
+keyword_map = function(motCle, maCouleur, monTitre, nomFichier){
 
   # Get dataframe
   df_keyword = corpus %>% 
@@ -291,16 +296,21 @@ keyword_map = function(motCle, maCouleur, monTitre){
     filter(!is.na(n))
   
   ### Make an interactive map
+  max_n = max(data$n)
+  rad = if(max_n<100){0.5} else {0.2}
+  n_cities = nrow(data)
   title = tags$div(
-    tag.map.title, HTML(paste0("<td align=justify><b>Nombre de mentions de '", monTitre, "'</b></td>")))
-  leaflet(data = data, options = leafletOptions(zoomControl = TRUE, minZoom = 1, maxZoom = 5)) %>% 
+    tag.map.title, HTML(paste0("<td align=justify><b>Nombre de mentions de '", monTitre, "'</b><br>", n_cities, " villes</td>")))
+  leaf = leaflet(data = data, options = leafletOptions(zoomControl = TRUE, minZoom = 1, maxZoom = 5)) %>% 
     addProviderTiles("CartoDB.VoyagerNoLabels") %>% 
     addCircleMarkers(~longitude, 
                      ~latitude,
                      label = paste0(data$urban_aggl,", ", data$n),
                      color = maCouleur,
                      opacity = 1,
-                     radius = 0.1*data$n) %>% 
+                     radius = rad*data$n) %>% 
     addControl(title, position = "topright") 
+  
+  saveWidget(leaf, file = paste0("occurrence_leaflet_", nomFichier, ".html"), selfcontained = TRUE)
 }
 ```
