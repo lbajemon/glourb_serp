@@ -25,7 +25,7 @@ df = read.csv("collected_data/english/df_tokenized_snippets.csv") %>%
   subset(!is.na(tokenized)) # remove empty values
 
 # read corpus
-corpus = read_corpus(df, text_field = "tokenized", docid_field = "seg_id")
+corpus = quanteda::corpus(df, text_field = "tokenized", docid_field = "seg_id")
 ```
 
 ### Make the wordcloud
