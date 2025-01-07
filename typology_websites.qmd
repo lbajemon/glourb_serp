@@ -9,7 +9,7 @@ editor: visual
 
 The aim of this document is to get the types of the collected websites (commercial, social media, institutional, blog, newspaper, etc.). To do this, multiple sources and tools will be used and combined:
 
--   Ranking of websites: their types will be filled by hand.
+-   Ranking of websites: the types of the most common websites will be filled by hand.
 
 -   Wikidata: for each website URL, we will check if it corresponds to the official website of a wikidata element. If so, we will collect its type (instance_of).
 
@@ -22,36 +22,43 @@ The aim of this document is to get the types of the collected websites (commerci
 ```{r load_packages_ranking}
 library(tidyverse)
 library(urltools)
+library(RColorBrewer)
 ```
 
 ```{r read_data_rank}
 data_city_river = read.csv("input_data/data_city_river.csv") 
 # rename the "domain" column 
-data_combined = read.csv("collected_data/hl/df_tokenized_all.csv") # this dataframe combines all the collected data 
-names(data_combined)[names(data_combined) == 'domain'] = 'full_domain' # rename the "domain" column to avoid confusions 
+data_hl = read.csv("collected_data/hl/df_scrap_tokens_all_hl.csv") # this dataframe combines all the collected data 
+data_all = read.csv("collected_data/combined_all_tokens.csv")
+names(data_hl)[names(data_hl) == 'domain'] = 'full_domain' # rename the "domain" column to avoid confusions 
+names(data_all)[names(data_all) == 'domain'] = 'full_domain' # rename the "domain" column to avoid confusions 
 domain_type = read.csv("input_data/domain_type.csv", sep = "\t")
 ```
 
 ### Rank the websites
 
+#### For local languages
+
 ```{r rank_websites}
 ### Extract domains from our dataset
-df_domain = data_combined %>% 
-  mutate(suffix_extract(data_combined$full_domain)) %>% 
-  group_by(domain) %>% # group by domain 
-  count(domain) %>% # count each domain
+df_domain_hl = data_hl %>% 
+  mutate(domain = suffix_extract(data_hl$full_domain)) %>%
+  group_by(domain$domain) %>% # group by domain 
+  count() %>% # count each domain
   filter(n > 100) %>% 
-  left_join(domain_type, by = "domain")
+  left_join(domain_type, join_by("domain$domain" == "domain"))
+# rename column
+names(df_domain_hl)[1] = "domain"
 
 # rearrange by decreasing order
-df_domain$domain = with(df_domain, reorder(domain, n))
+df_domain_hl$domain = with(df_domain_hl, reorder(domain, n))
 
 # palette
-palette = brewer.pal(9, "Set3")
+palette = brewer.pal(12, "Set3")
 palette[2] = "#ffed6f"
-
+palette[13] = "#a6cee3"
 ### Plot 
-plot = df_domain %>% 
+plot = df_domain_hl %>% 
   ggplot(mapping = aes(x = domain,
                        y = n,
                        fill = type)) +
@@ -60,14 +67,49 @@ plot = df_domain %>%
   labs(title = "Les noms de domaines les plus représentés dans les SERP", 
        subtitle = "Requête « rivière et ville » dans les langues locales", 
        x = "nom du domaine",
-       y = "nombre de snippets",
-       caption = "L. Bajemon, juillet 2024") +
+       y = "nombre de pages") +
   coord_flip() + # flip x and y coordinates 
   theme_bw() +
   theme(legend.position = "right",
         plot.caption.position = "plot") 
-  
 plot # display the plot
+ggsave("analysis/typology/ranking_typo_hl.png")
+```
+
+#### For local languages + English
+
+```{r}
+### now let's rank the websites for all of our data (english + hl)
+df_domain_all = data_all %>%
+  mutate(domain = suffix_extract(data_all$full_domain)) %>%
+  group_by(domain$domain) %>% # group by domain 
+  count() %>% # count each domain
+  filter(n > 130) %>% 
+  left_join(domain_type, join_by("domain$domain" == "domain"))
+# rename column
+names(df_domain_all)[1] = "domain"
+
+# rearrange by decreasing order
+df_domain_all$domain = with(df_domain_all, reorder(domain, n))
+
+### Plot 
+plot = df_domain_all %>% 
+  ggplot(mapping = aes(x = domain,
+                       y = n,
+                       fill = type)) +
+  geom_col(position = "stack") +
+  scale_fill_manual("Type de site", values = palette) +
+  labs(title = "Classement des domaines pour les requêtes rivière+ville",
+       subtitle = "(langues locales et anglais)",
+       x = "nom du domaine",
+       y = "nombre de pages") +
+  coord_flip() + # flip x and y coordinates 
+  theme_bw() +
+  theme(legend.position = "bottom",
+        plot.caption.position = "plot") 
+plot # display the plot
+ggsave("analysis/typology/ranking_typo_all.png")
+ggsave("analysis/typology/ranking_typo_all_paysage.png", width = 22, height = 16, unit = "cm")
 ```
 
 ## Compile data analysed by hand
@@ -75,7 +117,7 @@ plot # display the plot
 ```{r compile_by_hand_data}
 
 bind = function(df){
-  data = read.csv(glue::glue("analysis/critical/{df}.csv"))
+  data = read.csv(glue::glue("analysis/etude_10_villes/{df}.csv"))
   data = data %>% 
     select(c(displayed_link, type))
   return(data)           
@@ -89,6 +131,19 @@ by_hand = bind("ahmedabad_sabarmati_EN") %>%
   rbind(bind(df = "lyon_rhone_FR")) %>% 
   rbind(bind(df = "montreal_st-laurent_EN")) %>% 
   rbind(bind(df = "montreal_st-laurent_FR")) %>% 
+  rbind(bind(df = "xuanwei_beipan_ZH")) %>% 
+  rbind(bind(df = "xuanwei_beipan_EN")) %>% 
+  rbind(bind(df = "wuhan_yangtze_ZH")) %>% 
+  rbind(bind(df = "wuhan_yangtze_EN")) %>% 
+  rbind(bind(df = "ufa_belaya_RU")) %>% 
+  rbind(bind(df = "ufa_belaya_EN")) %>%   
+  rbind(bind(df = "nha_trang_cai_EN")) %>% 
+  rbind(bind(df = "nha_trang_cai_VI")) %>% 
+  rbind(bind(df = "ndjamena_chari_FR")) %>% 
+  rbind(bind(df = "ndjamena_chari_EN")) %>% 
+  rbind(bind(df = "ndjamena_chari_AR")) %>% 
+  rbind(bind(df = "abomey-calavi_oueme_FR")) %>% 
+  rbind(bind(df = "abomey-calavi_oueme_EN")) %>% 
   # extract domain link
   separate(displayed_link, c("url", "page"), " › ") %>% 
   select(-page) %>% 
@@ -109,8 +164,8 @@ library(xmlparsedata)
 
 ```{r read_data, warning = FALSE, message = FALSE}
 # retrieve data
-df_hl = read.csv("collected_data/hl/df_tokenized_all.csv")
-df_en = read.csv("collected_data/english/df_tokenized_snippets.csv")
+df_hl = read.csv("collected_data/hl/df_scrap_tokens_all_hl.csv")
+df_en = read.csv("collected_data/english/scrap_data_river_en.csv")
 
 # prepare data
 data_hl = df_hl %>%
@@ -135,7 +190,7 @@ data_hl = df_hl %>%
   # only keep distinct websites to reduce the number of queries
   distinct(website) %>% 
   # define a number for each website (i.e. an ID) 
-  mutate(i = row_number())
+  dplyr::mutate(i = row_number())
 
 data_en = df_en %>%
   # get the url by extracting it from the displayed link
@@ -160,7 +215,7 @@ data_en = df_en %>%
   # only keep distinct websites to reduce the number of queries
   distinct(website) %>% 
   # define a number for each website (i.e. an ID) 
-  mutate(i = row_number())
+  dplyr::mutate(i = row_number())
 ```
 
 ### Make queries
@@ -170,7 +225,7 @@ We will use the glitter R package to send SPARQL queries to collect Wikidata ele
 ```{r def_get_websites}
 
 get_websites_attributes_hl = function(website, i){
-  triplet=paste0("?item wdt:P856 <",website,">")
+  triplet = paste0("?item wdt:P856 <",website,">")
   result = spq_init() %>%
     spq_add(triplet) %>% 
     spq_add("?item wdt:P31 ?type", .required = FALSE) %>%
@@ -179,12 +234,12 @@ get_websites_attributes_hl = function(website, i){
 }
 
 get_websites_attributes_en = function(website, i){
-  triplet=paste0("?item wdt:P856 <",website,">")
+  triplet = paste0("?item wdt:P856 <",website,">")
   result = spq_init() %>%
     spq_add(triplet) %>% 
     spq_add("?item wdt:P31 ?type", .required = FALSE) %>%
     spq_perform()
-  write.csv(x = result, file = glue::glue("analysis/critical/wikidata/en/{i}.csv"))
+  write.csv(x = result, file = glue::glue("analysis/typology/wikidata/en/{i}.csv"))
 }
 ```
 
@@ -249,17 +304,17 @@ write.csv(compile_en, "analysis/critical/wikidata/wikidata_compile_en.csv")
 ### Join with data
 
 ```{r}
-wikidata_en = read.csv("analysis/critical/wikidata/wikidata_compile_en.csv")
-wikidata_hl = read.csv("analysis/critical/wikidata/wikidata_compile_hl.csv")
+compile_en = read.csv("analysis/typology/wikidata/wikidata_compile_en.csv")
+compile_hl = read.csv("analysis/typology/wikidata/wikidata_compile_hl.csv")
 
 # now combine the collected data
 types = bind_rows(compile_hl, compile_en) %>% 
   # keep only distinct types
   distinct(type, .keep_all = TRUE)
-write.csv(types, "analysis/critical/wikidata/distinct_types.csv", row.names = FALSE)
+write.csv(types, "analysis/typology/wikidata/distinct_types.csv", row.names = FALSE)
 # the labels are retrieved by hand and classified in bigger categories
 # read updated data
-category = read.csv("analysis/critical/wikidata/types.csv") %>% 
+category = read.csv("analysis/typology/wikidata/types.csv") %>% 
   select(-c(X.1, X, id, item))
 
 compile = bind_rows(compile_hl, compile_en) %>% 
@@ -269,15 +324,15 @@ compile = bind_rows(compile_hl, compile_en) %>%
   # some websites have multiple labels (types)
   # let's identify them 
   distinct(item, cat, .keep_all = TRUE) %>% 
-  write.csv("analysis/critical/wikidata/compile_types.csv")
+  write.csv("analysis/typology/wikidata/compile_types.csv")
 # and choose a category by hand
 
 # join with website url
-compile_en = read.csv("analysis/critical/wikidata/compile_types_en.csv") %>% 
+compile_en = read.csv("analysis/typology/wikidata/compile_types_en.csv") %>% 
   left_join(data_en, by = c("id"="i")) %>% 
   select(c(cat, website)) %>% 
   distinct(website, .keep_all = TRUE)
-compile_hl = read.csv("analysis/critical/wikidata/compile_types_hl.csv", sep = ";") %>% 
+compile_hl = read.csv("analysis/typology/wikidata/compile_types_hl.csv", sep = ";") %>% 
   left_join(data_hl, by = c("id"="i")) %>% 
   select(c(cat, website)) %>% 
   distinct(website, .keep_all = TRUE)
@@ -374,8 +429,12 @@ df_en_types = results_en %>%
     str_detect(domain, "livejournal") & is.na(type) ~ "média",
     TRUE ~ type)) %>% 
   mutate(type = ifelse(str_detect(type, "^\\bencyclopédie\\b$"), paste0(type, ", base de données"), type)) %>% 
-  mutate(type = str_replace_all(type, "entreprise, commerce", "commercial, entreprise"))
-write.csv(df_en_types, "analysis/critical/df_en_types.csv")
+  mutate(type = str_replace_all(type, "entreprise, commerce", "commercial, entreprise")) %>% 
+  mutate(type = str_replace_all(type, "commercial, entreprises", "commercial, entreprise"))
+df_en_types$type = gsub("académique(?!, scientifique)", "académique, scientifique", df_en_types$type, perl = TRUE)
+df_en_types$type = trimws(df_en_types$type)
+
+write.csv(df_en_types, "analysis/typology/df_en_types.csv")
 
 df_hl_types = results_hl %>% 
   left_join(domain_type, by = "url") %>% 
@@ -397,8 +456,27 @@ df_hl_types = results_hl %>%
     str_detect(domain, "livejournal") & is.na(type) ~ "média",
     TRUE ~ type)) %>% 
   mutate(type = ifelse(str_detect(type, "^\\bencyclopédie\\b$"), paste0(type, ", base de données"), type)) %>% 
-  mutate(type = str_replace_all(type, "entreprise, commerce", "commercial, entreprise"))
-write.csv(df_hl_types, "analysis/critical/df_hl_types.csv")
+  mutate(type = str_replace_all(type, "entreprise, commerce", "commercial, entreprise")) %>% 
+  mutate(type = str_replace_all(type, "commercial, entreprises", "commercial, entreprise"))
+df_hl_types$type = gsub("académique(?!, scientifique)", "académique, scientifique", df_hl_types$type, perl = TRUE)
+df_hl_types$type = trimws(df_hl_types$type)
+write.csv(df_hl_types, "analysis/typology/df_hl_types.csv")
+
+# make a df summarising the identified types 
+types_hl = df_hl_types %>% 
+  filter(!is.na(type)) %>% 
+  distinct(domain, .keep_all = TRUE) %>% 
+  select("domain", "type") 
+
+types_en = df_en_types %>% 
+  filter(!is.na(type)) %>% 
+  distinct(domain, .keep_all = TRUE) %>% 
+  select("domain", "type")
+
+types = types_hl %>% 
+  rbind(types_en) %>% 
+  distinct(domain, .keep_all = TRUE)
+write.csv(types, "analysis/typology/tous_sites_types.csv")
 ```
 
 Now let's plot the results:
@@ -406,7 +484,7 @@ Now let's plot the results:
 ```{r plot_english}
 # count nb of values for each type
 types_en_plot = df_en_types %>% 
-  count(type)
+  dplyr::count(type)
 # keep only non NA values
 identified_en = types_en_plot %>% 
   filter(!is.na(type))
@@ -439,10 +517,11 @@ plot_en_1 = somme_en %>%
        fill = NULL,
        title = "Identification des types de sites web",
        subtitle = "... pour les requêtes en anglais",
-       caption = "L. Bajemon, juillet 2024") +
+       caption = "L. Bajemon, septembre 2024") +
   theme_bw(base_family = "CenturySch", 
-           base_size = 10) +
+           base_size = 12) +
   theme(plot.caption.position = "plot")
+ggsave("analysis/typology/repartition_id_en.png")
 
 plot_en_2 = identified_en %>% 
   mutate(type = fct_reorder(type, perc)) %>% 
@@ -452,20 +531,29 @@ plot_en_2 = identified_en %>%
   labs(x = NULL,
        y = "%",
        title = "Répartition des types de sites web identifiés",
-       subtitle = "... pour les requêtes en anglais",
-       caption = "L. Bajemon, juillet 2024") +
+       subtitle = "... pour les requêtes en anglais") +
   theme_bw(base_family = "CenturySch", 
-           base_size = 10) +
-  theme(plot.caption.position = "plot")  
+           base_size = 12) +
+  theme(plot.caption.position = "plot") 
+
+ggsave("analysis/typology/types_EN.png", width = 20, height = 10, units = "cm")
 ```
 
 ```{r plot_hl}
 # count nb of values for each type
 types_hl_plot = df_hl_types %>% 
-  count(type)
-# keep only non NA values
+  mutate(type = str_replace_all(type, "journal", "média")) %>% 
+  mutate(type = str_replace_all(type, "magazine, blog ", "magazine, blog")) %>% 
+  mutate(type = str_replace_all(type, "ONG, association", "associatif, ONG")) %>% 
+  mutate(type = str_replace_all(type, "forum", "réseau social")) %>% 
+  dplyr::count(type) 
+
+  # keep only non NA values
 identified_hl = types_hl_plot %>% 
-  filter(!is.na(type))
+  filter(!is.na(type)) %>% 
+  filter(!is.null(type)) %>% 
+  filter(type != "")
+  
 # and count how many they are
 somme_id_hl = colSums(identified_hl["n"])
 # now get percentages
@@ -494,11 +582,11 @@ plot_hl_1 = somme_hl %>%
        y = "%",
        fill = NULL,
        title = "Identification des types de sites web",
-       subtitle = "... pour les requêtes dans les langues locales",
-       caption = "L. Bajemon, juillet 2024") +
+       subtitle = "... pour les requêtes dans les langues locales") +
   theme_bw(base_family = "CenturySch", 
-           base_size = 10) +
+           base_size = 12) +
   theme(plot.caption.position = "plot")
+ggsave("analysis/typology/repartition_id_hl.png")
 
 plot_hl_2 = identified_hl %>% 
   mutate(type = fct_reorder(type, perc)) %>% 
@@ -508,9 +596,41 @@ plot_hl_2 = identified_hl %>%
   labs(x = NULL,
        y = "%",
        title = "Répartition des types de sites web identifiés",
-       subtitle = "... pour les requêtes dans les langues locales",
-       caption = "L. Bajemon, juillet 2024") +
+       subtitle = "... pour les requêtes dans les langues locales") +
   theme_bw(base_family = "CenturySch", 
-           base_size = 10) +
+           base_size = 12) +
   theme(plot.caption.position = "plot")  
+ggsave("analysis/typology/types_HL.png", width = 20, height = 10, units = "cm")
+```
+
+Now let's combine the two plots showing the type for English and local queries:
+
+```{r combine_plots}
+library(patchwork)
+
+plot_1 = identified_en %>% 
+  mutate(type = fct_reorder(type, perc)) %>% 
+  ggplot(aes(x = type, y = perc)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.8, fill = "#b3de69") + 
+  coord_flip() + # flip x and y coordinates 
+  labs(x = NULL,
+       y = "%",
+       title = "Requêtes en anglais") +
+  theme_bw(base_family = "CenturySch", 
+           base_size = 12) +
+  theme(plot.caption.position = "plot") 
+plot_2 = identified_hl %>% 
+  mutate(type = fct_reorder(type, perc)) %>% 
+  ggplot(aes(x = type, y = perc)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.8, fill = "#b3de69") + 
+  coord_flip() + # flip x and y coordinates 
+  labs(x = NULL,
+       y = "%",
+       title = "Requêtes dans les langues locales") +
+  theme_bw(base_family = "CenturySch", 
+           base_size = 12) +
+  theme(plot.caption.position = "plot")  
+
+combined_plot = plot_1 + plot_2
+ggsave("analysis/typology/figure_typo_DSSE.png", width = 28, height = 15, units = "cm")
 ```

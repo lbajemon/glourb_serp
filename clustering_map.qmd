@@ -16,6 +16,7 @@ library(ggplot2)
 library(scatterpie)
 library(tmaptools)
 library(tidyverse)
+library(htmltools)
 ```
 
 ### Read data
@@ -181,7 +182,7 @@ f_pal <- colorFactor(palette = mypalette,
 
 leaf <- leaflet(data = data, options = leafletOptions(zoomControl = TRUE, minZoom = 1, maxZoom = 5)) %>% 
   addProviderTiles("CartoDB.VoyagerNoLabels") %>% 
- addCircleMarkers(~longitude, 
+  addCircleMarkers(~longitude, 
                    ~latitude,
                    label = data$urban_aggl,
                    color = ~f_pal(data$classname),

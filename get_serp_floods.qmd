@@ -80,6 +80,7 @@ data_city_river = left_join(data_city_river, data_google_domain, by = "gl", rela
 # note: there is no google domain for Iran, Soudan, Syria and North Korea, so we put google.com instead
 
 #  format the data for the search queries, i.e. put "OR" instead of ";"
+melbourne = data_city_river[119,]
 data_city_river = data_city_river %>% 
     mutate(city_en = str_replace_all(city_en, ";", " OR ")) %>% 
     mutate(city_hl1  = str_replace_all(city_hl1, ";", " OR ")) %>% 
@@ -88,7 +89,8 @@ data_city_river = data_city_river %>%
     mutate(city_hl4 = str_replace_all(city_hl4, ";", " OR ")) %>% 
     mutate(city_hl5 = str_replace_all(city_hl5, ";", " OR ")) %>% 
     mutate(city_hl6 = str_replace_all(city_hl6, ";", " OR ")) %>% 
-    distinct(urban_aggl, .keep_all = TRUE)
+    distinct(urban_aggl, .keep_all = TRUE) %>% 
+    rbind(melbourne)
 ```
 
 ## Collection of data

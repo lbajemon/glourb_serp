@@ -1,0 +1,119 @@
+---
+title: "Plot clusters"
+format: html
+editor: visual
+---
+
+#### Set-up
+
+```{r packages}
+library(tmaptools)
+library(ggplot2)
+library(tidyverse)
+library(forcats)
+data_city_river = read.csv("input_data/data_city_river.csv")
+mapalette = c("#8dd3c7", "#fdb462", "#bebada", "#ffed6f","#b3de69", "#bf812d", "#d9d9d9",  "#fccde5", "#bc80bd", "#80b1d3","#ccebc5","#9e0142", "#fb8072", "#f781bf", "#969696")
+meslabels = c("Hydrographie, inondation", "Système d'alerte", "Mesures de qualité", "Pollution, traitement des eaux usées", "Aménagement, gestion, environnement", "Industrie", "Outlier (Internet)", "Infrastructures, transports",  "Culture, architecture", "Tourisme, navigation", "Santé",  "Histoire, religion", "Gouvernement, armée, conflits", "Education", "NA")
+mylabels = c("Hydrography, floods", "Alert system", "Pollution, sewerage", "Quality measurements", "Planning, management, environment", "Industry", "Outliers - Internet", "Infrastructure, transport", "Culture, architecture", "Tourism, navigation","Health","History, religion","Government, army, conflicts","Education", "NA")
+```
+
+```{r set_up}
+df_clusters = data.frame(cluster = c(1:14,NA),
+                         couleur = c("#8dd3c7", "#fdb462", "#bebada", "#ffed6f","#b3de69", "#bf812d", "#d9d9d9",  "#fccde5", "#bc80bd", "#80b1d3","#ccebc5","#9e0142", "#fb8072", "#f781bf", "#969696"),
+                         nom = c("Hydrographie, inondation", "Système d'alerte", "Mesures de qualité", "Pollution, traitement des eaux usées", "Aménagement, gestion, environnement", "Industrie", "Outlier (Internet)", "Infrastructures, transports",  "Culture, architecture", "Tourisme, navigation", "Santé",  "Histoire, religion", "Gouvernement, armée, conflits", "Education", "NA"),
+                         label = c("Hydrography, floods", "Alert system", "Pollution, sewerage", "Quality measurements", "Planning, management, environment", "Industry", "Outliers - Internet", "Infrastructure, transport", "Culture, architecture", "Tourism, navigation","Health","History, religion","Government, army, conflicts","Education", "NA"))
+```
+
+#### Plot clusters distribution for each city
+
+```{r}
+plot_clusters = function(fid, ville, riviere, urban_aggl, river){
+  print(fid)
+  # retrieve data
+  data = read.csv(glue::glue("analysis/clusters/clusters_city/clusters_{fid}.csv")) 
+  # get nb of pages
+  pages = unique(data$segment_source) 
+  # count nb of segments for each cluster
+  df = data %>% 
+    group_by(cluster) %>% 
+    count() 
+  somme = sum(df$n)
+  df = df %>% 
+    left_join(df_clusters, by = "cluster") %>% 
+    mutate(perc = n/somme*100) %>% 
+    arrange(desc(n))
+  
+  # plot results (in French)
+  if(!file.exists(glue::glue("analysis/clusters/plots_city_fr/plot_cl_{fid}.png"))){
+  df %>% 
+    ggplot(aes(x = fct_reorder(nom, perc),
+               y = perc,
+               fill = nom)) +
+     geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.8) +
+    scale_fill_manual(values = setNames(df$couleur, df$nom)) +
+    labs(title = paste0("Répartitions des sujets pour ", ville, " et ", riviere),
+         subtitle = paste0("Nombre de segments : ", sum(df$n),", nombre de pages : ", length(pages)),
+         y = "%",
+         x = "") +
+    coord_flip() +
+    theme_bw() +
+    theme(legend.position = "none")
+  ggsave(glue::glue("analysis/clusters/plots_city_fr/plot_cl_{fid}.png"), width = 25, height = 18, units = "cm")
+  } 
+  
+  # plot results in English
+  if(!file.exists(glue::glue("analysis/clusters/plots_city_en/plot_cl_{fid}.png"))){
+    df %>% 
+    ggplot(aes(x = fct_reorder(label, perc),
+               y = perc,
+               fill = label)) +
+     geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.8) +
+    scale_fill_manual(values = setNames(df$couleur, df$label)) +
+    labs(title = paste0("Topics distribution for ", urban_aggl, " and the ", river),
+         subtitle = paste0("Number of segments: ", sum(df$n),", number of pages: ", length(pages)),
+         y = "%",
+         x = "") +
+    coord_flip() +
+    theme_bw() +
+    theme(legend.position = "none")
+  ggsave(glue::glue("analysis/clusters/plots_city_en/plot_cl_{fid}.png"), width = 25, height = 10, units = "cm")
+  }
+}
+```
+
+Now let's run the function for each city+river combination:
+
+```{r run_plot_clusters}
+data_city_river %>% 
+  mutate(data = purrr::pmap(list(fid = fid,
+                                 ville = ville,
+                                 riviere = riviere,
+                                 urban_aggl = urban_aggl, 
+                                 river = river),
+                          plot_clusters))
+```
+
+Example:
+
+![](analysis/clusters/plots_city_fr/plot_cl_10.png)
+
+#### Plot cities distribution for each cluster
+
+```{r def_plot_cities}
+plot_cities = function(i){
+  df_cl = read.csv(glue::glue("analysis/clusters/spec_clusters/cluster_{i}.csv")) %>% 
+    select(c("urban_aggl", "spec", "n"))
+  
+   df_cl %>% 
+    ggplot(aes(x = fct_reorder(urban_aggl, n),
+               y = n,
+               fill = mapalette[i])) +
+     geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.8) +
+    labs(title = paste0("Répartition des villes pour le sujet ", meslabels[i]),
+         y = "n",
+         x = "") +
+    coord_flip() +
+    theme_bw() +
+    theme(legend.position = "none")
+}
+```

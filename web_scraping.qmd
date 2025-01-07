@@ -1,0 +1,541 @@
+---
+title: "Web scrapping with rvest"
+author: "Liolia Bajemon"
+format: html
+editor: visual
+---
+
+## Description
+
+The aim of this document is to extract content from given websites – in other words, *web scraping*. The links of the websites were retrieved beforehand using SERP (see [here](https://github.com/lbajemon/glourb_serp/blob/main/get_data_river.qmd)). Multiple packages will be used, including one from Python. The cleaning process of the HTML content was inspired by B. Rudis ([2017](https://rud.is/b/2017/08/24/reticulating-readability/)).
+
+## Set-up
+
+```{r packages, warning = FALSE, message = FALSE, comment = FALSE}
+library(httr)
+library(reticulate)
+library(xml2)
+library(tidyverse)
+library(rvest)
+library(RSelenium)
+library(R.utils)
+library(polyglotr)
+
+# install python if necessary: 
+# install_python(version = "3.10:latest")
+# install readability
+reticulate::py_install(c("readability-lxml", "lxml_html_clean"))
+# import the readability library from python
+readability = reticulate::import("readability") # pip install readability-lxml
+```
+
+## Define functions for web scraping
+
+First, let's define the function which will scrape the websites.
+
+```{r def_scrape_page}
+scrap_page = function(url){
+  print(url)
+  
+  # Scrap URL
+  result = tryCatch({
+    withTimeout({
+      Sys.sleep(sample(1:3, 1))
+      # define an user-agent to prevent being blocked from some websites
+      res = GET(url = url, config(followlocation = 10), add_headers("user-agent" = "Mozilla/5.0"), set_cookies("cookies" = "value"))
+
+      # check if the response is valid
+      if (is.null(res) || !inherits(res, "response") || httr::status_code(res) != 200) {
+        cat("Non-200 status code or NULL response for: ", url, "\n")
+        return(NA_character_)
+      } else {
+        print("valid status code")
+        }
+  
+      # extract HTML content 
+      html_content = tryCatch({
+        httr::set_config(httr::user_agent("Mozilla/5.0"))
+        httr::content(res, as = "text", encoding = "UTF-8")
+      }, error = function(e) {
+        cat("Error when extracting content for: ", url, ":", e$message, "\n")
+        return(NULL)
+      })
+
+      # check if HTML content is valid
+      if(is.null(html_content) || is.na(html_content) || html_content == "" || !grepl("<html", html_content, ignore.case = TRUE)) {
+        cat("Invalid HTML content or non-HTML content for: ", url, "\n")
+        return(NA_character_)
+      } else {
+      print("valid HTML content")
+        }
+  
+      # clean HTML using rvest (read_html)
+      html_clean = tryCatch({
+        read_html(html_content)
+      }, error = function(e) {
+        cat("Error when analysing the HTML file for: ", url, ":", e$message, "\n")
+        return(NULL)
+      })
+
+      if (is.null(html_clean)) {
+        cat("Failed to parse HTML for: ", url, "\n")
+        return(NA_character_)
+      } else {
+        print("HTML was successfully cleaned")
+        }
+  
+      # Convert HTML to text
+      html_clean_text = as.character(html_clean)
+   
+      summary_text = tryCatch({
+        # use readability to keep only text
+        doc = readability$Document(html_clean_text)
+        # get simplified content 
+        summary_html = doc$summary()
+        # read XML content and extract text
+        read_html(summary_html) %>%
+          html_text()
+      }, error = function(e) {
+        cat("error when extracting text from HTML summary for: ", url, ":", e$message, "\n")
+        return(NULL)
+      })
+    
+        if(is.null(summary_text)){
+          cat("The HTML summary cannot be read for:", url, "\n")
+          return(NA_character_)
+        } else {
+          print("Text was extracted successfully")
+          }
+  
+    return(summary_text)
+      # if extracting the content takes too long, return NA 
+  }, timeout = 50, onTimeout = "error")
+}, TimeoutException = function(ex){
+  cat("Timeout exceeded for:", url, "\n")
+  return(NA_character_)
+}, error = function(e){
+  cat("error occurred for:", url, ":", e$message, "\n")
+  return(NA_character_)
+})
+  return(result)
+}
+```
+
+After retrieving the content from the websites, the data needs to be cleaned and organized in a dataframe.
+
+```{r def_process_data}
+
+process_data_en = function(fid){
+  print(fid)
+  if(!file.exists(glue::glue("collected_data/english/scrap_data/scrap_{fid}.csv"))){
+    # read data
+    df = read.csv(glue::glue("collected_data/english/clean_data/clean_{fid}.csv")) %>% 
+    # create a new empty column
+    cbind(text = NA_character_)
+
+    df = df %>% 
+      # using the link of the website, scrap its content
+      mutate(text = purrr::map(link, scrap_page)) %>% 
+      # transform the list to strings
+      unnest(text) %>% 
+      # replace \n which correspond to a carriage return
+      mutate(text = str_replace_all(text, "\n", " ")) %>% 
+      # save the results
+      write.csv(glue::glue("collected_data/english/scrap_data/scrap_{fid}.csv"), row.names = FALSE)
+  }
+}
+
+process_data_hl = function(fid, hl){
+  print(fid)
+  if(!file.exists(glue::glue("collected_data/hl/scrap_data/scrap_{fid}_{hl}.csv"))){
+    if(file.exists(glue::glue("collected_data/hl/clean_data/clean_{fid}_{hl}.csv"))){
+    # read data
+    df = read.csv(glue::glue("collected_data/hl/clean_data/clean_{fid}_{hl}.csv")) %>% 
+    # create a new empty column
+    cbind(text = NA_character_)
+
+    df = df %>% 
+      # using the link of the website, scrap its content
+      mutate(text = purrr::map(link, scrap_page)) %>% 
+      # transform the list to strings
+      unnest(text) %>% 
+      # replace \n which correspond to a carriage return
+      mutate(text = str_replace_all(text, "\n", " ")) %>% 
+      # save the results
+      write.csv(glue::glue("collected_data/hl/scrap_data/scrap_{fid}_{hl}.csv"), row.names = FALSE)
+    }
+  }
+  else print("No Data")
+}
+```
+
+### Run functions
+
+Finally, let's run the functions for each of our cities:
+
+```{r run_functions}
+
+data_city_river = read.csv("input_data/data_city_river.csv", sep = ",")
+
+# in english
+data_city_river %>% 
+  mutate(data = purrr::map(fid, process_data_en))
+
+# in local languages 
+for(i in 1:6) {
+  n_hl = 7 + i 
+  data_subset = filter(data_city_river, ((data_city_river[, n_hl] != "no data") & ((data_city_river[, n_hl] != "en") | data_city_river[, 7] != "us")))
+  data = select(.data = data_subset, c(1, n_hl))
+  colnames(data) = c("fid", "hl")
+  
+data %>% 
+  mutate(data = purrr::pmap(list(fid = fid,
+                                 hl = hl),
+                            process_data_hl))
+}
+```
+
+### Translate scraped data
+
+Now we will translate all the scraped data so that everything is in English. First, we must define a function which will translate the text only if it is not English.
+
+```{r def_translation}
+translation = function(text){
+  # check if there is any text
+  if(is.na(text) || text == "" || grepl("^\\s*$", text) || is.null(text)){
+    return(NA_character_)
+  }
+  
+  # initialize an empty variable to store the final translation
+  translated_text = ""
+  text_length = nchar(text)
+  
+  # shorten the text to detect its language
+  short_text = substr(text, 1, min(1000, text_length))
+  lang = tryCatch({
+    language_detect(short_text)
+  }, error = function(e){
+    print("erreur de détection de la langue")
+      return(NA_character_)
+    })
+
+    if(is.na(lang)){
+    return(NA_character_)
+    }
+
+  # translate the text if necessary
+  if(lang != "en"){
+    # divide the text in chunks of 4000 char. to translate it
+    for (start_pos in seq(1, text_length, by = 4000)){
+      # get end position for the current chunk
+      end_pos = min(start_pos + 3999, text_length)
+      # extract chunk
+      chunk = substr(text, start_pos, end_pos)
+      # translate chunk
+       trans_text = tryCatch({
+      google_translate(chunk, "en", "auto")
+    }, error = function(e) {
+      print(paste("erreur pour segment", start_pos, "à", end_pos))
+       # if an error occurs, return NA
+        return(NA_character_)
+      })
+ 
+    # check if translation returned character(0). If so, return NA:
+    if(length(trans_text) == 0 || is.na(trans_text)){
+      return(NA)
+    } else {
+      translated_text = paste0(translated_text, trans_text)
+    }
+  } 
+    
+    return(translated_text)
+    } else {
+    # i.e. the text is already in English 
+    return(text)
+    }
+  }
+```
+
+Then we define a function which deals with all of our dataframes and translates the text when necessary:
+
+```{r def_translate_text_en}
+translate_text_en = function(fid){
+  print(fid)
+  file = glue::glue("collected_data/english/scrap_translated/scrap_t_{fid}.csv")
+  
+  # if the file already exists, the function will not be run.
+  if(!file.exists(file)){
+    df = read.csv(glue::glue("collected_data/english/scrap_data/scrap_{fid}.csv", fileEncoding = "UTF-8"))
+    
+  ### CLEAN 
+  ## remove the URL because they cause an error with google translate 
+  test = test %>% 
+    mutate(text = str_replace_all(text, "http://", " ")) %>% 
+    mutate(text = str_replace_all(text, "https://", " ")) %>% 
+    mutate(text = str_replace_all(text, "%", " ")) %>% 
+    mutate(text = str_replace_all(text, "://", " ")) %>% 
+    mutate(text = str_replace_all(text, "\t", " ")) %>% 
+    mutate(text = str_replace_all(text, "\n", " ")) %>% 
+    rowwise() %>% 
+    # translate text when necessary
+    mutate(text_en = translation(text)) %>% 
+    ungroup() %>% 
+    mutate(text_en = case_when(
+      !is.na(text_en) ~ text_en,
+      # if no text has been found, use the snippet instead
+      is.na(text_en) & !is.na(trans_snippet) ~ trans_snippet,
+      # if there neither text or a snippet, return NA
+      TRUE ~ NA
+      ))
+  
+  ### SAVE 
+  # write the results in a new file
+  readr::write_csv(df,
+                   glue::glue("collected_data/english/scrap_translated/scrap_t_{fid}.csv"))
+  }
+}
+```
+
+```{r def_translate_text_hl}
+translate_text_hl = function(fid, hl){
+  print(fid)
+  file = glue::glue("collected_data/hl/scrap_translated/scrap_t_{fid}_{hl}.csv")
+  
+  # if the file already exists, the function will not be run.
+  if(!file.exists(file)){
+    if(file.exists(glue::glue("collected_data/hl/scrap_data/scrap_{fid}_{hl}.csv"))){
+      df = read.csv(glue::glue("collected_data/hl/scrap_data/scrap_{fid}_{hl}.csv", fileEncoding = "UTF-8"))
+    
+  ### CLEAN 
+  ## remove the URL because they cause an error with google translate 
+  df = df %>% 
+    mutate(text = str_replace_all(text, "http://", " ")) %>% 
+    mutate(text = str_replace_all(text, "https://", " ")) %>% 
+    mutate(text = str_replace_all(text, "%", " ")) %>% 
+    mutate(text = str_replace_all(text, "://", " ")) %>% 
+    mutate(text = str_replace_all(text, "\t", " ")) %>% 
+    mutate(text = str_replace_all(text, "\n", " ")) %>% 
+    rowwise() %>% 
+    # translate text when necessary
+    mutate(text_en = if_else(is.na(text) || text == "" || grepl("^\\s*$", text), NA_character_, translation(text))) %>% 
+    ungroup() %>% 
+    mutate(text_en = case_when(
+      !is.na(text_en) ~ text_en,
+      # if no text has been found, use the snippet instead
+      is.na(text_en) & !is.na(trans_snippet) ~ trans_snippet,
+      # if there neither text or a snippet, return NA
+      TRUE ~ NA_character_
+      ))
+  
+  ### SAVE 
+  # write the results in a new file
+  readr::write_csv(df,
+                   glue::glue("collected_data/hl/scrap_translated/scrap_t_{fid}_{hl}.csv"))
+    }
+    else{
+      print("No data")
+    }
+  }
+}
+```
+
+Finally let's run the function to translate all of our dataframes:
+
+```{r run_translated}
+# english queries
+data_city_river %>% 
+  mutate(data = purrr::map(fid,
+                          translate_text_en))
+
+# local languages queries
+for(i in 1:6) {
+  n_hl = 7 + i 
+  data_subset = filter(data_city_river, ((data_city_river[, n_hl] != "no data") & ((data_city_river[, n_hl] != "en") | data_city_river[, 7] != "us")))
+  data = select(.data = data_subset, c(1, n_hl))
+  colnames(data) = c("fid", "hl")
+  
+data %>% 
+  mutate(data = purrr::pmap(list(fid = fid,
+                                 hl = hl),
+                           translate_text_hl))
+}
+```
+
+Add scraped data for american cities, i.e. copy the data we extracted in English:
+
+```{r add_english}
+
+add_english = function(fid){
+  df = read.csv(glue::glue("collected_data/english/scrap_translated/scrap_t_{fid}.csv", fileEncoding = "UTF-8"))
+  write.csv(df, glue::glue("collected_data/hl/scrap_translated/scrap_t_{fid}_en.csv"))
+}
+
+for(i in 1:6) {
+  n_hl = 7 + i 
+  data_subset = filter(data_city_river, (data_city_river[, n_hl] == "en") & (data_city_river[, 7] == "us"))
+  data = select(.data = data_subset, c(1, n_hl))
+  colnames(data) = c("fid", "hl")
+  
+data %>% 
+  mutate(data = purrr::map(fid, add_english))
+}
+```
+
+### Update and correct scraped data
+
+After analyzing the translated and scraped content, we noticed that the snippet was more relevant than the scraped content. We will update the files.
+
+```{r update_files_en}
+
+# in english
+update_df_en = function(fid){
+  # read file
+  df = read.csv(glue::glue("collected_data/english/scrap_translated/scrap_t_{fid}.csv"))
+  # update file
+  df_update = df %>% 
+  mutate(text_en = case_when(
+      str_detect(domain, paste(c("dreamstime", "alamy", "commons.wikimedia", "trip.com", "shutterstock", "journals.ametsoc", "frontiersinthefield", "wanderlog", "structurae", "booking", "istockphoto", "limaynoticias", "expedia", "emeraldcruises", "rivercruiseadvisor", "lonelyplanet", "globaljourneys", "gate1travel", "aquadocs", "vietnamtypicaltours", "123rf", "peek", "justasklayla", "superstock", "sg.trip", "stmqjt", "flickr", "imago-images", "cbsnews", "greatlakes-seaway", "collections.leventhalmap", "ijc", "lre.usace.army", "vikingcruises", "marriott", "quora", "books.google", "reddit", "usgs.gov", "water.weather", "yelp", "waze", "westword", "letsflytravel", "bridgemanimages", "tourradar", "geosci", "riverreports", "sygic", "revistas.unicentro", "eajournals", "internationalscholarsjournals", "link.springer", "virtuoso", "gettyimages", "stock.adobe", "maps.google", "amazon", "inkl", "ebscohost"), collapse = "|")) ~ trans_snippet,
+      str_detect(text_en, "The server cannot process the request") ~ text,
+      str_detect(domain, "instagram") ~ str_remove_all(text_en, "like|comment"),
+      str_detect(domain, "youtube") ~ NA_character_,
+      TRUE ~ text_en
+      )) %>% 
+    mutate(text_en = if_else(
+      str_detect(text, "utilisation des cookies de Facebook"), 
+      trans_snippet, 
+      text_en)) %>% 
+    mutate(text_en = if_else(
+      str_detect(text, "Allow Facebook cookies on this browser"), 
+      trans_snippet, 
+      text_en)) %>% 
+    mutate(text_en = if_else(
+      str_detect(text, "Benarkan penggunaan kuki daripada Facebook pada pelayar ini"), 
+      trans_snippet, 
+      text_en)) %>% 
+    mutate(text_en = if_else(
+      str_detect(text, "Academia.edu no longer supports Internet"), 
+      trans_snippet, 
+      text_en)) %>% 
+    mutate(text_en = if_else(
+      str_detect(text, "Deprecated: Using \\$\\{var\\} in strings is deprecated, use \\{\\$var\\} instead in ..."), 
+      NA_character_, 
+      text_en)) %>% 
+    mutate(text_en = if_else(
+      str_detect(text, "cookie") & 
+      str_detect(text, paste(c("experience", "policy", "personalize", "collect", "accept", "consent"), collapse = "|")), 
+      trans_snippet, 
+      text_en))
+
+  # save file
+  readr::write_csv(df_update,
+                   glue::glue("collected_data/english/scrap_update/scrap_t_{fid}.csv"))
+}
+```
+
+Run the function:
+
+```{r run_update_en}
+# run function for each city
+data_city_river %>% 
+  mutate(data = purrr::map(fid, update_df_en))
+```
+
+```{r update_files_hl}
+# in local languages
+update_df_hl = function(fid, hl){
+  if(!file.exists((glue::glue("collected_data/hl/scrap_update/scrap_t_{fid}_{hl}.csv")))){
+  # read file
+  if(file.exists((glue::glue("collected_data/hl/scrap_translated/scrap_t_{fid}_{hl}.csv")))){
+  df = read.csv(glue::glue("collected_data/hl/scrap_translated/scrap_t_{fid}_{hl}.csv"))
+  # update file
+  df_update = df %>% 
+  mutate(text_en = case_when(
+      str_detect(domain, paste(c("dreamstime", "alamy", "commons.wikimedia", "trip.com", "shutterstock", "journals.ametsoc", "frontiersinthefield", "wanderlog", "structurae", "booking", "istockphoto", "limaynoticias", "expedia", "emeraldcruises", "rivercruiseadvisor", "lonelyplanet", "globaljourneys", "gate1travel", "aquadocs", "vietnamtypicaltours", "123rf", "peek", "justasklayla", "superstock", "sg.trip", "stmqjt", "flickr", "imago-images", "cbsnews", "greatlakes-seaway", "collections.leventhalmap", "ijc", "lre.usace.army", "vikingcruises", "marriott", "quora", "books.google", "reddit", "usgs.gov", "water.weather", "yelp", "waze", "westword", "letsflytravel", "bridgemanimages", "tourradar", "geosci", "riverreports", "sygic", "revistas.unicentro", "eajournals", "internationalscholarsjournals", "link.springer", "virtuoso", "gettyimages", "stock.adobe", "maps.google", "amazon", "inkl", "ebscohost", "reddit", "archive.org", "scribd", "vk.com", "irannewsagency"), collapse = "|")) ~ trans_snippet,
+      str_detect(domain, "instagram") ~ str_remove_all(text_en, "like|comment"),
+      str_detect(domain, "youtube") ~ NA_character_,
+      TRUE ~ text_en
+      )) %>% 
+     mutate(text_en = if_else(
+      str_detect(text_en, "Academia.edu no longer supports Internet") | str_detect(text, "Benarkan penggunaan kuki daripada Facebook pada pelayar ini") | str_detect(text_en, "Allow Facebook cookies on this browser") | str_detect(text, "utilisation des cookies de Facebook") | str_detect(text_en, "I'm not a robot") | str_detect(text, "vous devez vous connecter") | str_detect(text_en, "This Account has been suspended"), 
+      trans_snippet, 
+      text_en)) %>% 
+    mutate(text_en = if_else(
+      str_detect(text, "devez vous connecter pour continuer"),
+      trans_snippet,
+      text_en)) %>% 
+    mutate(text_en = if_else(
+      str_detect(text_en, "cookies|cookie") & 
+      str_detect(text_en, paste(c("experience", "policy", "personalize", "collect", "accept", "consent", "enable", "privacy", "browser", "improve", "enabled", "use", "provide"), collapse = "|")), 
+      trans_snippet, 
+      text_en)) %>% 
+    mutate(text_en = if_else(
+      str_detect(text_en, "browser") & 
+      str_detect(text_en, "enable|disable"), 
+      trans_snippet, 
+      text_en)) %>% 
+    mutate(text_en = str_remove_all(text_en, "email|Email"))
+
+  # save file
+  readr::write_csv(df_update,
+                   glue::glue("collected_data/hl/scrap_update/scrap_t_{fid}_{hl}.csv"))
+  }
+  else
+    print("No data")
+  }
+}
+```
+
+Run the function:
+
+```{r run_update_hl}
+# run function for each city
+for(i in 1:6) {
+  n_hl = 7 + i 
+  data_subset = filter(data_city_river, (data_city_river[, n_hl] != "no data"))
+  data = select(.data = data_subset, c(1, n_hl))
+  colnames(data) = c("fid", "hl")
+data %>% 
+  mutate(data = purrr::pmap(list(fid = fid,
+                                 hl = hl),
+                           update_df_hl))
+}
+```
+
+```{r}
+# outlier for 178 (Bur Said), item number 78 (pharmacies) 
+df = read.csv("collected_data/hl/scrap_update/scrap_t_178_ar.csv")
+df[78,24] = df[78,22]
+write.csv(df, "collected_data/hl/scrap_update/scrap_t_178_ar.csv", row.names = FALSE)
+
+# outlier for 762 number 7 (null null null)
+df = read.csv("collected_data/hl/scrap_update/scrap_t_762_en.csv")
+df[7,21] = df[7,19]
+write.csv(df, "collected_data/hl/scrap_update/scrap_t_762_en.csv", row.names = FALSE)
+
+# outlier for 719_a number 54 (pharmacies)
+df = read.csv("collected_data/hl/scrap_update/scrap_t_719_a_zu.csv")
+df[54,24] = df[54,22]
+write.csv(df, "collected_data/hl/scrap_update/scrap_t_719_a_zu.csv", row.names = FALSE)
+
+# outlier for 897_tl: multiple websites show the same text of the "Medical Technologists (Medtech) Licensure Examination Results" 
+df = read.csv("collected_data/hl/scrap_update/scrap_t_897_tl.csv")
+df[61,18] = df[61,16]
+df[63,18] = df[63,16]
+df[66,18] = df[66,16]
+df[70,18] = df[70,16]
+# or for an electricity exam
+df[55,18] = df[55,16]
+# or shops
+df[35,18] = df[35,16]
+write.csv(df, "collected_data/hl/scrap_update/scrap_t_897_tl.csv", row.names = FALSE)
+
+# outlier for 680_sn: Court judgements
+df = read.csv("collected_data/hl/scrap_update/scrap_t_680_sn.csv")
+df[18,17] = df[18,15]
+write.csv(df, "collected_data/hl/scrap_update/scrap_t_680_sn.csv", row.names = FALSE)
+
+# outlier for 331_a_en : Train stations
+df = read.csv("collected_data/english/scrap_update/scrap_t_331_a.csv")
+df[47,26] = df[47,2] # replace text by title of the page
+write.csv(df, "collected_data/english/scrap_update/scrap_t_331_a.csv", row.names = FALSE)
+```

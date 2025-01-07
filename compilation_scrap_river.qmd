@@ -1,0 +1,276 @@
+---
+title: "Search Engine Pages Results: Data compilation"
+author: "Liolia Bajemon"
+format: html
+editor: visual
+---
+
+### Description
+
+Using web-scraping methods, we extracted web content for 372 queries sent on Google. Then each extracted text was translated to English, if necessary, and lemmatised. This document aims to compile the data in one single table. This table will be used for further analysis (clustering, topic modelling, specificity score, *etc.*).
+
+### Set-up
+
+```{r load_packages, results = 'hide', warning = FALSE, message = FALSE}
+library(magrittr)
+library(tidyr)
+library(plyr)
+library(purrr)
+library(stringr)
+library(tokenizers)
+library(lexicon)
+library(dplyr)
+```
+
+```{r read_data}
+data_city_river = read.csv("input_data/data_city_river.csv")
+```
+
+### Compilation of results from the queries ran in English
+
+The table below contains all the original snippets, the translated snippets and the tokenized snippets for each city. For example, the snippet "*The wetland vegetations in Luliang Prefecture are concentrately distributed in the basins of Sanchuan River*" becomes "*wetland vegetation prefecture concentrately distribute basin wucheng*" with the locations and "*wetland vegetation prefecture concentrately distribute basin*" without the locations.
+
+```{r combine_snippets}
+# now put the resulting tokenized sentences in a df containing all of the snippets 
+df_compile = data.frame(data_city_river[,c(1,2)]) %>% 
+  mutate(path = paste0("collected_data/english/scrap_tokens/tokens_", fid, ".csv")) %>%
+  mutate(data = map(path, read.csv)) %>% # read the data for each city
+  unnest(data) %>%  # create a row for each token for each city
+  mutate(id = paste0(fid, "_", position)) # create a unique id for each snippet 
+
+# simplify the resulting dataframe and save it
+df = df_compile %>% 
+  select(c("fid", "urban_aggl", "position", "title", "link", "domain", "displayed_link", "english", "snippet", "trans_snippet", "text", "text_en", "tokenized_text", "tokenized_noloc", "id"))
+write.csv(df, "collected_data/english/scrap_data_river_en.csv", row.names = FALSE)
+```
+
+### Compilation of results from the queries ran in the local languages
+
+Because every city has at least one local language, but sometimes not more, we will compile the data as follows:
+
+-   [Compilation 1:]{.underline} data found for queries in the first local language (hl1) (concerns all cities)
+
+-   [Compilation 2:]{.underline} data found for queries in the second local language (hl2) (does not concern all cities)
+
+-   [Compilation 3:]{.underline} data found for queries in the third local language (hl3) (does not concern all cities)
+
+-   [Compilation 4:]{.underline} data found for queries in the fourth local language (hl4) (does not concern all cities)
+
+-   [Compilation 5:]{.underline} data found for queries in the third local language (hl5) (does not concern all cities)
+
+-   [Compilation 6:]{.underline} data found for queries in the third local language (hl6) (does not concern all cities)
+
+-   [Compilation 7:]{.underline} combine all data found for queries in all local languages (hl1 to hl6) (concerns all cities and combines all the previous compilations)
+
+We will use the same approach as for the queries in English.
+
+#### Compilation 1: in the 1st local language
+
+```{r compile_tokens_hl1}
+
+# get path 
+df = data.frame(data_city_river[,c(1,2,7,8,21)]) %>% 
+  mutate(path = paste0("collected_data/hl/scrap_tokens/tokens_", fid, "_", hl1, ".csv")) %>% # indicate the path for finding the file for each city
+  # check if data exists
+  mutate(path = case_when(file.exists(path) ~ path,
+                          # else write "no data"
+                          !file.exists(path) ~ NA))
+
+# keep count of cities where there is no data
+no_data = df %>% 
+  filter(is.na(path)) %>% 
+  select(-c("path")) 
+write.csv(no_data, "collected_data/hl/scrap_no_data_hl1.csv", row.names = FALSE)
+
+# read files
+df = df %>% 
+  filter(!is.na(path)) %>% # remove cities for which there is no data (n = 7) 
+  mutate(data = map(path, read.csv)) %>% 
+  unnest(data) %>% # create a row for each token for each city
+  mutate(snippet_id = paste0(fid, "_", position)) # create a unique id for each snippet
+df = df %>% 
+  select(c("fid", "urban_aggl", "gl", "hl1", "river_en", "position", "title", "link", "domain", "displayed_link", "snippet", "trans_snippet", "text", "text_en", "tokenized_text", "tokenized_noloc", "snippet_id"))
+write.csv(df, "collected_data/hl/df_scrap_tokens_hl1.csv", row.names = FALSE)
+```
+
+#### Compilation 2: in the 2nd local language
+
+```{r compile_hl2}
+## Combine all tokens in a single dataframe
+
+# get path 
+df = data.frame(data_city_river[,c(1,2,7,9,21)]) %>% 
+  mutate(path = paste0("collected_data/hl/scrap_tokens/tokens_", fid, "_", hl2, ".csv")) %>% 
+  mutate(path = case_when(file.exists(path) ~ path,
+                          !file.exists(path) & gl == "us" & hl2 != "no data" ~ paste0("collected_data/english/scrap_tokens/tokens_", fid, ".csv"),
+                          !file.exists(path) & gl != "us" ~ NA))
+
+# keep count of cities where there is no data (when applicable, i.e. a city without a second local language is not counted)
+no_data = df %>% 
+  filter(is.na(path) & hl2 != "no data") %>% 
+  select(-c("path"))
+write.csv(no_data, "collected_data/hl/scrap_no_data_hl2.csv", row.names = FALSE)
+
+# read files
+df = df %>% 
+  subset(!is.na(path)) %>% 
+  mutate(data = map(path, read.csv)) %>% 
+  unnest(data) %>% # create a row for each token for each city
+  mutate(snippet_id = paste0(fid, "_", position)) # create a unique id for each snippet
+df = df %>% 
+  select(c("fid", "urban_aggl", "gl", "hl2", "river_en", "position", "title", "link", "domain", "displayed_link", "snippet", "trans_snippet", "text", "text_en", "tokenized_text", "tokenized_noloc", "snippet_id"))
+
+write.csv(df, "collected_data/hl/df_scrap_tokens_hl2.csv", row.names = FALSE)
+```
+
+#### Compilation 3: in the 3rd local language
+
+##### Combine tokens
+
+```{r compile_hl3}
+
+df = data.frame(data_city_river[,c(1,2,7,10,21)]) %>% 
+  mutate(path = paste0("collected_data/hl/scrap_tokens/tokens_", fid, "_", hl3, ".csv")) %>% 
+  mutate(path = case_when(file.exists(path) ~ path,
+                          !file.exists(path) & gl == "us" & hl3 != "no data" ~ paste0("collected_data/english/scrap_tokens/tokens_", fid, ".csv"),
+                          !file.exists(path) & gl != "us" ~ NA))
+
+no_data = df %>% 
+  filter(is.na(path) & hl3 != "no data") %>% 
+  select(-c("path"))
+write.csv(no_data, "collected_data/hl/scrap_no_data_hl3.csv", row.names = FALSE)
+
+# read files
+df = df %>% 
+  subset(!is.na(path)) %>% 
+  mutate(data = map(path, read.csv)) %>% 
+  unnest(data) %>% 
+  mutate(snippet_id = paste0(fid, "_", position)) 
+
+df = df %>% 
+  select(c("fid", "urban_aggl", "gl", "hl3", "river_en", "position", "title", "link", "domain", "displayed_link", "snippet", "trans_snippet", "text", "text_en", "tokenized_text", "tokenized_noloc", "snippet_id"))
+
+write.csv(df, "collected_data/hl/df_scrap_tokens_hl3.csv", row.names = FALSE)
+```
+
+#### Compilation 4: in the 4th local language
+
+```{r compile_hl4}
+
+df = data.frame(data_city_river[,c(1,2,7,11,21)]) %>% 
+  mutate(path = paste0("collected_data/hl/scrap_tokens/tokens_", fid, "_", hl4, ".csv")) %>% 
+  mutate(path = case_when(file.exists(path) ~ path,
+                          !file.exists(path) & gl == "us" & hl4 != "no data" ~ paste0("collected_data/english/scrap_tokens/tokens_", fid, ".csv"),
+                          !file.exists(path) & gl != "us" ~ NA))
+
+no_data = df %>% 
+  filter(is.na(path) & hl4 != "no data") %>% 
+  select(-c("path"))
+write.csv(no_data, "collected_data/hl/scrap_no_data_hl4.csv", row.names = FALSE)
+
+df = df %>% 
+  subset(!is.na(path)) %>% 
+  mutate(data = map(path, read.csv)) %>% 
+  unnest(data) %>% 
+  mutate(snippet_id = paste0(fid, "_", position)) 
+
+df = df %>% 
+  select(c("fid", "urban_aggl", "gl", "hl4", "river_en", "position", "title", "link", "domain", "displayed_link", "snippet", "trans_snippet", "text", "text_en", "tokenized_text", "tokenized_noloc", "snippet_id"))
+
+write.csv(df, "collected_data/hl/df_scrap_tokens_hl4.csv", row.names = FALSE)
+```
+
+#### Compilation 5: in the 5th local language
+
+```{r compile_hl5}
+
+df = data.frame(data_city_river[,c(1,2,7,12,21)]) %>% 
+  mutate(path = paste0("collected_data/hl/scrap_tokens/tokens_", fid, "_", hl5, ".csv")) %>% 
+  mutate(path = case_when(file.exists(path) ~ path,
+                          !file.exists(path) & gl == "us" & hl5 != "no data" ~ paste0("collected_data/english/scrap_tokens/tokens_", fid, ".csv"),
+                          !file.exists(path) & gl != "us" ~ NA))
+
+no_data = df %>% 
+  filter(is.na(path) & hl5 != "no data") %>% 
+  select(-c("path"))
+write.csv(no_data, "collected_data/hl/scrap_no_data_hl5.csv", row.names = FALSE)
+
+df = df %>% 
+  subset(!is.na(path)) %>% 
+  mutate(data = map(path, read.csv)) %>% 
+  unnest(data) %>% 
+  mutate(snippet_id = paste0(fid, "_", position)) 
+
+df = df %>% 
+  select(c("fid", "urban_aggl", "gl", "hl5", "river_en", "position", "title", "link", "domain", "displayed_link", "snippet", "trans_snippet", "text", "text_en", "tokenized_text", "tokenized_noloc", "snippet_id"))
+
+write.csv(df, "collected_data/hl/df_scrap_tokens_hl5.csv", row.names = FALSE)
+```
+
+#### Compilation 6: in the 6th local language
+
+```{r compile_hl6}
+
+df = data.frame(data_city_river[,c(1,2,7,13,21)]) %>% 
+  mutate(path = paste0("collected_data/hl/scrap_tokens/tokens_", fid, "_", hl6, ".csv")) %>% 
+  mutate(path = case_when(file.exists(path) ~ path,
+                          !file.exists(path) & gl == "us" & hl6 != "no data" ~ paste0("collected_data/english/scrap_tokens/tokens_", fid, ".csv"),
+                          !file.exists(path) & gl != "us" ~ NA)) 
+
+no_data = df %>% 
+  filter(is.na(path) & hl6 != "no data") %>% 
+  select(-c("path"))
+write.csv(no_data, "collected_data/hl/scrap_no_data_hl6.csv", row.names = FALSE)
+
+df = df %>% 
+  filter(!is.na(path))
+# No data available (0 obs.)
+```
+
+No data is available for the cities which have a 6th language (2 cities in South Africa).
+
+#### Compilation 7: Combine all results in local languages
+
+```{r combine_all_tokens_hl}
+
+df1 = read.csv("collected_data/hl/df_scrap_tokens_hl1.csv") %>% 
+  rename_at("hl1", ~"hl")
+df2 = read.csv("collected_data/hl/df_scrap_tokens_hl2.csv") %>% 
+  rename_at("hl2", ~"hl")
+df3 = read.csv("collected_data/hl/df_scrap_tokens_hl3.csv") %>% 
+  rename_at("hl3", ~"hl")
+df4 = read.csv("collected_data/hl/df_scrap_tokens_hl4.csv") %>% 
+  rename_at("hl4", ~"hl")
+df5 = read.csv("collected_data/hl/df_scrap_tokens_hl5.csv") %>% 
+  rename_at("hl5", ~"hl")
+
+df = df1 %>% 
+  rbind(df2, df3, df4, df5) %>% 
+  # modify snippet_id to integrate the language
+  mutate(id = paste0(fid, "_", hl, "_", position))
+
+write.csv(df, "collected_data/hl/df_scrap_tokens_all_hl.csv", row.names = FALSE)
+```
+
+### Compile everything (English and local languages)
+
+```{r compile_everything}
+# first adapt the dataframes so they have the same variables
+df_en = read.csv("collected_data/english/scrap_data_river_en.csv") %>% 
+  mutate(hl = "en") %>% 
+  mutate(query = "english") %>% 
+  select(-english)
+df_hl = read.csv("collected_data/hl/df_scrap_tokens_all_hl.csv") %>% 
+  mutate(query = "hl") %>% 
+  # remove data for american cities in English (duplicate)
+  filter(!(gl == "us" & hl == "en")) %>% 
+  select(-c("gl", "river_en", "snippet_id"))
+
+data = data_city_river %>% 
+  select(-c("urban_aggl", "multiple_rivers", "river_position", "sub_continent", "clim", "clco", "biome"))
+df_all = df_en %>% 
+  rbind(df_hl) %>% 
+  left_join(data, by = "fid")
+
+write.csv(df_all, "collected_data/combined_all_tokens.csv")
+```

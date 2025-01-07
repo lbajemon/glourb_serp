@@ -49,15 +49,6 @@ data_city_river = data_city_river %>%
     mutate(river_hl5 = str_replace_all(river_hl5, ";", " OR ")) %>% 
     mutate(river_hl6 = str_replace_all(river_hl6, ";", " OR ")) 
 
-# in the value SERP API, the language code for chinese (simplified) is zh-cn. Let's update our data table:
-data_city_river = data_city_river %>% 
-  mutate(hl1 = str_replace_all(hl1, "zh", "zh-cn")) %>% 
-  mutate(hl2 = str_replace_all(hl2, "zh", "zh-cn")) %>% 
-  mutate(hl3 = str_replace_all(hl3, "zh", "zh-cn")) %>% 
-  mutate(hl4 = str_replace_all(hl4, "zh", "zh-cn")) %>% 
-  mutate(hl5 = str_replace_all(hl5, "zh", "zh-cn")) %>% 
-  mutate(hl6 = str_replace_all(hl6, "zh", "zh-cn"))
-
 lexicon_en = get_lexicon("en") %>% 
   rbind(read.csv("input_data/ignore/missing_words_lexicon_en2.csv"))
 ```
@@ -141,7 +132,137 @@ lemmatisation_en = function(fid, cityname, rivername){
   
   if(!file.exists(file)){
     # read data
-    my_df = read.csv(glue::glue("collected_data/english/scrap_translated/scrap_t_{fid}.csv", fileEncoding = "UTF-8")) %>% 
+    my_df = read.csv(glue::glue("collected_data/english/scrap_update/scrap_t_{fid}.csv", fileEncoding = "UTF-8")) 
+      
+    # tokenize data
+    df = my_df %>% 
+      unnest_tokens(output = "word", input = "text_en", token = "words", drop = FALSE)  %>% 
+      mutate(word = str_replace_all(word, "river's", "river")) %>% # replace a few words with the 's
+      mutate(word = str_replace_all(word, "world's", "world")) %>% 
+      mutate(word = str_replace_all(word, "oceangoing", "ocean-going")) %>% 
+      mutate(word = str_replace_all(word, "seatrout", "sea-trout")) %>% 
+      mutate(word = str_replace_all(word, "world's", "world")) %>% 
+      mutate(word = str_replace_all(word, "can't", "can_t")) %>%  # replace ' by _ to match the lexicon 
+      mutate(word = str_replace_all(word, "there's", "there_s")) %>% 
+      mutate(word = str_replace_all(word, "doesn't", "doesn_t")) %>% 
+      mutate(word = str_replace_all(word, "aren't", "aren_t")) %>% 
+      mutate(word = str_replace_all(word, "didn't", "didn_t")) %>%
+      mutate(word = str_replace_all(word, "don't", "don_t")) %>% 
+      mutate(word = str_replace_all(word, "wasn't", "wasn_t")) %>% 
+      mutate(word = str_replace_all(word, "they're", "they_re")) %>% 
+      left_join(lexicon_en, by = "word") # join with english lexicon to get the lemma
+      print("data tokenized") 
+      # define words to remove, which are specific to this city
+      # i.e. the city name and the river name
+      fid_names = data.frame(word = c(cityname, rivername)) %>% 
+        mutate(word = str_split(word, pattern = "OR ")) %>% 
+        unlist() %>% 
+        as.data.frame() 
+      row.names(fid_names) = NULL
+      colnames(fid_names) = "word" 
+      
+      fid_names = fid_names %>% 
+        mutate(word = str_split(word, pattern = " ")) %>% 
+        unlist() %>% 
+        as.data.frame()
+      row.names(fid_names) = NULL
+      colnames(fid_names) = "word" 
+      fid_names = fid_names %>% 
+        mutate(word = str_to_lower(word)) %>% 
+        subset(word != "")
+      
+      # now get all spellings of the city and river names 
+      # example for N'Djaména
+      fid_names = fid_names %>% 
+        mutate(ascii = tolower(stringi::stri_trans_general(word, "latin-ascii"))) %>% # n'djamena
+        mutate(punct = tolower(gsub('[[:punct:]]+', '', word))) %>% # ndjaména
+        mutate(punct_ascii = tolower(gsub('[[:punct:]]+', '', stringi::stri_trans_general(word, "latin-ascii")))) %>% # ndjamena
+        mutate(punct2 = tolower(gsub('[[:punct:] ]+', ' ', word))) %>% # n djaména
+        mutate(punct2_ascii = tolower(gsub('[[:punct:] ]+', ' ', stringi::stri_trans_general(word, "latin-ascii")))) # n djamena 
+      rows = fid_names %>% 
+        # pivot the columns to rows
+        pivot_longer(cols = everything(),
+                     names_to = "type",
+                     values_to = "word")
+      # delete the first columns which doesn't interest us
+        fid_names = rows[,2, drop = FALSE] %>% 
+          unique()
+
+      # clean data
+      df_clean = df %>% 
+        anti_join(stop_words, by = "word") %>% # remove stop words
+        anti_join(fid_names, by = "word") %>% # remove city and river names
+        anti_join(dates, by = "word") %>% # remove days and months
+        anti_join(country_names, by = "word") %>% # remove country names
+        filter(word != "river" & word != "character" & word != "lib") %>%
+        mutate(word = gsub("[0-9]", "", word)) %>% # remove numbers
+        mutate(word = gsub("\\b[a-zA-Z]\\b", "", word)) %>% # remove solitary letters
+        left_join(locations, by = "word", keep = FALSE) %>% # join with location names 
+        # define which type to keep 
+        mutate(type = case_when(
+          !is.na(lemma) ~ type.x,
+          is.na(lemma) & !is.na(type.y) ~ type.y, 
+          is.na(lemma) & is.na(type.y) ~ NA
+        )) %>% 
+        # remove words which have no lemma and are not a location
+        # we can assume that they are names of persons
+        subset(!is.na(type)) %>% 
+        # remove empty lines
+        subset(word != "") %>% 
+        # define which word to keep (lemma or word)
+        mutate(token = case_when(
+          !is.na(lemma) ~ lemma,
+          is.na(lemma) ~ word)) 
+      print("data cleaned")
+      
+       # "error" from a wikipedia page, corresponding to a table describing towns and subdistricts, resulting to a string like "town town town subdistrict subdistrict subdistrict" etc. 
+    if(fid == 404){
+      df_clean = df_clean %>% 
+        filter(!(position == 8 & token %in% c("subdistrict", "district", "town", "establish", "billion")))
+    }
+    # wikipedia page displaying lat/lon coordinates, resulting in "lat lat lat lat lat" etc.
+  if(fid == "797_b"){
+    df_clean = df_clean %>% 
+      filter(!(position == 23 & token %in% c("lat", "false", "true", "zoom")))
+  }
+      
+      # now combine all the tokens to obtain a "tokenized" text
+      tokenized_text = ddply(df_clean, "position", summarize, tokenized_text = paste(token, collapse = " "))
+      # combine all the tokens without the location type
+      df_without_loc = subset(df_clean, df_clean$type != "location")
+      tokenized_text_loc = ddply(df_without_loc, "position", summarize, tokenized_noloc = paste(token, collapse = " "))
+      # join the resulting "tokenized texts" with the original dataframe
+      my_df = my_df %>% 
+        left_join(tokenized_text, by = "position") %>% 
+        left_join(tokenized_text_loc, by = "position")
+
+      write.csv(my_df, glue::glue("collected_data/english/scrap_tokens/tokens_{fid}.csv"), row.names = FALSE,  fileEncoding = "UTF-8")
+   }
+}
+```
+
+```{r run_get_serp_data_en, warning = FALSE, message = FALSE}
+data_city_river %>% 
+  mutate(data = purrr::pmap(list(fid = fid,
+                                 cityname = city_en,
+                                rivername = river_en
+                               ),
+                          lemmatisation_en))
+```
+
+#### 2. Requests in the local languages
+
+```{r def_lemmatisation_hl}
+lemmatisation_hl = function(fid, cityname, rivername, hl){
+  
+   {
+      
+      # read data
+      if(file.exists(glue::glue("collected_data/hl/scrap_update/scrap_t_{fid}_{hl}.csv"))){
+ print(paste0(fid, ": ", cityname))
+
+    # read data
+    my_df = read.csv(glue::glue("collected_data/hl/scrap_update/scrap_t_{fid}_{hl}.csv", fileEncoding = "UTF-8")) %>% 
       mutate(text_en = case_when(
         # if the website is one of the following, then the text will be the snippet (more relevant)
         str_detect(domain, "books.google") ~ trans_snippet,
@@ -150,8 +271,10 @@ lemmatisation_en = function(fid, cityname, rivername){
         str_detect(domain, "istockphoto") ~ trans_snippet,
         str_detect(domain, "gettyimages") ~ trans_snippet,
         str_detect(domain, "virtuoso") ~ trans_snippet,
+        str_detect(domain, "stock.adobe") ~ trans_snippet,
+        str_detect(domain, "shutterstock") ~ trans_snippet,
         TRUE ~ text_en))
-      
+    
     # tokenize data
     df = my_df %>% 
       unnest_tokens(output = "word", input = "text_en", token = "words", drop = FALSE)  %>% 
@@ -233,6 +356,11 @@ lemmatisation_en = function(fid, cityname, rivername){
           is.na(lemma) ~ word)) 
       print("data cleaned")
       
+      if(fid == 463){
+    df_clean = df_clean %>% 
+      filter(!(position == 54 & token %in% c("zip", "code", "medical", "refill", "oxygen")))
+      }
+      
       # now combine all the tokens to obtain a "tokenized" text
       tokenized_text = ddply(df_clean, "position", summarize, tokenized_text = paste(token, collapse = " "))
       # combine all the tokens without the location type
@@ -243,117 +371,11 @@ tokenized_text_loc = ddply(df_without_loc, "position", summarize, tokenized_nolo
         left_join(tokenized_text, by = "position") %>% 
         left_join(tokenized_text_loc, by = "position")
 
-      write.csv(my_df, glue::glue("collected_data/english/scrap_tokens/tokens_{fid}.csv"), row.names = FALSE,  fileEncoding = "UTF-8")
-   }
-}
-```
-
-```{r run_get_serp_data_en, warning = FALSE, message = FALSE}
-data_city_river %>% 
-  mutate(data = purrr::pmap(list(fid = fid,
-                                 cityname = city_en,
-                                rivername = river_en
-                               ),
-                          lemmatisation_en))
-```
-
-#### 2. Requests in the local languages
-
-```{r def_lemmatisation_hl}
-lemmatisation_hl = function(fid, cityname, rivername, hl){
-  
-   file = glue::glue("collected_data/hl/tokens/tokens_{fid}_{hl}.csv")
-    if(!file.exists(file)){
-      
-      # read data
-      if(file.exists(glue::glue("collected_data/hl/clean_data/clean_{fid}_{hl}.csv"))){
-      df = read.csv(glue::glue("collected_data/hl/clean_data/clean_{fid}_{hl}.csv")) 
-      
-      # tokenize data
-      df = df %>% 
-        unnest_tokens(output = "word", input = "trans_snippet", token = "words", drop = FALSE)  %>% 
-        mutate(word = str_replace_all(word, "river's", "river")) %>% # replace a few words with the 's
-        mutate(word = str_replace_all(word, "world's", "world")) %>% 
-        mutate(word = str_replace_all(word, "oceangoing", "ocean-going")) %>% 
-        mutate(word = str_replace_all(word, "seatrout", "sea-trout")) %>% 
-        mutate(word = str_replace_all(word, "world's", "world")) %>% 
-        mutate(word = str_replace_all(word, "can't", "can_t")) %>%  # replace ' by _ to match the lexicon 
-        mutate(word = str_replace_all(word, "there's", "there_s")) %>% 
-        mutate(word = str_replace_all(word, "doesn't", "doesn_t")) %>% 
-        mutate(word = str_replace_all(word, "aren't", "aren_t")) %>% 
-        mutate(word = str_replace_all(word, "didn't", "didn_t")) %>%
-        mutate(word = str_replace_all(word, "don't", "don_t")) %>% 
-        mutate(word = str_replace_all(word, "wasn't", "wasn_t")) %>% 
-        mutate(word = str_replace_all(word, "they're", "they_re")) %>% 
-        left_join(lexicon_en, by = "word") # join with english lexicon to get the lemma
-          
-      # define words to remove, which are specific to this city
-      # i.e. the city name and the river name
-      fid_names = data.frame(word = c(cityname, rivername)) %>% 
-        mutate(word = str_split(word, pattern = "OR ")) %>% 
-        unlist() %>% 
-        as.data.frame() 
-      row.names(fid_names) = NULL
-      colnames(fid_names) = "word" 
-      
-      fid_names = fid_names %>% 
-        mutate(word = str_split(word, pattern = " ")) %>% 
-        unlist() %>% 
-        as.data.frame()
-      row.names(fid_names) = NULL
-      colnames(fid_names) = "word" 
-      fid_names = fid_names %>% 
-        mutate(word = str_to_lower(word)) %>% 
-        subset(word != "")
-      
-      # now get all spellings of the city and river names 
-      # example for N'Djaména
-      fid_names = fid_names %>% 
-        mutate(ascii = tolower(stringi::stri_trans_general(word, "latin-ascii"))) %>% # n'djamena
-        mutate(punct = tolower(gsub('[[:punct:]]+', '', word))) %>% # ndjaména
-        mutate(punct_ascii = tolower(gsub('[[:punct:]]+', '', stringi::stri_trans_general(word, "latin-ascii")))) %>% # ndjamena
-        mutate(punct2 = tolower(gsub('[[:punct:] ]+', ' ', word))) %>% # n djaména
-        mutate(punct2_ascii = tolower(gsub('[[:punct:] ]+', ' ', stringi::stri_trans_general(word, "latin-ascii")))) # n djamena 
-      fid_names = fid_names %>% 
-        # pivot the columns to rows
-        pivot_longer(cols = everything(),
-                     names_to = "type",
-                     values_to = "word")
-      # delete the first columns which doesn't interest us
-        fid_names = fid_names[,2] %>% 
-          unique() %>% 
-          rbind("river")
-
-      # clean data
-      df_clean = df %>% 
-        anti_join(stop_words, by = "word") %>% # remove stop words
-        anti_join(fid_names, by = "word") %>% # remove city and river names
-        anti_join(dates, by = "word") %>% # remove days and months
-        anti_join(country_names, by = "word") %>% # remove country names
-        mutate(word = gsub("[0-9]", "", word)) %>% # remove numbers
-        mutate(word = gsub("\\b[a-zA-Z]\\b", "", word)) %>% # remove solitary letters
-        left_join(locations, by = "word", keep = FALSE) %>% # join with location names 
-        # define which type to keep 
-        mutate(type = case_when(
-          !is.na(lemma) ~ type.x,
-          is.na(lemma) & !is.na(type.y) ~ type.y, 
-          is.na(lemma) & is.na(type.y) ~ NA
-        )) %>% 
-        # remove words which have no lemma and are not a location
-        # we can assume that they are names of persons
-        subset(!is.na(type)) %>% 
-        # remove empty lines
-        subset(word != "") %>% 
-        # define which word to keep (lemma or word)
-        mutate(token = case_when(
-          !is.na(lemma) ~ lemma,
-          is.na(lemma) ~ word)) 
-      
-      write.csv(df_clean, glue::glue("collected_data/hl/tokens/tokens_{fid}_{hl}.csv"), row.names = FALSE)
-      print(paste0("Lemmatization done. FID = ", fid))
-      }
+      write.csv(my_df, glue::glue("collected_data/hl/scrap_tokens/tokens_{fid}_{hl}.csv"), row.names = FALSE,  fileEncoding = "UTF-8")
+      }      
       else {print(paste0("No data, FID = ", fid))}
-   }
+
+}
 }
 ```
 
@@ -361,9 +383,9 @@ lemmatisation_hl = function(fid, cityname, rivername, hl){
 
 for(i in 1:6) {
   n_hl = 7 + i 
-  data_subset = filter(data_city_river, ((data_city_river[, n_hl] != "no data") & ((data_city_river[, n_hl] != "en") | data_city_river[, 7] != "us")))
-  data = select(.data = data_subset, c(1:7, n_hl, 14, 21, 28, 34, 35))
-  colnames(data) = c("fid", "latitude", "longitude", "urban_aggl", "country_en", "country_fr", "gl", "hl", "cityname", "rivername", "multiple_rivers", "tld", "google_domain")
+  data_subset = filter(data_city_river, (data_city_river[, n_hl] != "no data"))
+  data = select(.data = data_subset, c(1, n_hl, 14, 21))
+  colnames(data) = c("fid", "hl", "cityname", "rivername")
 
 data %>%
   mutate(data = purrr::pmap(list(fid = fid,

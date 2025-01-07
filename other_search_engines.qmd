@@ -20,8 +20,10 @@ library(tidyverse)
 library(httr)
 library(jsonlite)
 library(remotes)
-remotes::install_github("lvaudor/mixr") # for the lexicon
-remotes::install_github("Tomeriko96/polyglotr", force = TRUE) # for translations
+library(dplyr)
+library(mixr)
+library(polyglotr)
+library(RColorBrewer)
 ```
 
 #### Authentication
@@ -50,7 +52,7 @@ We will read the file containing all the considered {city name} + {river name} c
 
 ```{r data}
 # read data
-data_city_river_11 = read.csv("input_data/data_city_river_11.csv", sep = ";")
+data_city_river_11 = read.csv("input_data/data_city_river_11.csv", sep ="\t")
 
 # visualise data
 data_city_river_11
@@ -416,4 +418,157 @@ xuanwei = xuanwei %>%
   left_join(xuanwei_title, by = "position") %>% 
   left_join(xuanwei_snip, by = "position")
 write.csv(xuanwei, "collected_data/baidu/xuanwei.csv")
+```
+
+### Analysis
+
+First, let's combine all the collected data, i.e. results from each search engine (Google, Yahoo, Bing and Baidu - if applicable). Then, we will analyze the data. First, we will count how many times each website appears. Then we will do the same, but for the domains (for example, <https://en.wikipedia.org/wiki/Yangtze> becomes "wikipedia"). Finally, we will calculate a "score" of likeness, as a way to compare the results from Google and from other search engines.
+
+```{r def_analysis_search_engines}
+analysis_se = function(fid, nom_ville, nom_riviere){
+  
+  ### retrieve all collected data
+  google = read.csv(glue::glue("collected_data/english/clean_data/clean_{fid}.csv")) %>% 
+    select("position", "title", "link", "snippet") %>% 
+    mutate(engine = "google") %>% 
+    mutate(domain = domain(link)) 
+  yahoo = read.csv(glue::glue("collected_data/yahoo/{fid}.csv")) %>% 
+    select("position", "title", "link", "snippet") %>% 
+    mutate(engine = "yahoo") %>% 
+    mutate(domain = domain(link))
+  bing = read.csv(glue::glue("collected_data/bing/{fid}.csv")) %>% 
+    select("position", "title", "link", "snippet") %>% 
+    mutate(engine = "bing") %>% 
+    mutate(domain = domain(link))
+  baidu = case_when(
+    fid == 212 ~ read.csv("collected_data/baidu/wuhan.csv"),
+    fid == 319 ~ read.csv("collected_data/baidu/xuanwei.csv")
+  )
+  if(exists("baidu")){
+    baidu = baidu %>% 
+      select("position", "link", "trans_snippet", "trans_title") %>% 
+      mutate(engine = "baidu") %>% 
+      mutate(domain = domain(link))
+    names(baidu) = c("position", "link", "snippet", "title", "engine", "domain")
+  } else {
+    baidu = data.frame("position" = NA,
+                       "link" = NA,
+                       "snippet" = NA,
+                       "title" = NA,
+                       "engine" = NA,
+                       "domain" = NA)
+    }
+  
+    if(fid == 212 | fid == 319){
+        # bind everything for chinese cities 
+      df = google %>% 
+        bind_rows(yahoo) %>% 
+        bind_rows(bing) %>% 
+        bind_rows(baidu)
+    } else {
+        # bind everything for non-chinese cities
+        df = google %>% 
+          bind_rows(yahoo) %>% 
+          bind_rows(bing)
+    }
+  
+  ### CALCULATIONS FOR ANALYSIS
+  # let's count how many times each website appears 
+  count_website = df %>% 
+    group_by(link) %>% 
+    dplyr::count()
+  
+  # let's extract the domain from the link
+  # and count how many times they appear
+  count_domain = df %>% 
+    group_by(engine, domain) %>% 
+    dplyr::count() 
+    
+  # let's plot the results
+  plot = count_domain %>%
+    filter(n > 1) %>% 
+    mutate(domain = fct_reorder(domain, n)) %>% 
+    ggplot(mapping = aes(x = domain, y = n)) +
+    geom_col(position = "stack", fill = "#fdb462") +
+    labs(title = "Nombre d'apparition des domaines dans les moteurs de \nrecherche", 
+         y = "",
+         x = "",
+         subtitle = nom_ville) +
+    theme_bw() +
+    coord_flip()
+ if(!file.exists(paste0("analysis/search_engines/search_e_", nom_ville, ".png"))){
+   ggsave(paste0("analysis/search_engines/search_e_", nom_ville, ".png"), plot)
+ }
+  
+  # let's calculate a "score" of likeness  
+  google_score = google %>% 
+    mutate(n_yahoo = 0) %>% 
+    mutate(n_bing = 0) %>% 
+    mutate(n_baidu = 0) 
+  # add 1 if the link is found in another search engine
+  for(i in 1:nrow(google_score)){
+    if(google_score$link[i] %in% yahoo$link){
+      google_score$n_yahoo[i] = google_score$n_yahoo[i] + 1
+    }
+    if(google_score$link[i] %in% baidu$link){
+      google_score$n_baidu[i] = google_score$n_baidu[i] + 1
+    }
+    if(google_score$link[i] %in% bing$link){
+      google_score$n_bing[i] = google_score$n_bing[i] + 1
+    }
+  }
+  if(!file.exists(glue::glue("analysis/search_engines/score_likeness_{nom_ville}.csv"))){
+  write.csv(google_score, glue::glue("analysis/search_engines/score_likeness_{nom_ville}.csv"), row.names = FALSE)
+  }
+  
+  # now let's summarize the results to make a plot
+  # if it is a chinese city, include baidu 
+  if(fid == 319 | fid == 212){
+  sum_score = google_score %>% 
+    select("n_yahoo","n_bing","n_baidu") %>% 
+    colSums()
+  summary_score = data.frame(engine = c("Yahoo", "Bing", "Baidu"),
+                             sum = sum_score) 
+  plot = summary_score %>%
+    mutate(engine = fct_reorder(engine, sum)) %>% 
+    ggplot(mapping = aes(x = engine, y = sum)) +
+    geom_col(position = "stack", fill = "#fdb462") +
+    labs(title = paste0(nom_riviere, " - ", nom_ville), 
+         y = "Nombre de pages web en commun avec \nle moteur de recherche Google",
+         x = "Moteur de recherche") +
+    theme_bw()  
+  } else {
+  # if it is not a chinese city, exclude baidu 
+  sum_score = google_score %>% 
+    select("n_yahoo","n_bing") %>% 
+    colSums()
+  summary_score = data.frame(engine = c("Yahoo", "Bing"),
+                             sum = sum_score) %>% 
+    mutate(legend = case_when(
+      str_detect(engine, "Yahoo") ~ paste0("Yahoo (n = ", nrow(yahoo), ")"),
+      str_detect(engine, "Bing") ~ paste0("Bing (n = ", nrow(bing), ")"))
+    )
+  plot = summary_score %>%
+    mutate(engine = fct_reorder(engine, sum)) %>% 
+    ggplot(mapping = aes(x = legend, y = sum)) +
+    geom_col(position = "stack", fill = "#fdb462") +
+    labs(title = paste0(nom_riviere, " - ", nom_ville), 
+         y = "Nombre de pages web en commun avec \nle moteur de recherche Google",
+         x = "Moteur de recherche") +
+    scale_y_continuous(labels = label_number(accuracy = 1)) +
+    theme_bw()  
+  }
+  ggsave(glue::glue("analysis/search_engines/score_likeness_{nom_ville}.png"), plot)
+}
+```
+
+Finally, let's run the function for each of our cities.
+
+```{r run_analysis_se}
+
+data_city_river_11 %>% 
+  mutate(data = purrr::pmap(list(fid = fid, 
+                                 nom_ville = urban_aggl,
+                                 nom_riviere = river),
+                            analysis_se))
 ```
