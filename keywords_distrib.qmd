@@ -1,0 +1,306 @@
+---
+title: "Keywords global distribution"
+format: html
+editor: visual
+author: "Liolia Bajemon"
+---
+
+### Set up
+
+```{r packages}
+library(tidyverse)
+library(rnaturalearth) # world map
+library(sf) # map
+library(cowplot) # arrange plots together
+library(leaflet) # leaflet map
+library(htmltools) # title on leaflet map
+library(htmlwidgets) # to save leaflet map
+
+tag.map.title = tags$style(HTML("
+  .leaflet-control.map-title { 
+    transform: translate(-50%,20%);
+    position: topright;
+    left: 50%;
+    text-align: center;
+    padding-left: 10px; 
+    padding-right: 10px; 
+    background: rgba(50, 111, 168,0.5);
+    #font-weight: bold;
+    font-size: 18px;
+    color: white;
+  }
+"))
+```
+
+```{r read_corpus}
+corpus = read.csv("collected_data/combined_all_tokens.csv") 
+```
+
+### Major keywords
+
+W
+
+#### Riverfront
+
+```{r riverfront_data}
+riverfronts = corpus %>% 
+  # keep pages mentioning a waterfront or riverfront
+  filter(str_detect(text_en, "riverfront|waterfront")) %>% # 980 pages 
+  # do not keep the exact same page twice
+  distinct(link, .keep_all = TRUE) %>% # 811 pages
+  group_by(urban_aggl) %>% 
+  # count nb of occurrences per city
+  count() 
+# 196 cities mention a water/riverfront
+# prepare dataset for representing it on a map
+data = corpus %>% 
+  select(c("urban_aggl", "latitude", "longitude")) %>% 
+  distinct(urban_aggl, .keep_all = TRUE) %>% 
+  left_join(riverfronts, by = "urban_aggl") %>% 
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) %>% 
+  mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
+  # remove cities which do not mention the river/waterfront
+  filter(!is.na(n))
+
+### MAP
+# Prepare data
+data_sf = st_as_sf(data, coords = c("longitude", "latitude"), crs = 4326)
+world_map = ne_countries(scale = "medium", returnclass = "sf")
+
+map = ggplot(world_map) +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_sf, aes(size = n), color = "#41b6c4", alpha = 0.7, show.legend = TRUE) +
+  scale_size_continuous(breaks = c(1, 5, 10, 25, 91)) +
+  # color palette
+  # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom",
+        plot.background = element_rect(fill = "white", color = "white")) +
+  # legend
+  labs(size = "Nombre de mentions de 'riverfront' ou de 'waterfront'")   
+
+### DIAGRAM
+diagram = data %>% 
+  mutate(urban_aggl = fct_reorder(urban_aggl, n)) %>% 
+  filter(n >= 8) %>% 
+  ggplot(mapping = aes(x = urban_aggl, # create the plot
+                      y = n)) + 
+    geom_col(fill = "#41b6c4", position = "stack") +
+    coord_flip() + # flip x and y coordinates 
+    labs(x = "",
+         y = "") + 
+    theme_bw(base_family = "CenturySch")
+
+### JOIN EVERYTHING AND SAVE
+plot_grid(map, diagram, rel_widths = c(2,1))
+ggsave("occurrence_riverfront.png", path = "analysis/riverfront/", width = 4000, height = 2500, units = "px")
+
+### LEAFLET MAP (Interactive)
+title = tags$div(
+  tag.map.title, HTML("<td align=justify><b>Nombre de mentions de 'riverfront' ou de 'waterfront'</b></td>"))
+leaf = leaflet(data = data, options = leafletOptions(zoomControl = TRUE, minZoom = 1, maxZoom = 5)) %>% 
+  addProviderTiles("CartoDB.VoyagerNoLabels") %>% 
+  addCircleMarkers(~longitude, 
+                   ~latitude,
+                   label = paste0(data$urban_aggl,", ", data$n),
+                   color = "#41b6c4",
+                   opacity = 1,
+                   radius = 0.2*data$n) %>% 
+  addControl(title, position = "topright") 
+saveWidget(leaf, file = "occurrence_riverfront_leaflet.html")
+```
+
+#### Water scarcity
+
+```{r data_water_scarcity}
+water_scarcity = corpus %>% 
+  # keep pages mentioning water scarcity/shortage
+  filter(str_detect(text_en, "water scarcity|water shortage")) %>% 
+  # do not keep the exact same page twice
+  distinct(link, .keep_all = TRUE) %>% # 811 pages
+  group_by(urban_aggl) %>% 
+  # count nb of occurrences per city
+  count() 
+
+# 132 cities
+
+# prepare dataset for representing it on a map
+data = corpus %>% 
+  select(c("urban_aggl", "latitude", "longitude")) %>% 
+  distinct(urban_aggl, .keep_all = TRUE) %>% 
+  left_join(water_scarcity, by = "urban_aggl") %>% 
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) %>% 
+  mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
+  # remove cities which do not mention water scarcity
+  filter(!is.na(n))
+
+### MAP
+# Prepare data
+data_sf = st_as_sf(data, coords = c("longitude", "latitude"), crs = 4326)
+world_map = ne_countries(scale = "medium", returnclass = "sf")
+
+map = ggplot(world_map) +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_sf, aes(size = n), color = "#fdb462", alpha = 0.7, show.legend = TRUE) +
+  scale_size_area(breaks = c(2, 4, 6, 8, 10, 12), max_size = 2) +
+  # color palette
+  # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom",
+        plot.background = element_rect(fill = "white", color = "white")) +
+  # legend
+  labs(size = "Nombre de mentions de 'water scarcity' ou de 'water shortage'")   
+
+### DIAGRAM
+diagram = data %>% 
+  mutate(urban_aggl = fct_reorder(urban_aggl, n)) %>% 
+  filter(n > 3) %>% 
+  ggplot(mapping = aes(x = urban_aggl, # create the plot
+                      y = n)) + 
+    geom_col(fill = "#fdb462", position = "stack") +
+    coord_flip() + # flip x and y coordinates 
+    labs(x = "",
+         y = "") + 
+    theme_bw(base_family = "CenturySch")
+
+### JOIN EVERYTHING AND SAVE
+plot_grid(map, diagram, rel_widths = c(2,1))
+ggsave("occurrence_water_scarcity.png", path = "analysis/keywords/", width = 4000, height = 2500, units = "px")
+
+### LEAFLET MAP (Interactive)
+title = tags$div(
+  tag.map.title, HTML("<td align=justify><b>Nombre de mentions de 'water scarcity' ou de 'water shortage'</b></td>"))
+leaf = leaflet(data = data, options = leafletOptions(zoomControl = TRUE, minZoom = 1, maxZoom = 5)) %>% 
+  addProviderTiles("CartoDB.VoyagerNoLabels") %>% 
+  addCircleMarkers(~longitude, 
+                   ~latitude,
+                   label = paste0(data$urban_aggl,", ", data$n),
+                   color = "#fdb462",
+                   opacity = 1,
+                   radius = 0.5*data$n) %>% 
+  addControl(title, position = "topright") 
+saveWidget(leaf, file = "occurrence_water_scarcity_leaflet.html")
+```
+
+#### Climate change
+
+```{r climate_change}
+climate_change = corpus %>% 
+  # keep pages mentioning a climate change, global warming
+  filter(str_detect(text_en, "climate change|global warming")) %>% 
+  # do not keep the exact same page twice
+  distinct(link, .keep_all = TRUE) %>% # 811 pages
+  group_by(urban_aggl) %>% 
+  # count nb of occurrences per city
+  count() 
+
+# 245 cities
+
+# prepare dataset for representing it on a map
+data = corpus %>% 
+  select(c("urban_aggl", "latitude", "longitude")) %>% 
+  distinct(urban_aggl, .keep_all = TRUE) %>% 
+  left_join(climate_change, by = "urban_aggl") %>% 
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) %>% 
+  mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
+  # remove cities which do not mention water scarcity
+  filter(!is.na(n))
+
+### MAP
+# Prepare data
+data_sf = st_as_sf(data, coords = c("longitude", "latitude"), crs = 4326)
+world_map = ne_countries(scale = "medium", returnclass = "sf")
+
+map = ggplot(world_map) +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_sf, aes(size = n), color = "#fc8d62", alpha = 0.7, show.legend = TRUE) +
+  scale_size_area(max_size = 5)  +
+  # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom",
+        plot.background = element_rect(fill = "white", color = "white")) +
+  # legend
+  labs(size = "Nombre de mentions de 'climate change' ou de 'global warming'")
+
+
+### DIAGRAM
+diagram = data %>% 
+  mutate(urban_aggl = fct_reorder(urban_aggl, n)) %>% 
+  filter(n >= 9) %>% 
+  ggplot(mapping = aes(x = urban_aggl, # create the plot
+                      y = n)) + 
+    geom_col(fill = "#fc8d62", position = "stack") +
+    coord_flip() + # flip x and y coordinates 
+    labs(x = "",
+         y = "") + 
+    theme_bw(base_family = "CenturySch")
+
+### JOIN EVERYTHING AND SAVE
+plot_grid(map, diagram, rel_widths = c(2,1))
+ggsave("occurrence_climate_change.png", path = "analysis/keywords/", width = 4000, height = 2500, units = "px")
+
+### LEAFLET MAP (Interactive)
+title = tags$div(
+  tag.map.title, HTML("<td align=justify><b>Nombre de mentions de 'climate change' ou de 'global warming'</b></td>"))
+leaf = leaflet(data = data, options = leafletOptions(zoomControl = TRUE, minZoom = 1, maxZoom = 5)) %>% 
+  addProviderTiles("CartoDB.VoyagerNoLabels") %>% 
+  addCircleMarkers(~longitude, 
+                   ~latitude,
+                   label = paste0(data$urban_aggl,", ", data$n),
+                   color = "#fc8d62",
+                   opacity = 1,
+                   radius = 0.5*data$n) %>% 
+  addControl(title, position = "topright") 
+saveWidget(leaf, file = "occurrence_climate_change_leaflet.html")
+```
+
+Now let's make a function which produces a map and a diagram based on a given keyword.
+
+```{r}
+keyword_map = function(motCle, maCouleur, monTitre){
+
+  # Get dataframe
+  df_keyword = corpus %>% 
+    # keep pages mentioning the keyword
+    filter(str_detect(text_en, motCle)) %>% 
+    # do not keep the exact same page twice
+    distinct(link, .keep_all = TRUE) %>%
+    group_by(urban_aggl) %>% 
+    # count nb of occurrences per city
+    count()
+ 
+  data = corpus %>% 
+    select(c("urban_aggl", "latitude", "longitude")) %>% 
+    distinct(urban_aggl, .keep_all = TRUE) %>% 
+    left_join(df_keyword, by = "urban_aggl") %>% 
+    mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) %>% 
+    mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
+    # remove cities which do not mention the keyword
+    filter(!is.na(n))
+  
+  ### Make an interactive map
+  title = tags$div(
+    tag.map.title, HTML(paste0("<td align=justify><b>Nombre de mentions de '", monTitre, "'</b></td>")))
+  leaflet(data = data, options = leafletOptions(zoomControl = TRUE, minZoom = 1, maxZoom = 5)) %>% 
+    addProviderTiles("CartoDB.VoyagerNoLabels") %>% 
+    addCircleMarkers(~longitude, 
+                     ~latitude,
+                     label = paste0(data$urban_aggl,", ", data$n),
+                     color = maCouleur,
+                     opacity = 1,
+                     radius = 0.1*data$n) %>% 
+    addControl(title, position = "topright") 
+}
+```
