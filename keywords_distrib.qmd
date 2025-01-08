@@ -42,7 +42,7 @@ corpus = read.csv("collected_data/combined_all_tokens.csv")
 
 ### Major keywords
 
-We have selected three thematics which seem important in our corpus: riverfronts and waterfronts, climate change and global warming, and water scarcity/shortage.
+We have selected four thematics which seem important but do not necessarily appear as thematic worlds in our corpus: riverfronts and waterfronts, climate change and global warming, water scarcity/shortage, and sand/gravel mining/extraction.
 
 #### Riverfront
 
@@ -198,7 +198,7 @@ saveWidget(leaf, file = "occurrence_water_scarcity_leaflet.html")
 
 ```{r climate_change}
 climate_change = corpus %>% 
-  # keep pages mentioning a climate change, global warming
+  # keep pages mentioning climate change, global warming
   filter(str_detect(text_en, "climate change|global warming")) %>% 
   # do not keep the exact same page twice
   distinct(link, .keep_all = TRUE) %>% # 811 pages
@@ -215,7 +215,7 @@ data = corpus %>%
   left_join(climate_change, by = "urban_aggl") %>% 
   mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) %>% 
   mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
-  # remove cities which do not mention water scarcity
+  # remove cities which do not mention the keyword
   filter(!is.na(n))
 
 ### MAP
@@ -264,9 +264,84 @@ leaf = leaflet(data = data, options = leafletOptions(zoomControl = TRUE, minZoom
                    ~latitude,
                    label = paste0(data$urban_aggl,", ", data$n),
                    color = "#fc8d62",
-                   opacity = 0.5*data$n) %>% 
+                   opacity = 1,
+                   radius = 0.5*data$n) %>% 
   addControl(title, position = "topright") 
 saveWidget(leaf, file = "occurrence_climate_change_leaflet.html")
+```
+
+#### Gravel mining 
+
+```{r gravel_mining}
+gravel_mining = corpus %>% 
+  # keep pages mentioning sand or gravel mining or extraction
+  filter(str_detect(text_en, "sand mining|gravel mining|sand extraction|gravel extraction")) %>% 
+  # do not keep the exact same page twice
+  distinct(link, .keep_all = TRUE) %>% # 88 pages
+  group_by(urban_aggl) %>% 
+  # count nb of occurrences per city
+  count() 
+
+# prepare dataset for representing it on a map
+data = corpus %>% 
+  select(c("urban_aggl", "latitude", "longitude")) %>% 
+  distinct(urban_aggl, .keep_all = TRUE) %>% 
+  left_join(gravel_mining, by = "urban_aggl") %>% 
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) %>% 
+  mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
+  # remove cities which do not mention the keyword
+  filter(!is.na(n))
+
+### MAP
+# Prepare data
+data_sf = st_as_sf(data, coords = c("longitude", "latitude"), crs = 4326)
+world_map = ne_countries(scale = "medium", returnclass = "sf")
+
+map = ggplot(world_map) +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_sf, aes(size = n), color = "#7fcdbb", alpha = 0.7, show.legend = TRUE) +
+  scale_size_area(breaks = c(2, 4, 5, 10, 13), max_size = 5)  +
+  # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom",
+        plot.background = element_rect(fill = "white", color = "white")) +
+  # legend
+  labs(size = "Nombre de mentions de 'sand/gravel mining/extraction'")
+
+
+### DIAGRAM
+diagram = data %>% 
+  mutate(urban_aggl = fct_reorder(urban_aggl, n)) %>% 
+  filter(n >= 2) %>% 
+  ggplot(mapping = aes(x = urban_aggl, # create the plot
+                      y = n)) + 
+    geom_col(fill = "#7fcdbb", position = "stack") +
+    coord_flip() + # flip x and y coordinates 
+    labs(x = "",
+         y = "") + 
+    theme_bw(base_family = "CenturySch")
+
+### JOIN EVERYTHING AND SAVE
+plot_grid(map, diagram, rel_widths = c(2,1))
+ggsave("occurrence_gravel_mining.png", path = "analysis/keywords/", width = 4000, height = 2500, units = "px")
+
+### LEAFLET MAP (Interactive)
+title = tags$div(
+  tag.map.title, HTML("<td align=justify><b>Nombre de mentions de 'sand/gravel mining/extraction'</b></td>"))
+leaf = leaflet(data = data, options = leafletOptions(zoomControl = TRUE, minZoom = 1, maxZoom = 5)) %>% 
+  addProviderTiles("CartoDB.VoyagerNoLabels") %>% 
+  addCircleMarkers(~longitude, 
+                   ~latitude,
+                   label = paste0(data$urban_aggl,", ", data$n),
+                   color = "#7fcdbb",
+                   opacity = 1,
+                   radius = 0.5*data$n) %>% 
+  addControl(title, position = "topright") 
+saveWidget(leaf, file = "occurrence_gravel_mining_leaflet.html")
 ```
 
 ### Define general function
