@@ -1,0 +1,365 @@
+---
+title: "Méthode thèse : production des figures pour la description du corpus"
+format: html
+editor: visual
+---
+
+### Packages
+
+```{r packages}
+library(tidyverse)
+library(sf)
+library(ggplot2)
+library(rnaturalearth)
+library(strex)
+library(dplyr)
+library(tidyr)
+library(rainette)
+```
+
+### Nombre de pages par ville
+
+```{r read_data}
+world_map = ne_countries(scale = "medium", returnclass = "sf")
+data = read.csv("collected_data/corpus_distinct.csv")
+coords = read.csv("input_data/data_city_river_fid_fusion.csv") %>%
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) %>% 
+  mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
+  select(c("longitude","latitude","fid_fusion")) %>% 
+  group_by(fid_fusion) %>% 
+  unique()
+
+fid_fusion = read.csv("input_data/data_city_river_fid_fusion.csv") %>% 
+  select(c("fid", "fid_fusion"))
+
+data_unique = data %>%
+  left_join(fid_fusion, by = "fid") %>% 
+  group_by(fid_fusion) %>% 
+  dplyr::summarise(n = n()) %>% 
+  dplyr::rename(n_value = n) 
+
+data = coords %>% 
+  left_join(data_unique, by = "fid_fusion") %>% 
+  mutate(n_value = as.numeric(n_value))
+data_sf = st_as_sf(data, coords = c("longitude", "latitude"), crs = 4326)
+```
+
+```{r map}
+world_map %>% 
+  ggplot() +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_sf, 
+          aes(size = n_value),
+          alpha = 0.5,
+          color = "#43a2ca") +
+  scale_size_continuous(range = c(1, 10),
+                        breaks = c(10, 100, 200, 400, 1500)) + 
+  # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom",
+        legend.box = "vertical") +
+  labs(size = "Nombre de pages")
+
+ggsave("analysis/description_corpus/nb_pages_en.svg", width = 4000, height = 2500, units = "px")
+ggsave("analysis/description_corpus/nb_pages_en.png", width = 4000, height = 2500, units = "px")
+```
+
+```{r zooms}
+# Zoom sur l'Inde
+india = ne_countries(scale = "medium", returnclass = "sf", sovereignt = "India") 
+continents = read.csv("input_data/continents.csv") %>% 
+  dplyr::rename(fid_fusion=y) 
+data_india = data %>% 
+  left_join(continents, by = "fid_fusion") %>% 
+  filter(Sub_cont == "AS_IND")
+data_in_sf = st_as_sf(data_india, coords = c("longitude", "latitude"), crs = 4326)
+india %>% 
+  ggplot() +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_in_sf, 
+          aes(size = n_value),
+          alpha = 0.5,
+          color = "#43a2ca") +
+  scale_size_continuous(range = c(1, 10),
+                        breaks = c(10, 100, 200, 400, 1500)) + 
+  # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom",
+        legend.box = "vertical") +
+  labs(size = "Nombre de pages")
+
+ggsave("analysis/description_corpus/nb_pages_india.svg", width = 4000, height = 2500, units = "px")
+
+## Zoom sur la Chine 
+china = ne_countries(scale = "medium", returnclass = "sf", sovereignt = "China") 
+continents = read.csv("input_data/continents.csv") %>% 
+  dplyr::rename(fid_fusion=y) 
+data_ch = data %>% 
+  left_join(continents, by = "fid_fusion") %>% 
+  filter(Sub_cont == "AS_CHN")
+data_ch_sf = st_as_sf(data_ch, coords = c("longitude", "latitude"), crs = 4326)
+china %>% 
+  ggplot() +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_ch_sf, 
+          aes(size = n_value),
+          alpha = 0.5,
+          color = "#43a2ca") +
+  scale_size_continuous(range = c(1, 15),
+                        breaks = c(200, 300, 400)) + 
+  # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom",
+        legend.box = "vertical") +
+  labs(size = "Nombre de pages")
+
+
+ggsave("analysis/description_corpus/nb_pages_china.svg", width = 4000, height = 2500, units = "px")
+```
+
+### Nombre de requêtes par agglomération
+
+```{r}
+
+# Read and process data
+fid_fusion = read.csv("input_data/data_city_river_fid_fusion.csv") %>% 
+  select(c("fid", "fid_fusion")) %>% 
+  group_by(fid_fusion) %>% 
+  summarise(nb = n())
+
+coords = read.csv("input_data/data_city_river_fid_fusion.csv") %>%
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) %>% 
+  mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
+  select(c("longitude","latitude","fid_fusion", "nb_ville_riv")) %>% 
+  group_by(fid_fusion) %>% 
+  unique() %>% 
+  left_join(fid_fusion, by = "fid_fusion")
+
+data_sf = st_as_sf(coords, coords = c("longitude", "latitude"), crs = 4326)
+
+world_map = ne_countries(scale = "medium", returnclass = "sf")
+
+# Map
+world_map %>% 
+  ggplot() +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_sf, 
+          aes(size = nb,
+              color = nb_ville_riv),
+          alpha = 0.8) +
+  scale_size_continuous(range = c(2, 8),
+                        breaks = c(1, 2, 3, 4, 5, 9)) +
+  scale_color_manual(breaks = c("unique", "mult_riv", "mult_ville", "mult_2"),
+                     values = c("#b3de69", "#8dd3c7", "#fdb462", "#e78ac3"),
+                     labels = c("Requête unique", "Plusieurs rivières", "Plusieurs villes", "Plusieurs villes et rivières")) +
+  # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom",
+        legend.box = "vertical") +
+  labs(size = "Nombre de requêtes\npar agglomération",
+       color = "")
+
+ggsave("analysis/description_corpus/nb_requetes.svg", width = 4000, height = 2500, units = "px")
+```
+
+### Pages wikipédia
+
+```{r wikipedia}
+
+world_map = ne_countries(scale = "medium", returnclass = "sf")
+
+fid_fusion = read.csv("input_data/data_city_river_fid_fusion.csv") %>% 
+  select(c("fid", "fid_fusion"))
+
+wikipedia = read.csv("collected_data/corpus_distinct.csv") %>% 
+  filter(str_detect_all(domain, "wikipedia")) %>% 
+  left_join(fid_fusion, by = "fid")
+wikipedia_city = wikipedia %>% 
+  distinct(fid_fusion) %>% 
+  mutate(wikipedia_page = TRUE)
+wikipedia_nb = wikipedia %>% 
+  group_by(fid_fusion) %>% 
+  distinct(link, .keep_all = TRUE) %>% 
+  summarise(n=n())
+
+cities = read.csv("input_data/data_city_river_fid_fusion.csv") %>%
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) %>% 
+  mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
+  select(c("longitude","latitude","fid_fusion")) %>% 
+  group_by(fid_fusion) %>% 
+  unique() %>% 
+  left_join(wikipedia_city, by = "fid_fusion") %>% 
+  left_join(wikipedia_nb, by = "fid_fusion") %>% 
+  mutate(wikipedia_page = ifelse(is.na(wikipedia_page), FALSE, TRUE))  %>% 
+  mutate(n = replace_na(n, 0)) # replace NA values by 0 
+
+cities_sf = st_as_sf(cities, coords = c("longitude", "latitude"), crs = 4326) 
+# classif. des valeurs
+summary(cities_sf$n)
+breaks = c(0, 3, 5, 10, Inf)
+cities_sf = cities_sf %>% 
+  mutate(n_quantile = cut(n, breaks = breaks)) %>% 
+  mutate(n_quantile = case_when(
+    n_quantile == "(10,Inf]" ~ "Plus de 10 pages",
+    n_quantile == "(0,3]" ~ "1 à 3 pages",
+    n_quantile == "(3,5]" ~ "4 à 5 pages",
+    n_quantile == "(5,10]" ~ "6 à 10 pages",
+    is.na(n_quantile) ~ "Aucune page"
+  ))
+
+write.csv(wikipedia, "analysis/description_corpus/pages_wikipedia.csv")
+```
+
+```{r map_wikipedia}
+world_map %>% 
+  ggplot() +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = cities_sf,
+          aes(color = n_quantile),
+          size = 4,
+          alpha = 0.6) +
+  scale_color_manual(breaks = c("Aucune page", "1 à 3 pages", "4 à 5 pages", "6 à 10 pages", "Plus de 10 pages"),
+                     values = c("grey", "#fdcc8a", "#fc8d59", "#e34a33", "#b30000")) + 
+  # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom",
+        legend.box = "vertical") +
+  labs(color = "Nombre de pages Wikipédia")
+
+ggsave("analysis/description_corpus/nb_pages_wiki.svg", width = 4000, height = 2500, units = "px")
+ggsave("analysis/description_corpus/nb_pages_wiki.png", width = 4000, height = 2500, units = "px")
+```
+
+```{r type_wikipedia}
+# types of wikipedia pages
+
+# identify types by hand (river, city, etc.)
+wikipedia = read.csv("analysis/description_corpus/pages_wikipedia_type.csv") #%>% 
+  select(c("fid", "urban_aggl", "theme", "title", "link")) %>% 
+  group_by(theme) %>% 
+  summarise(nb = n()) %>% 
+  mutate(perc = nb/sum(nb)*100)
+
+# plot
+ wikipedia %>% 
+    mutate(theme = forcats::fct_reorder(theme, perc)) %>% 
+    ggplot(mapping = aes(x = theme,
+                         y = perc)) +
+    geom_col(position = "stack", fill = "#b3de69") +
+    coord_flip() + # flip x and y coordinates 
+    labs(x = "Sujet de la page",
+         y = "%") +
+    theme_light() +
+    theme(legend.position = "right",
+          plot.caption.position = "plot")
+ 
+  ggsave(filename = "analysis/description_corpus/wikipedia_sujets.png", width = 7, height = 3, units = "in")
+
+  
+rivieres = read.csv("analysis/description_corpus/wiki_riviere.csv") #%>% 
+  group_by(wiki_riviere_corpus) %>% 
+  count()
+
+data_city_river = read.csv("input_data/data_city_river.csv") %>% 
+  select(c(1,2, 14:26)) %>% 
+  left_join(nb_p_riviere, by = "fid")
+write.csv(data_city_river, "analysis/description_corpus/wiki_rivieres.csv")
+```
+
+```{r}
+# thématiques des pages wikipedia
+
+# corpus classifié
+df = read.csv("collected_data/corpus_distinct.csv") %>% 
+  dplyr::rename(tokenized = tokenized_noloc) %>% # rename column
+  subset(!is.na(tokenized)) 
+corpus = quanteda::corpus(df, text_field = "tokenized", docid_field = "id") 
+corpus = split_segments(corpus, segment_size = 40)
+dhc = readRDS("analysis/clusters/dhc_all.rds")
+corpus$cluster = cutree(dhc, 14)
+corpus_df = convert(corpus, to = "data.frame")
+
+# nom des classes
+topics = read.csv("input_data/topic_names.csv", sep = "\t")
+
+# calcul répartition pages wikipédia 
+theme_wiki = corpus_df %>% 
+  filter(str_detect_all(domain, "wikipedia")) %>% 
+  group_by(cluster) %>% 
+  summarise(nb = n()) %>% 
+  mutate(topic = paste0("topic_", cluster)) %>% 
+  left_join(topic_names, by = "topic") %>% 
+  filter(!is.na(cluster)) %>% 
+  rbind(data.frame(cluster=1,
+                   nb=0,
+                   topic="topic_1",
+                   name="Santé",
+                   couleur=NA,
+                   col_high = NA,
+                   col_low = NA)) %>% 
+  mutate(perc = nb/sum(theme_wiki$nb)*100) 
+
+write.csv(theme_wiki, "analysis/description_corpus/corpus_wikipedia_mondes_lexicaux.csv")
+
+theme_wiki %>%
+  ggplot(aes(x = fct_reorder(name, perc), 
+             y = perc)) + 
+  geom_bar(fill = theme_wiki$couleur,
+           stat = "identity", 
+           position = position_dodge(width = 0.9), 
+           width = 0.8, 
+           show.legend = FALSE) +
+  coord_flip() + 
+  labs(x = NULL,
+       y = "%",
+       title = "Les thématiques abordées sur Wikipédia") +
+  theme_bw()
+ggsave(filename = "analysis/description_corpus/clusters_wikipedia.png", width = 7, height = 3, units = "in")
+```
+
+### Nombre de sites web
+
+```{r}
+data = read.csv("collected_data/corpus_distinct.csv")
+
+nb_sites = data %>% 
+  select("full_domain") %>% 
+  unique()
+```
+
+```{r}
+test = data %>% 
+  group_by(query, fid) %>% 
+  mutate(nb = n()) %>% 
+  select(c(2:4, 16,17, 44, 45))
+
+df_en = read.csv("collected_data/english/df_tokenized_snippets.csv") %>% 
+  group_by(fid) %>% 
+  mutate(nb = n()) %>% 
+  select(c(1:3, 14))
+
+df_hl = read.csv("collected_data/hl/df_tokenized_all.csv") %>% 
+  group_by(fid) %>% 
+  mutate(nb = n()) %>% 
+  select(c(1:5, 16))
+```
