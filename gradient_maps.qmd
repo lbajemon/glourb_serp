@@ -1,0 +1,148 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(data.table)
+library(ggplot2)
+library(sf)
+library(rnaturalearth)
+library(quanteda)
+```
+
+```{r}
+# read data
+coords = read.csv("input_data/data_city_river_fid_fusion.csv") %>% 
+  select(c("fid_fusion", "latitude", "longitude")) %>% 
+  unique()
+corpus = readRDS("analysis/clusters/split_corpus_all.rds")
+dhc = readRDS("analysis/clusters/dhc_all.rds")
+
+fid_fusion = read.csv("input_data/data_city_river_fid_fusion.csv") %>% 
+  select(c("fid", "fid_fusion"))
+
+# write clusters
+corpus$cluster = rainette::cutree(dhc, 14)
+# and turn the corpus into a df
+corpus_df = convert(corpus, to = "data.frame") %>% 
+  select(c("fid", "cluster", )) %>% 
+  left_join(fid_fusion, by = "fid") 
+# simplify the dataframe
+calc = corpus_df %>% 
+  group_by(fid_fusion, cluster) %>% 
+  # get number of segment / cluster
+  dplyr::summarise(nb = n(), .groups = "drop") %>% 
+  group_by(fid_fusion) %>% 
+  # get total number of segments / city 
+  mutate(somme = sum(nb)) %>% 
+  # get percentage of cluster / city
+  mutate(perc = nb/somme*100) %>% 
+  # get cluster name
+  mutate(class = paste0("cl_", cluster))
+#### ERREUR CA FAIT LA SOMME DE TOUT AU LIEU DE FAIRE LA SOMME PAR CLASSE
+
+# Get number of segments per cluster and per city (i.e. fid_fusion)
+nb_segments = corpus_df %>% 
+  group_by(fid_fusion, cluster) %>% 
+  dplyr::summarise(nb = n()) %>% 
+  ungroup()
+
+# Get total number of segments per city (i.e. fid_fusion)
+sum_segments = nb_segments %>%
+  group_by(fid_fusion) %>%
+  dplyr::summarise(somme = sum(nb)) %>% 
+  ungroup()
+
+# Jointure des deux jeux de données
+calc = nb_segments %>%
+  left_join(sum_segments, by = "fid_fusion") %>%
+  mutate(perc = nb/somme * 100) %>%
+  mutate(class = paste0("cl_", cluster))
+
+# reshape the table
+df = dcast(calc, fid_fusion ~ class, value.var = "perc") %>% 
+# replace NA values with 0
+  replace_na(list(cl_1 = 0, cl_2 = 0, cl_3 = 0, cl_4 = 0, cl_5 = 0, cl_6 = 0, cl_7 = 0, cl_8 = 0, cl_9 = 0, cl_10 = 0, cl_11 = 0, cl_12 = 0, cl_13 = 0, cl_14 = 0, cl_NA = 0)) %>% 
+  left_join(coords, by = "fid_fusion") %>% 
+  mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", ".")))
+
+df = st_as_sf(df, coords = c("longitude", "latitude"), crs = 4326)
+
+# get world map
+world_map = ne_countries(scale = "medium", returnclass = "sf")
+
+# get cluster labels 
+cl_labels = read.csv("input_data/cluster_names.csv", sep = "\t")
+```
+
+### Map (with cluster colors)
+
+```{r def_map}
+gradient_map = function(mycluster, mylabel, col1, col2){
+  
+world_map %>% 
+    ggplot() +
+    # world map 
+    geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+    # city points
+    geom_sf(data = df, 
+            aes(color = !!sym(mycluster)),
+            size = 3) +
+    #scale_color_distiller(palette = "BuPu", direction = 1) +
+    scale_color_gradient(low = col1,
+                         high = col2) +
+    # equal earth projection
+    coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom",
+        legend.box = "vertical") +
+  labs(color = paste0("Part de la thématique\n« ", mylabel, " »\ndans le corpus (%)"))
+  
+  ggsave(paste0("analysis/clusters/gradient_maps/cl_colors/map_", mycluster, ".png"), width = 4000, height = 2500, units = "px")
+}
+```
+
+```{r run_map}
+map2(paste0("cl_", 1:14),
+     1:14,
+     ~gradient_map(mycluster = .x,
+                   mylabel = cl_labels$name[.y],
+                   col1 = cl_labels$col_low[.y],
+                   col2 = cl_labels$col_high[.y]))
+```
+
+### Map (with uniform colors)
+
+```{r}
+gradient_map2 = function(mycluster, mylabel){
+  
+world_map %>% 
+    ggplot() +
+    # world map 
+    geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+    # city points
+    geom_sf(data = df, 
+            aes(color = !!sym(mycluster)),
+            size = 3) +
+    scale_color_distiller(palette = "GnBu", direction = 1) +
+    # equal earth projection
+    coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom",
+        legend.box = "vertical") +
+  labs(color = paste0("Part de la thématique\n« ", mylabel, " »\ndans le corpus (%)"))
+  
+  ggsave(paste0("analysis/clusters/gradient_maps/uni_colors/map_", mycluster, ".png"), width = 4000, height = 2500, units = "px")
+}
+
+map2(paste0("cl_", 1:14),
+     1:14,
+     ~gradient_map2(mycluster = .x,
+                   mylabel = cl_labels$name[.y]))
+```
