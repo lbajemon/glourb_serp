@@ -27,89 +27,55 @@ library(RColorBrewer)
 
 ```{r read_data_rank}
 data_city_river = read.csv("input_data/data_city_river.csv") 
-# rename the "domain" column 
-data_hl = read.csv("collected_data/hl/df_scrap_tokens_all_hl.csv") # this dataframe combines all the collected data 
-data_all = read.csv("collected_data/combined_all_tokens.csv")
-names(data_hl)[names(data_hl) == 'domain'] = 'full_domain' # rename the "domain" column to avoid confusions 
-names(data_all)[names(data_all) == 'domain'] = 'full_domain' # rename the "domain" column to avoid confusions 
-domain_type = read.csv("input_data/domain_type.csv", sep = "\t")
+# this dataframe combines all the collected data 
+data = read.csv("collected_data/corpus_distinct.csv")
+names(data)[names(data) == 'domain'] = 'full_domain' # rename the "domain" column to avoid confusions 
 ```
 
 ### Rank the websites
 
-#### For local languages
-
-```{r rank_websites}
-### Extract domains from our dataset
-df_domain_hl = data_hl %>% 
-  mutate(domain = suffix_extract(data_hl$full_domain)) %>%
-  group_by(domain$domain) %>% # group by domain 
-  count() %>% # count each domain
-  filter(n > 100) %>% 
-  left_join(domain_type, join_by("domain$domain" == "domain"))
-# rename column
-names(df_domain_hl)[1] = "domain"
-
-# rearrange by decreasing order
-df_domain_hl$domain = with(df_domain_hl, reorder(domain, n))
-
-# palette
-palette = brewer.pal(12, "Set3")
-palette[2] = "#ffed6f"
-palette[13] = "#a6cee3"
-### Plot 
-plot = df_domain_hl %>% 
-  ggplot(mapping = aes(x = domain,
-                       y = n,
-                       fill = type)) +
-  geom_col(position = "stack") +
-  scale_fill_manual("Type de site", values = palette) +
-  labs(title = "Les noms de domaines les plus représentés dans les SERP", 
-       subtitle = "Requête « rivière et ville » dans les langues locales", 
-       x = "nom du domaine",
-       y = "nombre de pages") +
-  coord_flip() + # flip x and y coordinates 
-  theme_bw() +
-  theme(legend.position = "right",
-        plot.caption.position = "plot") 
-plot # display the plot
-ggsave("analysis/typology/ranking_typo_hl.png")
+```{r}
+# First let's keep the websites which appear at least 10 times in the corpus
+df_domain_all = data %>%
+  select("full_domain") %>% 
+  group_by(full_domain) %>% # group by domain 
+  summarise(nb = n()) %>% # count each domain
+  filter(nb > 10) 
+# 568 websites are identified. Let's save the file, and identify their type by hand
+write.csv(df_domain_all, "analysis/typology_websites/domain_sup10.csv")
+# get the identified websites
+df_domain_id = read.csv("analysis/typology_websites/domain_sup10_identified.csv")
 ```
 
-#### For local languages + English
+### Plot most frequent domains
 
 ```{r}
-### now let's rank the websites for all of our data (english + hl)
-df_domain_all = data_all %>%
-  mutate(domain = suffix_extract(data_all$full_domain)) %>%
-  group_by(domain$domain) %>% # group by domain 
-  count() %>% # count each domain
-  filter(n > 130) %>% 
-  left_join(domain_type, join_by("domain$domain" == "domain"))
 # rename column
-names(df_domain_all)[1] = "domain"
+names(data)[names(data) == 'domain'] = 'full_domain' # rename the "domain" column to avoid confusions 
+domain_plot = data %>% 
+  mutate(domain = suffix_extract(data$full_domain)$domain) %>% 
+  select("domain") %>% 
+  group_by(domain) %>% 
+  summarise(nb = n())  %>% 
+  filter(nb > 130)
 
 # rearrange by decreasing order
-df_domain_all$domain = with(df_domain_all, reorder(domain, n))
+domain_plot$domain = with(domain_plot, reorder(domain, nb))
 
 ### Plot 
-plot = df_domain_all %>% 
+domain_plot %>% 
   ggplot(mapping = aes(x = domain,
-                       y = n,
-                       fill = type)) +
-  geom_col(position = "stack") +
-  scale_fill_manual("Type de site", values = palette) +
-  labs(title = "Classement des domaines pour les requêtes rivière+ville",
-       subtitle = "(langues locales et anglais)",
+                       y = nb)) +
+  geom_col(position = "stack", fill = "#b3de69") +
+  labs(title = "Classement des domaines du corpus",
        x = "nom du domaine",
        y = "nombre de pages") +
   coord_flip() + # flip x and y coordinates 
   theme_bw() +
   theme(legend.position = "bottom",
         plot.caption.position = "plot") 
-plot # display the plot
-ggsave("analysis/typology/ranking_typo_all.png")
-ggsave("analysis/typology/ranking_typo_all_paysage.png", width = 22, height = 16, unit = "cm")
+ggsave("analysis/typology_websites/classement_domaines.png", width = 22, height = 16, unit = "cm")
+write.csv(domain_plot, "analysis/typology_websites/classement_domaines.csv")
 ```
 
 ## Compile data analysed by hand
@@ -117,9 +83,9 @@ ggsave("analysis/typology/ranking_typo_all_paysage.png", width = 22, height = 16
 ```{r compile_by_hand_data}
 
 bind = function(df){
-  data = read.csv(glue::glue("analysis/etude_10_villes/{df}.csv"))
+  data = read.csv(glue::glue("analysis/etude_10_villes/{df}.csv"), sep = ",")
   data = data %>% 
-    select(c(displayed_link, type))
+    select(c(link, type))
   return(data)           
 }
 
@@ -145,9 +111,19 @@ by_hand = bind("ahmedabad_sabarmati_EN") %>%
   rbind(bind(df = "abomey-calavi_oueme_FR")) %>% 
   rbind(bind(df = "abomey-calavi_oueme_EN")) %>% 
   # extract domain link
-  separate(displayed_link, c("url", "page"), " › ") %>% 
-  select(-page) %>% 
-  distinct(url, .keep_all = TRUE)
+  mutate(domain = str_extract(link, "(?<=://)[^/]+")) %>% 
+  distinct(domain, .keep_all = TRUE) %>% 
+  mutate(type = case_when(str_detect(type, "académique|académique, scientifique") ~ "scientifique",
+                          str_detect(type, "associatif, ONG") ~ "associatif",
+                          str_detect(type, "commercial, entreprise|touristique, loisirs") ~ "commercial",
+                          str_detect(type, "forum") ~ "institutionnel",
+                          str_detect(type, "média") ~ "presse",
+                          str_detect(type, "utilitaire, services") ~ "utilitaire",
+                          str_detect(type, "wiki, participatif") ~ "wiki",
+                    
+                          TRUE ~ type)) 
+
+write.csv(by_hand, "analysis/typology_websites/ten_byhand.csv")
 ```
 
 ## Get wikidata
@@ -331,306 +307,158 @@ compile = bind_rows(compile_hl, compile_en) %>%
 compile_en = read.csv("analysis/typology/wikidata/compile_types_en.csv") %>% 
   left_join(data_en, by = c("id"="i")) %>% 
   select(c(cat, website)) %>% 
-  distinct(website, .keep_all = TRUE)
+  distinct(website, .keep_all = TRUE) 
 compile_hl = read.csv("analysis/typology/wikidata/compile_types_hl.csv", sep = ";") %>% 
   left_join(data_hl, by = c("id"="i")) %>% 
   select(c(cat, website)) %>% 
   distinct(website, .keep_all = TRUE)
+
+write.csv(compile_en, "analysis/typology_websites/wikidata_en.csv")
+write.csv(compile_hl, "analysis/typology_websites/wikidata_hl.csv")
 ```
 
 ## Identify types of websites
 
 We will use the data collected beforehand to add it to our SERP results. We consider that the most trustworthy types are the ones obtained from the ranking and from the analysis by hand, because the types have been determined manually. The less trustworthy results are the one obtained from the Wikidata queries, because they have been determined semi-automatically, and are therefore more subject to errors.
 
-```{r read_data}
-# results in english
-results_en = df_en %>% 
-  # get the url by extracting it from the displayed link
-  separate(displayed_link, c("url", "page"), sep = " › ") %>% 
-  # remove the 2nd part which we will not use
-  select(-page) %>% 
-  # for some websites, the local domain is given (e.g. facebook or wikipedia) so we need to homogeneize it 
-  mutate(url = ifelse(str_detect(domain, "wikipedia"), "https://wikipedia.org", url)) %>% 
-  # for facebook, linkedin we will check if the word is contained in the domain column because some of the supposed url do not correspond to url (e.g. "2,3 k+ followers")
-  mutate(url = ifelse(str_detect(domain, "facebook"), "https://www.facebook.com", url)) %>%
-  mutate(url = ifelse(str_detect(domain, "linkedin"), "https://www.linkedin.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "instagram"), "https://www.instagram.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "twitter"), "https://twitter.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "tiktok"), "https://www.tiktok.com", url)) %>%   
-  mutate(url = ifelse(str_detect(domain, "youtube"), "https://www.youtube.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "reddit"), "https://www.reddit.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "pinterest"), "https://www.pinterest.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "medium"), "https://medium.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "substack"), "https://substack.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "soundcloud"), "https://soundcloud.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "amazon"), "https://www.amazon.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "bbc"), "https://www.bbc.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "ebay"), "https://www.ebay.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "gettyimages"), "https://www.gettyimages.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "vikidia"), "https://en.vikidia.org", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "wikiloc"), "https://www.wikiloc.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "livehindustan"), "https://www.livehindustan.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "unionpedia"), "https://www.unionpedia.org", url)) %>% 
- mutate(url = ifelse(str_detect(domain, "unionpedia"), "https://www.unionpedia.org", url))
+```{r retrieve_data}
+data = read.csv("collected_data/combined_all_tokens.csv")
 
-# results in local languages
-results_hl = df_hl %>% 
-  # get the url by extracting it from the displayed link
-  separate(displayed_link, c("url", "page"), sep = " › ") %>% 
-  # remove the 2nd part which we will not use
-  select(-page) %>% 
-  # for some websites, the local domain is given (e.g. facebook or wikipedia) so we need to homogeneize it 
-  mutate(url = ifelse(str_detect(domain, "wikipedia"), "https://wikipedia.org", url)) %>% 
-  # for facebook, linkedin we will check if the word is contained in the domain column because some of the supposed url do not correspond to url (e.g. "2,3 k+ followers")
-  mutate(url = ifelse(str_detect(domain, "facebook"), "https://www.facebook.com", url)) %>%
-  mutate(url = ifelse(str_detect(domain, "linkedin"), "https://www.linkedin.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "instagram"), "https://www.instagram.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "twitter"), "https://twitter.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "tiktok"), "https://www.tiktok.com", url)) %>%   
-  mutate(url = ifelse(str_detect(domain, "youtube"), "https://www.youtube.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "reddit"), "https://www.reddit.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "pinterest"), "https://www.pinterest.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "medium"), "https://medium.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "substack"), "https://substack.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "soundcloud"), "https://soundcloud.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "amazon"), "https://www.amazon.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "bbc"), "https://www.bbc.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "ebay"), "https://www.ebay.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "gettyimages"), "https://www.gettyimages.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "vikidia"), "https://en.vikidia.org", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "wikiloc"), "https://www.wikiloc.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "livehindustan"), "https://www.livehindustan.com", url)) %>% 
-  mutate(url = ifelse(str_detect(domain, "unionpedia"), "https://www.unionpedia.org", url)) %>% 
- mutate(url = ifelse(str_detect(domain, "unionpedia"), "https://www.unionpedia.org", url))
+# the wikidata results are checked by hand
+wiki_data_en = read.csv("analysis/typology_websites/wikidata_en_checked.csv") %>% 
+  mutate(domain = str_remove(website, "^https?://")) %>% 
+  mutate(type = case_when(
+    str_detect(cat, "académique") ~ "scientifique",
+    str_detect(cat, "associatif, ONG") ~ "associatif",
+    str_detect(cat, "commercial, entreprise|touristique, loisirs|entreprise, commerce") ~ "commercial",
+    str_detect(cat, "encyclopédie$") ~ "encyclopédie, base de données",
+    str_detect(cat, "média") ~ "presse",
+    str_detect(cat, "utilitaire, services") ~ "utilitaire",
+    str_detect(cat, "wiki, participatif") ~ "wiki",
+    TRUE ~ cat)) %>% 
+  select(c("domain", "type"))
 
-domain_type = domain_type %>% 
-  select(-domain)
+wiki_data_hl = read.csv("analysis/typology_websites/wikidata_hl_checked.csv") %>% 
+  mutate(domain = str_remove(website, "^https?://")) %>% 
+   mutate(type = case_when(
+     str_detect(cat, "académique") ~ "scientifique",
+     str_detect(cat, "associatif, ONG|ONG, association") ~ "associatif",
+     str_detect(cat, "commercial, entreprise|touristique, loisirs|entreprise, commerce") ~ "commercial",
+     str_detect(cat, "encyclopédie$") ~ "encyclopédie, base de données",
+     str_detect(cat, "média|journal") ~ "presse",
+     str_detect(cat, "utilitaire, services") ~ "utilitaire",
+     str_detect(cat, "wiki, participatif") ~ "wiki",
+     TRUE ~ cat)) %>% 
+  select(c("domain", "type"))
+
+wiki2 = wiki_data_en %>% 
+  rbind(wiki_data_hl)
+names(wiki2)[names(wiki2) == 'type'] = 'type_wiki'
+
+ten_byhand = read.csv("analysis/typology_websites/ten_byhand.csv") %>% 
+    select(c("domain", "type"))
+names(ten_byhand)[names(ten_byhand) == 'type'] = 'type_ten'
+
+rank_byhand = read.csv("analysis/typology_websites/domain_sup10_identified.csv") %>% 
+  mutate(domain = full_domain) %>% 
+  select(c("domain", "type"))
+names(rank_byhand)[names(rank_byhand) == 'type'] = 'type_hand'
 ```
 
-```{r combine_types}
-# english
-df_en_types = results_en %>% 
-  left_join(domain_type, by = "url") %>% 
-  left_join(by_hand, by = "url") %>% 
-  # merge the two type columns
-  mutate(type = coalesce(type.x, type.y)) %>% 
-  select(-c(type.x, type.y)) %>% 
-  left_join(compile_en, by = c("url" = "website")) %>% 
-  mutate(type = coalesce(type, cat)) %>% 
-  select(-cat) %>% 
-  # add some categories by hand
+### Combine everything
+
+```{r combine}
+df = data %>% 
+  left_join(rank_byhand, by = "domain") %>% 
+  left_join(ten_byhand, by = "domain") %>% 
+  left_join(wiki2, by = "domain") %>% 
+  mutate(type = coalesce(type_hand, type_ten, type_wiki)) %>% 
+  # add some categories by hand 
   mutate(type = case_when(
-    str_detect(domain, "news") & is.na(type) ~ "média",
-    str_detect(domain, "radio") & is.na(type) ~ "média",
+    str_detect(domain, "news|radio|livejournal|gmw|.tv|daily|bbc") & is.na(type) ~ "presse",
     str_detect(domain, "gov") & is.na(type) ~ "institutionnel",
     str_detect(domain, "wordpress") & is.na(type) ~ "magazine, blog",
-    str_detect(domain, "yahoo") & is.na(type) ~ "média", 
-    str_detect(domain, "gmw") & is.na(type) ~ "média",
-    str_detect(domain, "livejournal") & is.na(type) ~ "média",
-    TRUE ~ type)) %>% 
-  mutate(type = ifelse(str_detect(type, "^\\bencyclopédie\\b$"), paste0(type, ", base de données"), type)) %>% 
-  mutate(type = str_replace_all(type, "entreprise, commerce", "commercial, entreprise")) %>% 
-  mutate(type = str_replace_all(type, "commercial, entreprises", "commercial, entreprise"))
-df_en_types$type = gsub("académique(?!, scientifique)", "académique, scientifique", df_en_types$type, perl = TRUE)
-df_en_types$type = trimws(df_en_types$type)
+    str_detect(domain, "facebook|twitter|instagram|flickr|youtube|tiktok|pinterest|reddit") & is.na(type)  ~ "réseau social",
+    str_detect(domain, "wikipedia|dbpedia|pedia|wiki|unionpedia|vikidia") & is.na(type)  ~ "wiki",
+    str_detect(domain, "skyscanner|expedia|airbnb|tripadvisor|amazon") & is.na(type) ~ "commercial",
+    str_detect(domain, "blogspot") & is.na(type) ~ "magazine, blog",
+    str_detect(domain, "books.google.") & is.na(type) ~ "livre, rapport",
+    str_detect(domain, ".edu") & is.na(type) ~ "éducatif",
+    str_detect(domain, ".org") & is.na(type) ~ "associatif",
+    TRUE ~ type)) 
 
-write.csv(df_en_types, "analysis/typology/df_en_types.csv")
-
-df_hl_types = results_hl %>% 
-  left_join(domain_type, by = "url") %>% 
-  left_join(by_hand, by = "url") %>% 
-  # merge the two type columns
-  mutate(type = coalesce(type.x, type.y)) %>% 
-  select(-c(type.x, type.y)) %>% 
-  left_join(compile_hl, by = c("url" = "website")) %>% 
-  mutate(type = coalesce(type, cat)) %>% 
-  select(-cat) %>% 
-  # add some categories by hand
-  mutate(type = case_when(
-    str_detect(domain, "news") & is.na(type) ~ "média",
-    str_detect(domain, "radio") & is.na(type) ~ "média",
-    str_detect(domain, "gov") & is.na(type) ~ "institutionnel",
-    str_detect(domain, "wordpress") & is.na(type) ~ "magazine, blog",
-    str_detect(domain, "yahoo") & is.na(type) ~ "média", 
-    str_detect(domain, "gmw") & is.na(type) ~ "média",
-    str_detect(domain, "livejournal") & is.na(type) ~ "média",
-    TRUE ~ type)) %>% 
-  mutate(type = ifelse(str_detect(type, "^\\bencyclopédie\\b$"), paste0(type, ", base de données"), type)) %>% 
-  mutate(type = str_replace_all(type, "entreprise, commerce", "commercial, entreprise")) %>% 
-  mutate(type = str_replace_all(type, "commercial, entreprises", "commercial, entreprise"))
-df_hl_types$type = gsub("académique(?!, scientifique)", "académique, scientifique", df_hl_types$type, perl = TRUE)
-df_hl_types$type = trimws(df_hl_types$type)
-write.csv(df_hl_types, "analysis/typology/df_hl_types.csv")
-
-# make a df summarising the identified types 
-types_hl = df_hl_types %>% 
-  filter(!is.na(type)) %>% 
-  distinct(domain, .keep_all = TRUE) %>% 
-  select("domain", "type") 
-
-types_en = df_en_types %>% 
-  filter(!is.na(type)) %>% 
-  distinct(domain, .keep_all = TRUE) %>% 
-  select("domain", "type")
-
-types = types_hl %>% 
-  rbind(types_en) %>% 
-  distinct(domain, .keep_all = TRUE)
-write.csv(types, "analysis/typology/tous_sites_types.csv")
-```
-
-Now let's plot the results:
-
-```{r plot_english}
-# count nb of values for each type
-types_en_plot = df_en_types %>% 
-  dplyr::count(type)
-# keep only non NA values
-identified_en = types_en_plot %>% 
+nb_id = df %>% 
   filter(!is.na(type))
-# and count how many they are
-somme_id_en = colSums(identified_en["n"])
-# now get percentages
-identified_en = identified_en %>% 
-  mutate(perc = (n/somme_id_en)*100)
-# now keep only NA values
-non_identified_en = types_en_plot %>% 
-  filter(is.na(type))
-somme_nid_en = non_identified_en[1,2]
-# bind everything
-somme_en = data.frame(type = c("Type du site identifié", "Type du site non identifié"), 
-                      somme = c(somme_id_en, somme_nid_en)) 
-# now get percentages
-somme_en = somme_en %>% 
-  mutate(total = sum(somme),
-         perc = (somme/total)*100) %>% 
-  select(-total)
-  
-# plot
-plot_en_1 = somme_en %>% 
-  ggplot(aes(x = "", y = perc, fill = type)) + 
-  geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.8) +
-  scale_fill_manual(values = c("Type du site non identifié" = "#fb8072", "Type du site identifié" = "#b3de69")) +
-  coord_flip() + # flip x and y coordinates 
-  labs(x = NULL,
-       y = "%",
-       fill = NULL,
-       title = "Identification des types de sites web",
-       subtitle = "... pour les requêtes en anglais",
-       caption = "L. Bajemon, septembre 2024") +
-  theme_bw(base_family = "CenturySch", 
-           base_size = 12) +
-  theme(plot.caption.position = "plot")
-ggsave("analysis/typology/repartition_id_en.png")
 
-plot_en_2 = identified_en %>% 
-  mutate(type = fct_reorder(type, perc)) %>% 
-  ggplot(aes(x = type, y = perc)) +
-  geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.8, fill = "#b3de69") + 
-  coord_flip() + # flip x and y coordinates 
-  labs(x = NULL,
-       y = "%",
-       title = "Répartition des types de sites web identifiés",
-       subtitle = "... pour les requêtes en anglais") +
-  theme_bw(base_family = "CenturySch", 
-           base_size = 12) +
-  theme(plot.caption.position = "plot") 
-
-ggsave("analysis/typology/types_EN.png", width = 20, height = 10, units = "cm")
+write.csv(df, "analysis/typology_websites/corpus_website_types.csv")
 ```
 
-```{r plot_hl}
-# count nb of values for each type
-types_hl_plot = df_hl_types %>% 
-  mutate(type = str_replace_all(type, "journal", "média")) %>% 
-  mutate(type = str_replace_all(type, "magazine, blog ", "magazine, blog")) %>% 
-  mutate(type = str_replace_all(type, "ONG, association", "associatif, ONG")) %>% 
-  mutate(type = str_replace_all(type, "forum", "réseau social")) %>% 
-  dplyr::count(type) 
+### Plots
 
-  # keep only non NA values
-identified_hl = types_hl_plot %>% 
-  filter(!is.na(type)) %>% 
-  filter(!is.null(type)) %>% 
-  filter(type != "")
-  
-# and count how many they are
-somme_id_hl = colSums(identified_hl["n"])
-# now get percentages
-identified_hl = identified_hl %>% 
-  mutate(perc = (n/somme_id_hl)*100)
-# now keep only NA values
-non_identified_hl = types_hl_plot %>% 
-  filter(is.na(type))
-somme_nid_hl = non_identified_hl[1,2]
-# bind everything
-somme_hl = data.frame(type = c("Type du site identifié", "Type du site non identifié"), 
-                      somme = c(somme_id_hl, somme_nid_hl)) 
-# now get percentages
-somme_hl = somme_hl %>% 
-  mutate(total = sum(somme),
-         perc = (somme/total)*100) %>% 
-  select(-total)
+```{r plot}
+# prepare data 
+df_plot = df %>% 
+  select(c("query", "type")) %>% 
+  mutate(type = trimws(type)) %>% 
+  group_by(query, type) %>% 
+  summarise(nb = n()) %>% 
+  filter(!is.na(type)) 
+df_total = df_plot %>% 
+  group_by(type) %>% 
+  summarise(total = sum(nb)) 
+df_plot = df_plot %>% 
+  left_join(df_total, by = "type") %>% 
+  mutate(type = fct_reorder(type, total)) 
   
 # plot
-plot_hl_1 = somme_hl %>% 
-  ggplot(aes(x = "", y = perc, fill = type)) + 
-  geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.8) +
-  scale_fill_manual(values = c("Type du site non identifié" = "#fb8072", "Type du site identifié" = "#b3de69")) +
-  coord_flip() + # flip x and y coordinates 
-  labs(x = NULL,
-       y = "%",
-       fill = NULL,
-       title = "Identification des types de sites web",
-       subtitle = "... pour les requêtes dans les langues locales") +
-  theme_bw(base_family = "CenturySch", 
-           base_size = 12) +
-  theme(plot.caption.position = "plot")
-ggsave("analysis/typology/repartition_id_hl.png")
-
-plot_hl_2 = identified_hl %>% 
-  mutate(type = fct_reorder(type, perc)) %>% 
-  ggplot(aes(x = type, y = perc)) +
-  geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.8, fill = "#b3de69") + 
-  coord_flip() + # flip x and y coordinates 
-  labs(x = NULL,
-       y = "%",
-       title = "Répartition des types de sites web identifiés",
-       subtitle = "... pour les requêtes dans les langues locales") +
-  theme_bw(base_family = "CenturySch", 
-           base_size = 12) +
-  theme(plot.caption.position = "plot")  
-ggsave("analysis/typology/types_HL.png", width = 20, height = 10, units = "cm")
+df_plot %>% 
+  ggplot(aes(x = nb, y = type)) + 
+  geom_col(aes(fill = query), width = 0.7) +
+  scale_fill_manual(values = c("#fa9fb5", "#a6d854"),
+                    labels = c("Anglais", "Langues locales")) +
+  labs(x = "Nombre de pages",
+       y = NULL,
+       fill = "Langue de requête",
+       title = "Les types de sites web du corpus",
+       subtitle = "N = 42622") +
+  theme_bw()
+ggsave("analysis/typology_websites/types_sites.png", width = 20, height = 10, units = "cm")
 ```
 
-Now let's combine the two plots showing the type for English and local queries:
+Now let's combine two plots showing the percentages of each type for English and local queries:
 
 ```{r combine_plots}
 library(patchwork)
 
-plot_1 = identified_en %>% 
-  mutate(type = fct_reorder(type, perc)) %>% 
-  ggplot(aes(x = type, y = perc)) +
-  geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.8, fill = "#b3de69") + 
-  coord_flip() + # flip x and y coordinates 
-  labs(x = NULL,
-       y = "%",
-       title = "Requêtes en anglais") +
-  theme_bw(base_family = "CenturySch", 
-           base_size = 12) +
-  theme(plot.caption.position = "plot") 
-plot_2 = identified_hl %>% 
-  mutate(type = fct_reorder(type, perc)) %>% 
-  ggplot(aes(x = type, y = perc)) +
-  geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.8, fill = "#b3de69") + 
-  coord_flip() + # flip x and y coordinates 
-  labs(x = NULL,
-       y = "%",
-       title = "Requêtes dans les langues locales") +
-  theme_bw(base_family = "CenturySch", 
-           base_size = 12) +
-  theme(plot.caption.position = "plot")  
+# prepare data 
+data_en = df_plot %>% 
+  filter(query == "english") %>% 
+  mutate(perc = nb/sum(nb)*100)
 
-combined_plot = plot_1 + plot_2
-ggsave("analysis/typology/figure_typo_DSSE.png", width = 28, height = 15, units = "cm")
+plot_en = data_en %>% 
+  mutate(type = fct_reorder(type, perc)) %>% 
+  ggplot(aes(x = type, y = perc)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.8, fill = "#fa9fb5") + 
+  coord_flip() + # flip x and y coordinates 
+  labs(x = NULL,
+       y = "%",
+       title = "Les requêtes en anglais") +
+  theme_bw()
+
+data_hl = df_plot %>% 
+  filter(query == "hl") %>% 
+  mutate(perc = nb/sum(nb)*100)
+
+plot_hl = data_hl %>% 
+  mutate(type = fct_reorder(type, perc)) %>% 
+  ggplot(aes(x = type, y = perc)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.8, fill = "#b3de69") + 
+  coord_flip() + # flip x and y coordinates 
+  labs(x = NULL,
+       y = "%",
+       title = "Les requêtes dans les langues locales") +
+  theme_bw() 
+
+combined_plot = plot_en + plot_hl
+ggsave("analysis/typology_websites/type_repartition.png", width = 28, height = 15, units = "cm")
 ```
