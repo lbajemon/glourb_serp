@@ -1,0 +1,594 @@
+---
+title: "SERP: Localness and domains ranking"
+author: "Liolia Bajemon"
+format: html
+editor: visual
+---
+
+### Description
+
+The aim of this document is to answer the following questions:
+
+-   Where does the data collected from the SERP come from?
+
+-   Which countries produce the most data?
+
+-   Is the data produced locally?
+
+-   Are there domains or websites which predominate the web?
+
+We will try to answer these questions by 1. comparing the language of the website to the local language (of the country) and 2. comparing the domain of the website to the country's top-level domain.
+
+### Set-up
+
+```{r set_up, message = FALSE, warning = FALSE}
+library(urltools)
+library(RColorBrewer)
+library(tidyverse)
+library(polyglotr)
+library(scales)
+library(Rwhois)
+library(ggplot2)
+library(maps)
+library(ggalt)
+library(proj4)
+library(sf)
+library(rnaturalearth)
+```
+
+### Read data
+
+```{r read_data}
+data_city_river = read.csv("input_data/data_city_river.csv") %>% 
+  select(c("fid", "latitude", "longitude", "hl1", "hl2", "hl3", "hl4", "hl5", "hl6", "ville", "riviere"))
+# rename the "domain" column 
+languages_code = read.csv("input_data/languages_code.csv", sep = ";") # iso code for each language
+domain_code = read.csv("input_data/country_code_internet.csv", sep = ",") %>% # internet domain for each country
+  select(c("gl", "tld"))
+data_combined = read.csv("collected_data/hl/df_scrap_tokens_all_hl.csv") %>% # this dataframe combines all the collected data for local languages queries
+  left_join(data_city_river, by = "fid") %>% 
+  # Add country domain
+  left_join(domain_code, by = "gl") %>% 
+  # rename the "domain" column to avoid confusions 
+  dplyr::rename(full_domain = domain) %>% 
+  mutate(hl1 = str_replace_all(hl1, "zh-cn", "zh-CN"))
+```
+
+### Get localness score
+
+```{r detect_language}
+language1 = function(text, snippet, title, hl){
+  print(title)
+   if(!is.na(text)){
+     short_text = substr(text, 1, 500)
+     res = language_detect(short_text)
+     if(res == hl){
+       return(TRUE)
+     } else {
+       return(FALSE)
+     }
+   }
+     # if there is no text, check if there is a snippet
+   else {
+       if(!is.na(snippet)){
+         res = language_detect(snippet)
+         if(res == hl){
+           return(TRUE)
+         } else {
+           return(FALSE)
+         }
+       } else {
+         if(!is.na(title)){
+           res = language_detect(title)
+           if(res == hl){
+             return(TRUE)
+             } else {
+               return(FALSE)
+               }
+           }
+     }
+   }
+}
+```
+
+```{r detect_all_languages}
+detect_all_lang = function(text, snippet, title, hl1, hl2, hl3, hl4, hl5, hl6, full_domain){
+  if(!is.na(text) & (full_domain != "www.youtube.com") & text != "" & (full_domain != "www.facebook.com")){
+     short_text = substr(text, 1, 500)
+     res = language_detect(short_text)
+     if(res %in% c(hl1, hl2, hl3, hl4, hl5, hl6)){
+       return(TRUE)
+     } else {
+       return(FALSE)
+     }
+   }
+     # if there is no text, check if there is a snippet
+   else {
+       if(!is.na(snippet)){
+         res = language_detect(snippet)
+         if(res %in% c(hl1, hl2, hl3, hl4, hl5, hl6)){
+           return(TRUE)
+         } else {
+           return(FALSE)
+         }
+       } else {
+         if(!is.na(title)){
+           res = language_detect(title)
+           if(res %in% c(hl1, hl2, hl3, hl4, hl5, hl6)){
+             return(TRUE)
+             } else {
+               return(FALSE)
+             }
+           }
+         }
+   }
+}
+```
+
+```{r detect_tld}
+detect_tld = function(gl, tld, suffix1, suffix2, subdomain){
+    if ((!is.na(suffix1) && suffix1 == tld) || 
+        (!is.na(suffix2) && suffix2 == tld) || 
+        (!is.na(subdomain) && subdomain == tld)) {
+        return(TRUE)
+    } else {
+        return(FALSE)
+    }
+}
+```
+
+```{r localness_calc}
+
+localness_city = function(fid_city){
+  
+  print(fid_city)
+  
+  if(!file.exists(glue::glue("analysis/localness/localness_city/localness_{fid_city}.csv"))){
+  
+    df_fid = data_combined %>% 
+      filter(fid == fid_city)
+    
+    df = df_fid %>% 
+      # extract the suffix from the full domain with the urltools package
+      dplyr::mutate(suffix = (suffix_extract(df_fid$full_domain))$suffix) %>% 
+      # extract the subdomain
+      mutate(subdomain = (suffix_extract(domain(df_fid$full_domain)))$subdomain) %>% 
+      # extract the domain
+      mutate(domain = (suffix_extract(domain(df_fid$full_domain)))$domain) %>%   # separate the suffix if necessary
+      separate(suffix, c("suffix1", "suffix2"), sep = "\\.", remove = FALSE)
+    
+    locals = df %>% 
+      # now check if the suffix or the subdomain corresponds to the suffix of the country
+      rowwise() %>%
+      mutate(local_tld = detect_tld(gl, tld, suffix1, suffix2, subdomain)) %>% 
+      mutate(search_lang = language1(text, snippet, title, hl)) %>% 
+      mutate(local_lang = detect_all_lang(text, snippet, title, hl1, hl2, hl3, hl4, hl5, hl6, full_domain)) %>% 
+      ungroup()
+    
+    print("fichier OK")
+    
+    write.csv(locals, glue::glue("analysis/localness/localness_city/localness_{fid_city}.csv"), row.names = FALSE)
+    }
+}
+```
+
+```{r run_localness}
+data_city_river %>% 
+  mutate(fid_city = fid) %>%                                  
+  mutate(data = purrr::map(fid_city, localness_city))
+```
+
+```{r}
+# format data
+localness_format = function(fid){
+  data = read.csv(paste0("analysis/localness/localness_city/localness_", fid, ".csv")) %>% 
+    select(c("urban_aggl", "riviere", "ville", "local_tld","search_lang", "local_lang"))
+  
+  write.csv(data, paste0("analysis/localness/localness_compile/localness_", fid, ".csv"))
+}
+
+data_city_river %>% 
+  mutate(fid_city = fid) %>%                                  
+  mutate(data = purrr::map(fid_city, localness_format))
+
+# compile everything
+df =  read.csv("input_data/data_city_river.csv") %>%
+  select(c("fid")) %>% 
+  mutate(path = paste0("analysis/localness/localness_compile/localness_", fid, ".csv"))  %>% 
+  mutate(data = purrr::map(path, read.csv)) %>% 
+  unnest(data)
+write.csv(df, "analysis/localness/localness_compile.csv")
+
+df_cat = df %>% 
+  group_by(fid, local_tld, local_lang) %>% 
+  summarise(nb = n())
+
+df2 = read.csv("input_data/data_city_river.csv") %>%
+  select(c("fid", "ville", "riviere")) %>%
+  left_join(df_cat, by = "fid")
+
+write.csv(df2, "analysis/localness/df_matrix.csv")
+```
+
+### Maps
+
+We will make three maps:
+
+1.  Percentage of pages for which the language and the top-level domain are local.
+
+2.  Percentage of pages for which the top-level domain is local
+
+3.  Percentage of pages for which the language of the website is a local one.
+
+#### Local 1
+
+```{r score_local1}
+score_local1 = locals %>% 
+  mutate(score = case_when(
+    (local_tld == TRUE) & (local_lang == TRUE) ~ 1,
+    TRUE ~ 0
+  )) %>% 
+  group_by(fid, score) %>% 
+  count() %>% 
+  filter(score == 1) %>% 
+  dplyr::rename(n_local = n) 
+
+n_pages = locals %>% 
+  group_by(fid) %>% 
+  count() %>% 
+  dplyr::rename(n_tot = n)
+
+data_scores = data_city_river %>% 
+  left_join(score_local1, by = "fid") %>% 
+  left_join(n_pages, by = "fid") %>% 
+  mutate(perc_local = n_local/n_tot*100) %>% 
+  mutate(longitude = str_replace_all(longitude, ",", ".")) %>% 
+  mutate(latitude = str_replace_all(latitude, ",", ".")) %>% 
+  mutate(longitude = as.numeric(longitude)) %>% 
+  mutate(latitude = as.numeric(latitude)) %>% 
+  mutate(n_local = as.numeric(n_local)) %>% 
+  mutate(perc_local = replace_na(perc_local, 0))
+
+write.csv(data_scores, "analysis/localness/city_locals_1.csv", row.names = FALSE)
+```
+
+Now let's plot the results on a global map:
+
+```{r map_local1}
+world_map = ne_countries(scale = "medium", returnclass = "sf")
+data_scores_sf <- st_as_sf(data_scores, coords = c("longitude", "latitude"), crs = 4326)
+
+world_map %>% 
+  ggplot() +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_scores_sf, aes(color = perc_local), size = 3) +
+  # color palette
+  scale_color_gradientn(colors = c(brewer.pal(n = 9, name = "Spectral"))) +
+  # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom") +
+  # legend
+  labs(color = "Pourcentage de pages web pour \nlesquelles la langue ET l'URL sont locales")  
+
+ggsave("carte_localness_URL_Langue.png", path = "analysis/localness/", width = 4000, height = 2500, units = "px")
+```
+
+![](analysis/localness/carte_localness_URL_Langue.png)
+
+#### Local 2
+
+```{r score_local2}
+score_local2 = locals %>% 
+  mutate(score = case_when(
+    (local_tld == TRUE) ~ 1,
+    TRUE ~ 0
+  )) %>% 
+  group_by(fid, score) %>% 
+  count() %>% 
+  filter(score == 1) %>% 
+  dplyr::rename(n_local = n) 
+
+n_pages = locals %>% 
+  group_by(fid) %>% 
+  count() %>% 
+  dplyr::rename(n_tot = n)
+
+data_scores = data_city_river %>% 
+  left_join(score_local2, by = "fid") %>% 
+  left_join(n_pages, by = "fid") %>% 
+  mutate(perc_local = n_local/n_tot*100) %>% 
+  mutate(longitude = str_replace_all(longitude, ",", ".")) %>% 
+  mutate(latitude = str_replace_all(latitude, ",", ".")) %>% 
+  mutate(longitude = as.numeric(longitude)) %>% 
+  mutate(latitude = as.numeric(latitude)) %>% 
+  mutate(n_local = as.numeric(n_local)) %>% 
+  mutate(perc_local = replace_na(perc_local, 0))
+
+write.csv(data_scores, "analysis/localness/city_locals_2.csv", row.names = FALSE)
+```
+
+```{r map_local2}
+world_map = ne_countries(scale = "medium", returnclass = "sf")
+data_scores_sf <- st_as_sf(data_scores, coords = c("longitude", "latitude"), crs = 4326)
+
+world_map %>% 
+  ggplot() +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_scores_sf, aes(color = perc_local), size = 3) +
+  # color palette
+  scale_color_gradientn(colors = c(brewer.pal(n = 9, name = "Spectral"))) +
+  # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom") +
+  # legend
+  labs(color = "Pourcentage de pages web pour \nlesquelles l'URL est locale")  
+
+ggsave("carte_localness_URL.png", path = "analysis/localness/", width = 4000, height = 2500, units = "px")
+```
+
+![](analysis/localness/carte_localness_URL.png)
+
+#### Local 3
+
+```{r score_locals3}
+score_local3 = locals %>% 
+  mutate(score = case_when(
+    (local_lang == TRUE) ~ 1,
+    TRUE ~ 0
+  )) %>% 
+  group_by(fid, score) %>% 
+  count() %>% 
+  filter(score == 1) %>% 
+  dplyr::rename(n_local = n) 
+
+n_pages = locals %>% 
+  group_by(fid) %>% 
+  count() %>% 
+  dplyr::rename(n_tot = n)
+
+data_scores = data_city_river %>% 
+  left_join(score_local3, by = "fid") %>% 
+  left_join(n_pages, by = "fid") %>% 
+  mutate(perc_local = n_local/n_tot*100) %>% 
+  mutate(longitude = str_replace_all(longitude, ",", ".")) %>% 
+  mutate(latitude = str_replace_all(latitude, ",", ".")) %>% 
+  mutate(longitude = as.numeric(longitude)) %>% 
+  mutate(latitude = as.numeric(latitude)) %>% 
+  mutate(n_local = as.numeric(n_local)) %>% 
+  mutate(perc_local = replace_na(perc_local, 0))
+
+write.csv(data_scores, "analysis/localness/city_locals_3.csv", row.names = FALSE)
+```
+
+```{r map_local3}
+world_map = ne_countries(scale = "medium", returnclass = "sf")
+data_scores_sf <- st_as_sf(data_scores, coords = c("longitude", "latitude"), crs = 4326)
+
+world_map %>% 
+  ggplot() +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_scores_sf, aes(color = perc_local), size = 3) +
+  # color palette
+  scale_color_gradientn(colors = c(brewer.pal(n = 9, name = "Spectral"))) +
+  # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom") +
+  # legend
+  labs(color = "Pourcentage de pages web pour \nlesquelles la langue est locale")  
+
+ggsave("carte_localness_Langue.png", path = "analysis/localness/", width = 4000, height = 2500, units = "px")
+```
+
+![](analysis/localness/carte_localness_Langue.png)
+
+Statistics
+
+```{r}
+data_city_river = read.csv("input_data/data_city_river.csv") %>% 
+  select(c("fid", "country_en", "gl", "sub_continent"))
+locals2 = read.csv("analysis/localness/city_locals_2.csv") %>% 
+  left_join(data_city_river, by = "fid") %>% 
+  group_by(sub_continent) %>% 
+  mutate(mean_score = mean(perc_local)) %>% 
+  mutate(median_score = median(perc_local)) %>% 
+  mutate(min_score = min(perc_local)) %>% 
+  mutate(max_score = max(perc_local))
+locals3 = read.csv("analysis/localness/city_locals_3.csv")
+```
+
+```{r global_barplot}
+
+# calculate the percentage of web pages which have a local TLD
+n_local_tld = locals %>%
+  group_by(local_tld) %>% 
+  count()
+n_local_tld = n_local_tld[2,2]/(n_local_tld[2,2] + n_local_tld[1,2])*100
+n_local_tld = as.numeric(n_local_tld)
+# calculate the percentage of web pages which are in the language of the query
+n_search_lang = locals %>% 
+  group_by(search_lang) %>% 
+  count()
+n_search_lang = n_search_lang[2,2]/(n_search_lang[2,2]+n_search_lang[1,2])*100
+n_search_lang = as.numeric(n_search_lang)
+# calculate the percentage of web pages which are in a local language of the city/country
+n_local_lang = locals %>% 
+  group_by(local_lang) %>% 
+  count()
+n_local_lang = n_local_lang[2,2]/(n_local_lang[2,2]+n_local_lang[1,2])*100
+n_local_lang = as.numeric(n_local_lang)
+# calculate the number of "local" web pages out of the total number of pages
+n_loc = sum(data_scores$n_local, na.rm = TRUE)
+n_tot = sum(data_scores$n_tot, na.rm = TRUE)
+n_local = n_loc/n_tot*100
+# combine everything in a dataframe
+df = data.frame(nom = c("TLD local", "Langue de requête", "Langue locale", "Pages web\nprobablement locales"),
+                values = c(n_local_tld, n_search_lang, n_local_lang, n_local))
+
+df %>% 
+  mutate(nom = fct_reorder(nom, values)) %>% 
+  ggplot(mapping = aes(x = nom,
+                       y = values)) +
+  geom_col(fill = "#abdda4") +
+ geom_text(aes(label = paste0(round(values, 1), "%")), 
+            vjust = 1.5, color = "white") + # Ajouter les pourcentages  
+  labs(y = "%",
+       x = "") +
+  theme_bw(base_family = "CenturySch",
+           base_size = 14)
+
+ggsave(df)
+```
+
+### Barplot for each city
+
+Get a localness percentage for each city and plot results:
+
+```{r def_localness_city}
+localness_city = function(fid_city, ville, riviere){
+  
+  # calculate percentages
+  df_city = locals %>% 
+    filter(fid == fid_city) %>% 
+    mutate(localness = case_when(
+      local_tld == FALSE & local_lang == FALSE ~ "TLD et langue\nnon locaux",
+      local_tld == TRUE & local_lang == TRUE ~ "TLD et langue\nlocaux",
+      local_tld == FALSE & local_lang == TRUE ~ "Langue locale",
+      local_tld == TRUE & local_lang == FALSE ~ "TLD local"
+    )) %>% 
+    group_by(localness) %>% 
+    # count number of each value 
+    count()
+  
+  somme = sum(df_city$n, na.rm = TRUE)
+  # add to a dataframe containing all of the possible values 
+  df = data.frame(localness = c("TLD et langue\nnon locaux", "TLD et langue\nlocaux", "Langue locale", "TLD local")) %>% 
+    left_join(df_city, by = "localness") %>% 
+    mutate(n = as.numeric(n)) %>% 
+    mutate(perc = n/somme*100) %>% 
+    mutate(perc = replace_na(perc, 0))
+  
+  df$localness = factor(df$localness, levels = c("TLD local", "Langue locale", "TLD et langue\nlocaux", "TLD et langue\nnon locaux")) # reorder
+  df$cat = c("Contenu probablement non local", "Contenu probablement local", "Contenu probablement local", "Contenu probablement local") # add a descriptor 
+  
+  # plot the results
+  df %>% 
+    ggplot(mapping = aes(x = localness,
+                         y = perc,
+                         fill = cat)) +
+    geom_col() +
+    scale_fill_manual(values = c("#abdda4", "#41b6c4")) +
+    labs(title = paste0("Pages web sur ", ville, " et ", riviere,"."),
+         x = "",
+         y = "%",
+    ) +
+    scale_y_continuous(limits = c(0,100)) +
+    theme_bw(base_family = "CenturySch", 
+             base_size = 14,
+    ) +
+    theme(legend.title = element_blank(), legend.position = "bottom")
+  
+  ggsave(filename = glue::glue("plot_localness_{fid_city}.png"), path = "analysis/localness/tld_langue_ville/")
+  
+  # now prepare df for saving alongside other cities  
+  df_inverse = df %>% 
+    select(-cat, -n) %>% 
+    pivot_wider(names_from = localness,
+                values_from = perc) %>% 
+    mutate(fid = fid_city)
+  colnames(df_inverse) = c("non_local", "local_tld_lang", "local_lang",  "local_tld", "fid")
+  return(df_inverse)
+}
+```
+
+Now let's run the function for each city:
+
+```{r run_localness_score}
+
+# initialize dataframe
+combiner = data.frame()
+
+data_city_river %>% 
+  mutate(data = purrr::pmap(list(fid_city = fid,
+                                 ville = ville,
+                                 riviere = riviere),
+                           localness_city))
+
+# run function
+for(i in 1:nrow(data_city_river)){
+  # if there is a local language and the data is available
+  if(!is.na(data_city_river[i,8]) & !is.na(data_city_river[i,15]) & !is.na(data_city_river[i,22]))
+    # then apply the function
+  fid_city = data_city_river[i,1]
+  urban_aggl = data_city_river[i,34]
+  river_en = data_city_river[i,35]
+  print(fid_city)
+  result = localness_city(fid_city, urban_aggl, river_en)
+  combiner = combiner %>% 
+    rbind(result)
+} 
+
+write.csv(result, "analysis/localness/perc_per_city.csv")
+```
+
+### Matrix for each city
+
+Let's plot a matrix for each city.
+
+```{r def_matrix_plot}
+matrix_plot = function(fid_city){
+  
+  df = df_cat %>% 
+    filter(fid == fid_city) %>% 
+    mutate(cat = case_when(
+      local_tld == TRUE & local_lang == TRUE ~ "B",
+      local_tld == TRUE & local_lang == FALSE ~ "D",
+      local_tld == FALSE & local_lang == FALSE ~ "C",
+      local_tld == FALSE & local_lang == TRUE ~ "A"
+      )) %>% 
+    mutate(tld_local = case_when(
+      local_tld == FALSE ~ "NON",
+      local_tld == TRUE ~ "OUI"
+    )) %>% 
+    mutate(lang_local = case_when(
+      local_lang == FALSE ~ "NON",
+      local_lang == TRUE ~ "OUI"
+    ))
+  
+  ggplot(df, aes(lang_local, tld_local)) +
+    geom_point(aes(color = cat, size = nb)) +
+    geom_text(aes(label = nb), color = "black", size = 4) +
+    coord_fixed() +
+    scale_color_manual(values = c("A" = "#F474C9", "B" = "#CE6B6A","C" = "#E8E8E8", "D" = "#9CD52A"))  + 
+    theme_bw()+
+    theme(legend.position = "none")+
+    scale_size(range = c(5, 30)) + 
+    labs(x = "Langue locale",
+         y = "Adresse web locale",
+         title = paste0(df$ville, " et ", df$riviere))
+  
+  ggsave(paste0("analysis/localness/localness_matrix/matrix_", fid_city, ".png"), width = 10, height = 10, units = "cm")
+}
+```
+
+```{r run_matrix_plot}
+# run the function
+
+df_cat = read.csv("analysis/localness/df_matrix.csv")
+data_city_river = read.csv("input_data/data_city_river.csv")
+
+data_city_river %>% 
+  mutate(fid_city = fid) %>%                                  
+  mutate(data = purrr::map(fid_city, matrix_plot))
+```
