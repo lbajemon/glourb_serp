@@ -450,9 +450,6 @@ We will run all the functions for each of our combinations and for each language
 for(i in 1:6) {
   # only select the cities which have the ith language we're interested in
   n_hl = 7 + i # the hl columns are beginning after the 7th column 
-  # if the language is english and the country is the usa
-  # do not keep it as the query has already been ran in this language and with the domain .com
-  data_subset = filter(data_city_river, ((data_city_river[, n_hl] != "no data") & ((data_city_river[, n_hl] != "en") | data_city_river[, 7] != "us")))
   
   # as well as the river and city names in the corresponding language
   # e.g. hl4, city_hl4 and main_river_hl4 
@@ -460,7 +457,7 @@ for(i in 1:6) {
   n_river_hl = 21 + i # the main river names are after the 21th column
   
   # if the name in the local language is not available, do not select this row
-  data_subset = filter(data_subset, ((data_subset[, n_city_hl] != "no data") & (data_subset[, n_river_hl] != "no data")))
+  data_subset = filter(data_city_river, ((data_city_river[, n_city_hl] != "no data") & (data_city_river[, n_river_hl] != "no data")))
   
   data = select(.data = data_subset, c(1:7, n_hl, n_city_hl, n_river_hl, 28, 34, 35))
   

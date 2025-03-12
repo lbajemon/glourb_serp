@@ -270,7 +270,7 @@ leaf = leaflet(data = data, options = leafletOptions(zoomControl = TRUE, minZoom
 saveWidget(leaf, file = "occurrence_climate_change_leaflet.html")
 ```
 
-#### Gravel mining 
+#### Gravel mining
 
 ```{r gravel_mining}
 gravel_mining = corpus %>% 

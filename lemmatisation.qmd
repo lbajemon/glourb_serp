@@ -55,7 +55,7 @@ lexicon_en = get_lexicon("en") %>%
 
 Now, let's define multiple tables containing words we want to remove or keep, e.g. stop words, country names, city names, etc.
 
-In particular, we will try to define a list of locations, including city names, country names and region names. We will use a [database from Geonames](https://public.opendatasoft.com/explore/dataset/geonames-all-cities-with-a-population-1000/information/?disjunctive.cou_name_en&sort=name), which supposedly contains the name of the cities with a population \> 1000 worldwide. We will also use diverse sources to get the first-level administrative divisions by country (in particular, this [Wikipedia](https://en.wikipedia.org/wiki/List_of_first-level_administrative_divisions_by_area) page or the first-level NUTS of the EU).
+In particular, we will try to define a list of locations, including city names, country names and region names. We will use a [database from Geonames](https://public.opendatasoft.com/explore/dataset/geonames-all-cities-with-a-population-1000/information/?disjunctive.cou_name_en&sort=name), which supposedly contains the name of the cities with a population \> 1000 worldwide. We will also use diverse sources to get the first-level administrative divisions by country (in particular, this [Wikipedia](https://en.wikipedia.org/wiki/List_of_first-level_administrative_divisions_by_area) page or [the first-level NUTS of the EU](https://en.wikipedia.org/wiki/First-level_NUTS_of_the_European_Union)).
 
 ```{r}
 # stop words (words which are too common)
