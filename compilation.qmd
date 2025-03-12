@@ -274,3 +274,25 @@ df_all = df_en %>%
 
 write.csv(df_all, "collected_data/combined_all_tokens.csv")
 ```
+
+### Clean corpus
+
+We will remove the pages which appear multiple times for the same city (duplicates).
+
+```{r}
+df = read.csv("collected_data/combined_all_tokens.csv") # 76927 pages
+
+df_distinct = df %>% 
+  group_by(fid) %>% 
+  distinct(link, .keep_all = TRUE) %>% 
+  ## remove 331_a_72 which is the results of a school examination 
+  filter(id != "331_a_72") %>% 
+  ## remove 78_a_43 which is the results of a school examination 
+  filter(id != "78_a_43") %>% 
+  ## remove 331_a_71 which is a list of administration addresses
+  filter(id != "331_a_71") %>% 
+  ## remove 480_ko_56 which is a list of industries 
+  filter(id != "480_ko_56")
+
+write.csv(df_distinct, "collected_data/corpus_distinct.csv") # 72722 pages
+```

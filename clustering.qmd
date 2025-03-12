@@ -246,7 +246,7 @@ rainette_explor(dhc_noloc, dfmatrix_noloc, corpus_noloc)
 #### d. For results in English and in all local languages (i.e. everything combined)
 
 ```{r all_data}
-df = read.csv("collected_data/combined_all_tokens.csv") %>% 
+df = read.csv("collected_data/corpus_distinct.csv") %>% 
   dplyr::rename(tokenized = tokenized_noloc) %>% # rename column
   subset(!is.na(tokenized)) 
 
@@ -254,7 +254,7 @@ df = read.csv("collected_data/combined_all_tokens.csv") %>%
 corpus = read_corpus(df, text_field = "tokenized", docid_field = "id")
 # split the corpus in smaller segments
 corpus = split_segments(corpus, segment_size = 40)
-# saveRDS(corpus, "analysis/clusters/split_corpus_all.rds")
+saveRDS(corpus, "analysis/clusters/split_corpus_all.rds")
 # corpus = readRDS("analysis/clusters/split_corpus_all.rds")
 tokens = read_tokens(corpus)
 
@@ -265,39 +265,37 @@ dfmatrix = calc_dtm(tokens)
 # and choose what adapts best to your data
 dhc = rainette(dfmatrix, k = 14, min_split_members = 500)
 rainette_explor(dhc, dfmatrix, corpus)
-# saveRDS(dhc, "analysis/clusters/dhc_all.rds")
+saveRDS(dhc, "analysis/clusters/dhc_all.rds")
 # dhc = readRDS("analysis/clusters/dhc_all.rds")
 
-labels_en = c("Hydrography,\nfloods", "Alert system", "Quality\nmeasurements", "Pollution,\nsewerage",  "Planning,\nmanagement,\nenvironment", "Industry", "Outliers -\nInternet", "Infrastructure,\ntransport", "Culture,\narchitecture", "Tourism,\nnavigation","Health","History,\nreligion","Government,\narmy,\nconflicts","Education")
-labels_fr = c("Hydrographie,\ninondation", "Système\nd'alerte", "Mesures de\nqualité", "Pollution,\ntraitement des\neaux usées", "Aménagement,\ngestion,\nenvironnement", "Industrie", "Outlier\nInternet", "Infrastructures,\ntransports",  "Culture,\narchitecture", "Tourisme,\nnavigation", "Santé",  "Histoire,\nreligion", "Gouvernement,\narmée,\nconflits", "Education")
-plot = rainette_plot(
+plot_en = rainette_plot(
   dhc, 
   dfmatrix, 
   14,
-  n_terms = 20,
+  n_terms = 30,
   free_scales = TRUE,
   measure = "chi2",
   show_negative = FALSE,
   text_size = 12,
-  cluster_label = labels_en,
-  colors = c("#8dd3c7", "#fdb462", "#bebada", "#ffed6f","#b3de69", "#bf812d", "#d9d9d9",  "#fccde5", "#bc80bd", "#80b1d3","#ccebc5","#9e0142", "#fb8072", "#f781bf")
+  cluster_label = c("Health", "Government\nand conflicts", "University,\nhistory,\nreligion", "Daily life,\nnews items", "Tourism,\ntravel",  "Heritage,\nattractions", "Urban\n infrastructure\nand geography", "Online images,\nweb content", "Planning,\nmanagement,\nenvironment", "Pollution,\nsewerage", "Chemical and\nphysical\nparameters", "Alert system", "Floods", "Hydrography"),
+  colors = c("#eac1f7","#fdb462", "#9e0142", "#f781bf", "#bc80bd" , "#bf812d" , "#f7bfbe", "#adadad","#b3de69", "#ffd92f","#8dd3c7", "#fb8072", "#bebada", "#80b1d3")
 )
-ggsave("analysis/clusters/clusters_all_14_en.png", plot, width = 500, height = 250, units = "mm", limitsize = FALSE)
+ggsave("analysis/clusters/clusters_all_14_en.png", plot_en, width = 500, height = 250, units = "mm", limitsize = FALSE)
 
-# let's also plot with only 4 topics 
-mini_plot = rainette_plot(
+plot_fr = rainette_plot(
   dhc, 
   dfmatrix, 
-  4,
-  n_terms = 20,
+  14,
+  n_terms = 30,
   free_scales = TRUE,
   measure = "chi2",
   show_negative = FALSE,
   text_size = 12,
-  cluster_label = c("Hydrographie\net inondation", "Aménagement et\nqualité de l'eau", "Tourisme\net loisirs", "Gouvernement,\narmée, histoire"),
-  colors = c("#8DD3C7", "#B3DE69", "#FCCDE5", "#FDB462")
+  cluster_label = c("Santé", "Gouvernement\net conflits", "Université,\nhistoire,\nreligion", "Vie quotidienne,\nfaits divers", "Tourisme,\nvoyage", "Patrimoine,\nattractions", "Infrastructures\net géographie\nurbaines", "Banques d'images,\ncontenu web", "Aménagement,\ngestion,\nenvironnement", "Pollution,\ntraitement des\neaux usées","Paramètres\nchimiques\net physiques", "Système\nd'alerte", "Inondations", "Hydrographie")
+,
+  colors = c("#eac1f7","#fdb462", "#9e0142", "#f781bf", "#bc80bd" , "#bf812d" , "#f7bfbe", "#adadad","#b3de69", "#ffd92f","#8dd3c7", "#fb8072", "#bebada", "#80b1d3")
 )
-ggsave("analysis/clusters/clusters_all_4.png", mini_plot, width = 380, height = 200, units = "mm", limitsize = FALSE)
+ggsave("analysis/clusters/clusters_all_14_fr.png", plot_fr, width = 500, height = 250, units = "mm", limitsize = FALSE)
 ```
 
 ### 4. Plot specificities
@@ -475,11 +473,11 @@ spec_doc = tidy_specificities(corpus_df, segment_source, cl) %>%
 # if the document contains only one segment, then its cluster doesn't require any calculation. 
 max_doc = corpus_df %>% 
   group_by(cl, segment_source) %>% 
-  summarise(count = n(), .groups = "drop") %>% 
+  dplyr::summarise(count = n(), .groups = "drop") %>% 
   group_by(segment_source) %>% 
   filter(count == max(count))
-max_doc = rename(max_doc, cl_max = cl)
-max_doc = rename(max_doc, count_max = count)
+max_doc = dplyr::rename(max_doc, cl_max = cl)
+max_doc = dplyr::rename(max_doc, count_max = count)
 
 spec = spec_doc %>% 
   left_join(max_doc, by = "segment_source") %>% 
@@ -487,40 +485,38 @@ spec = spec_doc %>%
                         spec < 2 ~ cl_max,
                         TRUE ~ cl)) 
 # Note: a document can have two clusters. This happens when there is an equality (for example if two segments fall in cluster 1 and two segments fall in cluster 2, the document will be cluster 1 AND 2)
-
-write.csv(spec, "analysis/typology/specificity_doc.csv")
 ```
 
 Join everything:
 
 ```{r join}
-# prepare the corpus for joining it to the specificity df
-corpus_spec = convert(corpus, to = "data.frame") %>%
-  select(c("domain","segment_source")) %>% 
-  distinct(segment_source, .keep_all = TRUE)
+# corpus
+corpus$cluster = cutree(dhc, 14)
+# and turn it into a df, keep only two variables for the specificity calculation
+corpus_df = convert(corpus, to = "data.frame") %>% 
+  select(c("segment_source", "cluster")) %>% 
+  mutate(cl = paste0("cl_", cluster))
 
 # Retrieve the dataset with website typology
-typology_websites = read.csv("analysis/typology/tous_sites_types2.csv")
+df = read.csv("analysis/typology_websites/corpus_website_type.csv") 
+typo = df %>% select(c("id", "type"))
 
 # retrieve cluster names
 cluster_names = read.csv("input_data/cluster_names.csv", sep = "\t")
 
 # join everything
-results = spec_doc %>% 
-  left_join(corpus_spec, by = "segment_source") %>% 
-  left_join(typology_websites, by = "domain") %>% 
-  left_join(cluster_names, by = "cl")
-write.csv(results, "analysis/typology/df_typology_website_and_cluster.csv")
+results = corpus_df %>% 
+  left_join(df, by = join_by(segment_source == id))
 
 # summarise the results
 res = results %>% 
   group_by(type, cl) %>% 
-  summarise(count = n(), .groups = "drop") %>% 
+  dplyr::summarise(count = n(), .groups = "drop") %>% 
   left_join(cluster_names, by = "cl") %>% 
   group_by(type) %>% 
   mutate(perc = count/sum(count)*100) %>% 
   ungroup() 
-write.csv(res, "analysis/typology/summary_typology_website_by_cluster.csv")
+write.csv(res, "analysis/typology_websites/summary_typology_website_by_cluster.csv")
 
 res_clusters = res %>% 
   # remove websites for which the type has not been identified
@@ -556,7 +552,7 @@ plot = res %>%
            base_size = 13)
   
   nom_fichier = str_split(type_site, ",", simplify = TRUE)[,1]
-  ggsave(plot, filename = glue::glue("analysis/typology/cluster_by_website/{nom_fichier}.png"), width = 20, height = 15, units = "cm")
+  ggsave(plot, filename = glue::glue("analysis/typology_websites/clusters_by_website/{nom_fichier}.png"), width = 20, height = 15, units = "cm")
   }
 ```
 
@@ -593,7 +589,7 @@ plot = res_clusters %>%
            base_size = 13)
   
   nom_fichier = str_split(nom, ",", simplify = TRUE)[,1]
-  ggsave(plot, filename = glue::glue("analysis/typology/website_by_cluster/{nom_fichier}.png"), width = 20, height = 15, units = "cm")
+  ggsave(plot, filename = glue::glue("analysis/typology_websites/websites_by_cluster/{nom_fichier}.png"), width = 20, height = 15, units = "cm")
   }
 ```
 
