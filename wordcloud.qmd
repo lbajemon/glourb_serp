@@ -7,30 +7,62 @@ editor: visual
 ### Set up
 
 ```{r packages}
-library(wordcloud)
 library(tidyverse)
-library(quanteda)
+library(tidytext)
+library(ggwordcloud)
+library(wordcloud2)
 ```
 
 ### Read data
 
 ```{r read_data}
-df = read.csv("collected_data/english/df_tokenized_snippets.csv") %>% 
-  subset(select = -12) %>%  # remove locations column
-  dplyr::rename(tokenized = tokenized_noloc) %>% # rename column
-  dplyr::rename(seg_id = snippet_id) %>% # rename doc id 
-  group_by(fid) %>% 
-  dplyr::mutate(n = n()) %>% # count number of snippets per city 
-  ungroup() %>% 
-  subset(!is.na(tokenized)) # remove empty values
-
-# read corpus
-corpus = quanteda::corpus(df, text_field = "tokenized", docid_field = "seg_id")
+corpus = readRDS("analysis/clusters/split_corpus_all.rds")
+dhc = readRDS("analysis/clusters/dhc_all.rds")
+corpus$cluster = cutree(dhc, 14)
+df = convert(corpus, to = "data.frame") %>% 
+  select(c("tokenized_text","cluster"))
 ```
 
-### Make the wordcloud
+### Wordcloud per cluster
 
-```{r make_wordcloud}
+```{r}
+df_wordcount <- df %>%
+  unnest_tokens(word, tokenized_text) %>%  
+  dplyr::count(word, cluster, sort = TRUE)
+df_filtered = df_wordcount %>% 
+  group_by(cluster) %>% 
+  top_n(15, n)
+df_filtered$cluster <- as.factor(df_filtered$cluster)
 
-wordcloud(corpus, max.words = 200, colors = brewer.pal(8, "Set2"),  rot.per=0) 
+ggplot(df_filtered, aes(label = word, size = n, color = cluster)) +
+  geom_text_wordcloud(eccentricity = 1) +
+  scale_size_area(max_size = 10) +
+  theme_minimal() +
+  scale_color_manual(values = c("#bebada","#b3de69","#bf812d",  "#ffd92f","#8dd3c7", "#fdb462", "#adadad","#fb8072","#f7bfbe", "#80b1d3", "#bc80bd",   "#f781bf", "#9e0142", "#eac1f7"))
+
+ggsave("analysis/wordcloud_cluster.png")
+```
+
+Wordcloud for the entire corpus
+
+```{r}
+df_wordcount_tt <- df %>%
+  unnest_tokens(word, tokenized_text) %>%  
+  dplyr::count(word, sort = TRUE)
+
+df_tt = df_wordcount_tt %>% 
+  top_n(100, n)
+
+# attribuer une couleur aléatoire à chaque mot
+palette = c("#bebada","#b3de69","#bf812d",  "#ffd92f","#8dd3c7", "#fdb462", "#adadad","#fb8072","#f7bfbe", "#80b1d3", "#bc80bd",   "#f781bf", "#9e0142", "#eac1f7")
+set.seed(1521)
+df_tt$color = sample(palette, nrow(df_tt), replace = TRUE)
+
+ggplot(df_tt, aes(label = word, size = n, color = color)) +
+  geom_text_wordcloud(eccentricity = 1) +
+  scale_size_area(max_size = 10) +
+  theme_minimal() +
+  scale_color_identity()
+
+ggsave("analysis/wordcloud_corpus.png", width = 10, height = 5)
 ```
