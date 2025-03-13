@@ -144,6 +144,7 @@ coords = read.csv("input_data/data_city_river.csv") %>%
   left_join(df_calc[,c(1,18)], by = "fid")
 coords_sf = st_as_sf(coords, coords = c("longitude", "latitude"), crs = 4326)
 world_map = ne_countries(scale = "medium", returnclass = "sf")
+
 coords_sf$type_city = as.factor(coords_sf$type_city)
 
 ggplot(world_map) +
@@ -177,6 +178,8 @@ df %>%
   filter(type_city == 1) %>% 
   ggplot(aes(x = factor(topic_nb, levels = sort(unique(topic_nb))), y = perc)) +
   geom_boxplot(fill = "#8dd3c7") +
+  scale_y_continuous(breaks = seq(0, 80, by = 20)) +
+  ylim(c(0, 80)) +
   theme_bw() +
   labs(x = "Thématique n°",
        y = "%")
@@ -186,6 +189,8 @@ df %>%
   filter(type_city == 2) %>% 
   ggplot(aes(x = factor(topic_nb, levels = sort(unique(topic_nb))), y = perc)) + 
   geom_boxplot(fill = "#fdb462") +
+  scale_y_continuous(breaks = seq(0, 80, by = 20)) +
+  ylim(c(0, 80)) +
   theme_bw() +
   labs(x = "Thématique n°",
        y = "%")
@@ -195,6 +200,8 @@ df %>%
   filter(type_city == 3) %>% 
   ggplot(aes(x = factor(topic_nb, levels = sort(unique(topic_nb))), y = perc)) + 
   geom_boxplot(fill = "#a6d854") +
+  scale_y_continuous(breaks = seq(0, 80, by = 20)) +
+  ylim(c(0, 80)) +
   theme_bw() +
   labs(x = "Thématique n°",
        y = "%")
@@ -204,6 +211,8 @@ df %>%
   filter(type_city == 4) %>% 
   ggplot(aes(x = factor(topic_nb, levels = sort(unique(topic_nb))), y = perc)) + 
   geom_boxplot(fill = "#fa9fb5") +
+  scale_y_continuous(breaks = seq(0, 80, by = 20)) +
+  ylim(c(0, 80)) +
   theme_bw() +
   labs(x = "Thématique n°",
        y = "%")
