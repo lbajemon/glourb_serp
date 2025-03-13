@@ -11,6 +11,7 @@ library(ggplot2)
 library(sf)
 library(rnaturalearth)
 library(quanteda)
+library(rainette)
 ```
 
 ```{r}
@@ -18,7 +19,14 @@ library(quanteda)
 coords = read.csv("input_data/data_city_river_fid_fusion.csv") %>% 
   select(c("fid_fusion", "latitude", "longitude")) %>% 
   unique()
-corpus = readRDS("analysis/clusters/split_corpus_all.rds")
+
+# read corpus
+df = read.csv("collected_data/corpus_distinct.csv") %>% 
+  dplyr::rename(tokenized = tokenized_noloc) %>% # rename column
+  subset(!is.na(tokenized)) 
+corpus = quanteda::corpus(df, text_field = "tokenized", docid_field = "id")  
+corpus = split_segments(corpus, segment_size = 40)
+
 dhc = readRDS("analysis/clusters/dhc_all.rds")
 
 fid_fusion = read.csv("input_data/data_city_river_fid_fusion.csv") %>% 
@@ -41,8 +49,7 @@ calc = corpus_df %>%
   # get percentage of cluster / city
   mutate(perc = nb/somme*100) %>% 
   # get cluster name
-  mutate(class = paste0("cl_", cluster))
-#### ERREUR CA FAIT LA SOMME DE TOUT AU LIEU DE FAIRE LA SOMME PAR CLASSE
+  mutate(topic = paste0("topic_", cluster))
 
 # Get number of segments per cluster and per city (i.e. fid_fusion)
 nb_segments = corpus_df %>% 
@@ -60,12 +67,12 @@ sum_segments = nb_segments %>%
 calc = nb_segments %>%
   left_join(sum_segments, by = "fid_fusion") %>%
   mutate(perc = nb/somme * 100) %>%
-  mutate(class = paste0("cl_", cluster))
+  mutate(topic = paste0("topic_", cluster))
 
 # reshape the table
-df = dcast(calc, fid_fusion ~ class, value.var = "perc") %>% 
+df = dcast(calc, fid_fusion ~ topic, value.var = "perc") %>% 
 # replace NA values with 0
-  replace_na(list(cl_1 = 0, cl_2 = 0, cl_3 = 0, cl_4 = 0, cl_5 = 0, cl_6 = 0, cl_7 = 0, cl_8 = 0, cl_9 = 0, cl_10 = 0, cl_11 = 0, cl_12 = 0, cl_13 = 0, cl_14 = 0, cl_NA = 0)) %>% 
+  replace_na(list(topic_1 = 0, topic_2 = 0, topic_3 = 0, topic_4 = 0, topic_5 = 0, topic_6 = 0, topic_7 = 0, topic_8 = 0, topic_9 = 0, topic_10 = 0, topic_11 = 0, topic_12 = 0, topic_13 = 0, topic_14 = 0, topic_NA = 0)) %>% 
   left_join(coords, by = "fid_fusion") %>% 
   mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
   mutate(latitude = as.numeric(str_replace_all(latitude, ",", ".")))
@@ -76,13 +83,13 @@ df = st_as_sf(df, coords = c("longitude", "latitude"), crs = 4326)
 world_map = ne_countries(scale = "medium", returnclass = "sf")
 
 # get cluster labels 
-cl_labels = read.csv("input_data/cluster_names.csv", sep = "\t")
+topic_labels = read.csv("input_data/topic_names.csv", sep = "\t")
 ```
 
-### Map (with cluster colors)
+### Map (with topic colors)
 
 ```{r def_map}
-gradient_map = function(mycluster, mylabel, col1, col2){
+gradient_map = function(mytopic, mylabel, col1, col2){
   
 world_map %>% 
     ggplot() +
@@ -90,7 +97,7 @@ world_map %>%
     geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
     # city points
     geom_sf(data = df, 
-            aes(color = !!sym(mycluster)),
+            aes(color = !!sym(mytopic)),
             size = 3) +
     #scale_color_distiller(palette = "BuPu", direction = 1) +
     scale_color_gradient(low = col1,
@@ -103,23 +110,23 @@ world_map %>%
         legend.box = "vertical") +
   labs(color = paste0("Part de la thématique\n« ", mylabel, " »\ndans le corpus (%)"))
   
-  ggsave(paste0("analysis/clusters/gradient_maps/cl_colors/map_", mycluster, ".png"), width = 4000, height = 2500, units = "px")
+  ggsave(paste0("analysis/clusters/gradient_maps/topic_colors/map_", mytopic, ".png"), width = 4000, height = 2500, units = "px")
 }
 ```
 
 ```{r run_map}
-map2(paste0("cl_", 1:14),
+map2(paste0("topic_", 1:14),
      1:14,
-     ~gradient_map(mycluster = .x,
-                   mylabel = cl_labels$name[.y],
-                   col1 = cl_labels$col_low[.y],
-                   col2 = cl_labels$col_high[.y]))
+     ~gradient_map(mytopic = .x,
+                   mylabel = topic_labels$name[.y],
+                   col1 = topic_labels$col_low[.y],
+                   col2 = topic_labels$col_high[.y]))
 ```
 
 ### Map (with uniform colors)
 
 ```{r}
-gradient_map2 = function(mycluster, mylabel){
+gradient_map2 = function(mytopic, mylabel){
   
 world_map %>% 
     ggplot() +
@@ -127,7 +134,7 @@ world_map %>%
     geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
     # city points
     geom_sf(data = df, 
-            aes(color = !!sym(mycluster)),
+            aes(color = !!sym(mytopic)),
             size = 3) +
     scale_color_distiller(palette = "GnBu", direction = 1) +
     # equal earth projection
@@ -138,11 +145,11 @@ world_map %>%
         legend.box = "vertical") +
   labs(color = paste0("Part de la thématique\n« ", mylabel, " »\ndans le corpus (%)"))
   
-  ggsave(paste0("analysis/clusters/gradient_maps/uni_colors/map_", mycluster, ".png"), width = 4000, height = 2500, units = "px")
+  ggsave(paste0("analysis/clusters/gradient_maps/uni_colors/map_", mytopic, ".png"), width = 4000, height = 2500, units = "px")
 }
 
-map2(paste0("cl_", 1:14),
+map2(paste0("topic_", 1:14),
      1:14,
-     ~gradient_map2(mycluster = .x,
-                   mylabel = cl_labels$name[.y]))
+     ~gradient_map2(mytopic = .x,
+                   mylabel = topic_labels$name[.y]))
 ```
