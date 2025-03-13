@@ -135,3 +135,96 @@ plot_typo(n_typo(read.csv("analysis/critical/abomey-calavi_oueme_FR.csv")), "ana
 plot_typo(n_typo(read.csv("analysis/critical/ufa_belaya_RU.csv")), "analysis/critical/typologie_ufa_ru.png", nrow(read.csv("analysis/critical/ufa_belaya_RU.csv")), "Requête en russe : rivière Belaya et Ufa")
 plot_typo(n_typo(read.csv("analysis/critical/ufa_belaya_EN.csv")), "analysis/critical/typologie_ufa_en.png", nrow(read.csv("analysis/critical/ufa_belaya_EN.csv")), "Requête en anglais : Belaya river and Ufa")
 ```
+
+### Bind everything
+
+```{r read_data}
+df1 = read.csv("analysis/etude_10_villes/lyon_rhone_EN.csv") %>%
+  select("snippet_from") 
+df3 = read.csv("analysis/etude_10_villes/abomey-calavi_oueme_EN.csv") %>%
+    select("snippet_from")
+df4 = read.csv("analysis/etude_10_villes/abomey-calavi_oueme_FR.csv") %>%
+    select("snippet_from")
+df5 = read.csv("analysis/etude_10_villes/ahmedabad_sabarmati_EN.csv") %>%
+    select("snippet_from")
+df6 = read.csv("analysis/etude_10_villes/ahmedabad_sabarmati_HI.csv") %>%
+    select("snippet_from")
+df7 = read.csv("analysis/etude_10_villes/denver_south-platte_EN.csv") %>%
+    select("snippet_from")
+df8 = read.csv("analysis/etude_10_villes/montreal_st-laurent_EN.csv") %>%
+    select("snippet_from")
+df9 = read.csv("analysis/etude_10_villes/montreal_st-laurent_FR.csv") %>%
+    select("snippet_from")
+df10 = read.csv("analysis/etude_10_villes/ndjamena_chari_EN.csv") %>%
+    select("snippet_from")
+df11 = read.csv("analysis/etude_10_villes/ndjamena_chari_FR.csv") %>%
+    select("snippet_from")
+df12 = read.csv("analysis/etude_10_villes/ndjamena_chari_AR.csv") %>%
+    select("snippet_from")
+df13 = read.csv("analysis/etude_10_villes/nha_trang_cai_EN.csv") %>%
+    select("snippet_from")
+df14 = read.csv("analysis/etude_10_villes/nha_trang_cai_VI.csv") %>%
+    select("snippet_from")
+df15 = read.csv("analysis/etude_10_villes/ufa_belaya_EN.csv") %>%
+    select("snippet_from")
+df16 = read.csv("analysis/etude_10_villes/ufa_belaya_RU.csv") %>%
+    select("snippet_from")
+df17 = read.csv("analysis/etude_10_villes/wuhan_yangtze_EN.csv") %>%
+    select("snippet_from")
+df18 = read.csv("analysis/etude_10_villes/wuhan_yangtze_ZH.csv") %>%
+    select("snippet_from")
+df19 = read.csv("analysis/etude_10_villes/xuanwei_beipan_EN.csv") %>%
+    select("snippet_from")
+df20 = read.csv("analysis/etude_10_villes/xuanwei_beipan_ZH.csv") %>%
+    select("snippet_from")
+
+df = df1 %>% 
+  rbind(df3) %>% 
+  rbind(df4) %>% 
+  rbind(df5) %>% 
+  rbind(df6) %>%   
+  rbind(df7) %>% 
+  rbind(df8) %>%   
+  rbind(df9) %>% 
+  rbind(df10) %>%   
+  rbind(df11) %>% 
+  rbind(df12) %>%   
+  rbind(df13) %>% 
+  rbind(df14) %>% 
+  rbind(df15) %>%
+  rbind(df16) %>%  
+  rbind(df17) %>%  
+  rbind(df18) %>%
+  rbind(df19) %>%
+  rbind(df20)
+```
+
+Plot everything:
+
+```{r}
+## PLOT
+data = df %>%
+  filter(snippet_from != "") %>% 
+  mutate(snippet_from = gsub("^\\s+|\\s+$", "", snippet_from)) %>% 
+  group_by(snippet_from) %>% 
+  count() %>% 
+  mutate(perc = n/sum(data$n)*100) %>% 
+  mutate(n = as.numeric(n)) 
+# ca veut pas se trier dans l'ordre donc je le fais à la main sur excel 
+write.csv(data, "analysis/etude_10_villes/compilation_snippets_from.csv", row.names = FALSE)
+data_sorted = read.csv("analysis/etude_10_villes/compilation_snippets_from.csv")
+
+  data_sorted %>% 
+    mutate(snippet_from = forcats::fct_reorder(snippet_from, perc)) %>% 
+    ggplot(mapping = aes(x = snippet_from,
+                         y = perc)) +
+    geom_col(position = "stack", fill = "#b3de69") +
+    coord_flip() + # flip x and y coordinates 
+    labs(x = "",
+         y = "%") +
+    theme_light() +
+    theme(legend.position = "right",
+          plot.caption.position = "plot")
+    
+  ggsave(filename = "analysis/etude_10_villes/provenance_snippets.png", width = 7, height = 3, units = "in")
+```
