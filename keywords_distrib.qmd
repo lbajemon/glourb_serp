@@ -37,7 +37,7 @@ tag.map.title = tags$style(HTML("
 ```
 
 ```{r read_corpus}
-corpus = read.csv("collected_data/combined_all_tokens.csv") 
+corpus = read.csv("collected_data/corpus_distinct.csv") 
 ```
 
 ### Major keywords
@@ -55,7 +55,7 @@ riverfronts = corpus %>%
   group_by(urban_aggl) %>% 
   # count nb of occurrences per city
   count() 
-# 196 cities mention a water/riverfront
+# 182 cities mention a water/riverfront
 # prepare dataset for representing it on a map
 data = corpus %>% 
   select(c("urban_aggl", "latitude", "longitude")) %>% 
@@ -71,12 +71,12 @@ data = corpus %>%
 data_sf = st_as_sf(data, coords = c("longitude", "latitude"), crs = 4326)
 world_map = ne_countries(scale = "medium", returnclass = "sf")
 
-map = ggplot(world_map) +
+ggplot(world_map) +
   # world map 
   geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
   # city points
   geom_sf(data = data_sf, aes(size = n), color = "#41b6c4", alpha = 0.7, show.legend = TRUE) +
-  scale_size_continuous(breaks = c(1, 5, 10, 25, 91)) +
+  scale_size_continuous(breaks = c(1, 5, 10, 25, 88)) +
   # color palette
   # equal earth projection
   coord_sf(crs = "+proj=eqearth") +
@@ -86,11 +86,12 @@ map = ggplot(world_map) +
         plot.background = element_rect(fill = "white", color = "white")) +
   # legend
   labs(size = "Nombre de mentions de 'riverfront' ou de 'waterfront'")   
+ggsave("analysis/keywords/map_riverfront.svg", width = 4000, height = 2500, units = "px")
 
 ### DIAGRAM
-diagram = data %>% 
+data %>% 
   mutate(urban_aggl = fct_reorder(urban_aggl, n)) %>% 
-  filter(n >= 8) %>% 
+  filter(n >= 12) %>% 
   ggplot(mapping = aes(x = urban_aggl, # create the plot
                       y = n)) + 
     geom_col(fill = "#41b6c4", position = "stack") +
@@ -98,10 +99,7 @@ diagram = data %>%
     labs(x = "",
          y = "") + 
     theme_bw(base_family = "CenturySch")
-
-### JOIN EVERYTHING AND SAVE
-plot_grid(map, diagram, rel_widths = c(2,1))
-ggsave("occurrence_riverfront.png", path = "analysis/riverfront/", width = 4000, height = 2500, units = "px")
+ggsave("analysis/keywords/diagram_riverfront.png", width = 750, height = 950, units = "px")
 
 ### LEAFLET MAP (Interactive)
 title = tags$div(
@@ -123,14 +121,14 @@ saveWidget(leaf, file = "occurrence_riverfront_leaflet.html")
 ```{r data_water_scarcity}
 water_scarcity = corpus %>% 
   # keep pages mentioning water scarcity/shortage
-  filter(str_detect(text_en, "water scarcity|water shortage")) %>% 
+  filter(str_detect(text_en, "water scarcity|water shortage|drought")) %>% 
   # do not keep the exact same page twice
   distinct(link, .keep_all = TRUE) %>% # 811 pages
   group_by(urban_aggl) %>% 
   # count nb of occurrences per city
   count() 
 
-# 132 cities
+# 269 cities
 
 # prepare dataset for representing it on a map
 data = corpus %>% 
@@ -147,12 +145,12 @@ data = corpus %>%
 data_sf = st_as_sf(data, coords = c("longitude", "latitude"), crs = 4326)
 world_map = ne_countries(scale = "medium", returnclass = "sf")
 
-map = ggplot(world_map) +
+ggplot(world_map) +
   # world map 
   geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
   # city points
   geom_sf(data = data_sf, aes(size = n), color = "#fdb462", alpha = 0.7, show.legend = TRUE) +
-  scale_size_area(breaks = c(2, 4, 6, 8, 10, 12), max_size = 2) +
+  scale_size_area(breaks = c(1, 5, 10, 20, 44)) +
   # color palette
   # equal earth projection
   coord_sf(crs = "+proj=eqearth") +
@@ -161,12 +159,13 @@ map = ggplot(world_map) +
   theme(legend.position = "bottom",
         plot.background = element_rect(fill = "white", color = "white")) +
   # legend
-  labs(size = "Nombre de mentions de 'water scarcity' ou de 'water shortage'")   
+  labs(size = "Nombre de mentions de 'water scarcity', 'water shortage' ou 'drought'")   
+ggsave("analysis/keywords/map_scarcity.svg", width = 4000, height = 2500, units = "px")
 
 ### DIAGRAM
-diagram = data %>% 
+data %>% 
   mutate(urban_aggl = fct_reorder(urban_aggl, n)) %>% 
-  filter(n > 3) %>% 
+  filter(n > 13) %>% 
   ggplot(mapping = aes(x = urban_aggl, # create the plot
                       y = n)) + 
     geom_col(fill = "#fdb462", position = "stack") +
@@ -174,10 +173,7 @@ diagram = data %>%
     labs(x = "",
          y = "") + 
     theme_bw(base_family = "CenturySch")
-
-### JOIN EVERYTHING AND SAVE
-plot_grid(map, diagram, rel_widths = c(2,1))
-ggsave("occurrence_water_scarcity.png", path = "analysis/keywords/", width = 4000, height = 2500, units = "px")
+ggsave("analysis/keywords/diagram_scarcity.png", width = 850, height = 950, units = "px")
 
 ### LEAFLET MAP (Interactive)
 title = tags$div(
