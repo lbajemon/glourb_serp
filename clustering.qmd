@@ -33,6 +33,8 @@ library(shiny)
 library(FactoMineR)
 library(quanteda.textplots)
 library(RColorBrewer)
+library(sf)
+library(rnaturalearth)
 set.seed(1204) # set seed to get reproductible results
 
 data_city_river = read.csv("input_data/data_city_river.csv", sep = ",") 
@@ -77,174 +79,6 @@ calc_dtm = function(tokens){
 
 ### 3. Run functions
 
-#### a. For results in English
-
-First, let's read our data, which corresponds to all the "tokenized snippets" for the queries in English (see [here](https://github.com/lbajemon/glourb_serp/blob/main/lemmatisation.qmd)). There are two different tokenized snippets for each element: one including locations (e.g. "France, "Lyon", *etc.*) and one excluding them. Through trial and error, we find that in this case it is better to exclude them from the corpus. For the calculation of the document-feature matrix, we remove features which appear in less than 10 documents and which appear less than 200 times.
-
-```{r read_data_en}
-
-# read datasets
-
-df = read.csv("collected_data/english/scrap_data_river_en.csv") %>% 
-  dplyr::rename(tokenized = tokenized_noloc) %>% # rename column
-  subset(!is.na(tokenized)) %>% # remove empty values
-  group_by(fid) %>% 
-  dplyr::mutate(n = n()) %>% # count number of snippets per city 
-  ungroup() 
-
-# read corpus
-corpus = read_corpus(df, text_field = "tokenized", docid_field = "id")
-# split the corpus in smaller segments
-corpus = split_segments(corpus, segment_size = 40)
-tokens = read_tokens(corpus)
-
-# calculate the document-feature matrix (DFM)
-dfmatrix = calc_dtm(tokens)
-
-# we suggest to try multiple number of clusters and minimum split members 
-# and choose what adapts best to your data
-dhc = rainette(dfmatrix, k = 17, min_split_members = 500)
-rainette_explor(dhc, dfmatrix, corpus)
-
-# plot the results
-plot = rainette_plot(
-  dhc, 
-  dfmatrix, 
-  17,
-  n_terms = 30,
-  free_scales = TRUE,
-  measure = "chi2",
-  show_negative = FALSE,
-  text_size = 12,
-  cluster_label = c("Santé", "Culture,\nreligion", "Politique,\ngouvernement,\nconflits", "Education", "Système d'alerte", "Mesures de qualité", "Hydrologie,\ninondation", "Académique", "Aménagement,\ngestion de la\nressource,\nenvironnement", "Pollutions,\neaux usées", "Outlier\n(commerces)", "Moyens de\ntransport", "Loisirs\naquatiques et\nnautiques", "Tourisme,\nloisirs,\nespaces verts", "Hydrographie,\nlocalisation", "Météo", "Outlier\n(images)"), 
-  colors = big_palette
-)
-ggsave("analysis/clusters/clusters_en_17.png", plot, width = 500, height = 250, units = "mm", limitsize = FALSE)
-
-  # write class of the doc according to the clustering
-  corpus$cluster = cutree(dhc, 17)
-  # create a df indicating the cluster for each doc 
-  docvar = docvars(corpus) %>% 
-    mutate(id = paste0(fid, "_", position)) %>% 
-    # seg_id: unique identifier of each segment 
-    subset(select = -c(1:(ncol(docvars(corpus))-1)))
-  # join with our original dataset
-  df_clusters = df %>% 
-    left_join(docvar, by = "id", keep = FALSE)
-  
-  write.csv(df_clusters, "analysis/clusters/clusters_en_17.csv", row.names = FALSE)
-```
-
-#### b. For results in the first local language
-
-Like for the English results, there are two different tokenized snippets for each element: one including locations (e.g. "France, "Lyon", *etc.*) and one excluding them. We find that excluding locations works better, because it eliminates the outliers. For the calculation of the document-feature matrix, we remove features which appear in less than 10 documents and which appear less than 200 times.
-
-```{r read_data_hl1}
-df_noloc = read.csv("collected_data/hl/df_scrap_tokens_hl1.csv") %>%
-  dplyr::rename(id = snippet_id) %>% # rename doc id 
-  select(-"tokenized_text") %>% 
-  dplyr::rename(tokenized = tokenized_noloc) %>% 
-  subset(!is.na(tokenized)) %>%  # remove empty values
-  group_by(fid) %>% 
-  dplyr::mutate(n = n()) %>% # count number of snippets per city 
-  ungroup() 
-corpus_noloc = read_corpus(df_noloc, text_field = "tokenized", docid_field = "id")
-corpus_noloc = split_segments(corpus_noloc, segment_size = 40)
-tokens_noloc = read_tokens(corpus_noloc)
-
-dfmatrix_noloc = calc_dtm(tokens_noloc)
-
-# Like for the English results 
-# try multiple numbers of clusters
-dhc_noloc = rainette(dfmatrix_noloc, k = 20, min_split_members = 500)
-rainette_explor(dhc_noloc, dfmatrix_noloc, corpus_noloc)
-```
-
-Like for the English results, we will apply two clusterisations: one with 17 clusters and one with 8 clusters.
-
-```{r 17_clusters_hl1}
-dhc = rainette(dfmatrix_noloc, k = 17, min_split_members = 500)
-rainette_explor(dhc, dfmatrix_noloc, corpus_noloc)
-
-# plot the results
-plot = rainette_plot(
-  dhc, 
-  dfmatrix_noloc, 
-  17,
-  n_terms = 30,
-  free_scales = TRUE,
-  measure = "chi2",
-  show_negative = FALSE,
-  text_size = 12,
-  cluster_label = c("Inondation", "Ouvrages\nhydrauliques", "Hydrographie", "Météo", "Tourisme,\nloisirs,\nespaces verts",  "Navigation,\nmoyens de\ntransports", "Biodiversité,\npêche", "Noyade,\nvictimes", "Culture,\nmusées", "Armée,\nguerre", "Système\nd'alerte", "Industrie", "Projet\nd'aménagement", "Pollution,\ntraitement des\neaux usées", "Education", "Gouvernement", "Archive,\ninternet"), 
-  colors = big_palette
-)
-ggsave("analysis/clusters/clusters_hl1_17.png", plot, width = 500, height = 250, units = "mm", limitsize = FALSE)
-
-  # write class of the doc according to the clustering
-  corpus_noloc$cluster = cutree(dhc, 17)
-  # create a df indicating the cluster for each doc 
-  docvar = docvars(corpus_noloc) %>% 
-    mutate(id = paste0(fid, "_", position)) %>% 
-    # seg_id: unique identifier of each segment 
-    subset(select = -c(1:(ncol(docvars(corpus_noloc))-1)))
-```
-
-```{r 8_clusters_hl1}
-dhc = rainette(dfmatrix_noloc, k = 8, min_split_members = 500)
-rainette_explor(dhc, dfmatrix_noloc, corpus_noloc)
-
-# plot the results
-plot = rainette_plot(
-  dhc, 
-  dfmatrix_noloc, 
-  8,
-  n_terms = 30,
-  free_scales = TRUE,
-  measure = "chi2",
-  show_negative = FALSE,
-  text_size = 12,
-  cluster_label = c("Système\nd'alerte", "Hydrographie,\ninondation", "Armée,\nguerre", "Tourisme,\nloisirs,\nnavigation", "Droit", "Projet\nd'aménagement,\npollution", "Gouvernement,\ninstitutions", "Industrie"), 
-  colors = big_palette
-)
-ggsave("analysis/clusters/clusters_hl1_8.png", plot, width = 500, height = 250, units = "mm", limitsize = FALSE)
-```
-
-#### c. For results in all local languages
-
-Now we will apply a clustering to all the results found from the queries in all local languages (up to 6 per city).
-
-```{r read_data_hl}
-df_loc = read.csv("collected_data/hl/df_tokenized_all.csv") %>% 
-  dplyr::rename(seg_id = snippet_id) %>% # rename doc id 
-  group_by(fid) %>% 
-  dplyr::mutate(n = n()) %>% # count number of snippets per city 
-  ungroup() %>% 
-  subset(!is.na(tokenized)) # remove empty values
-df_noloc = read.csv("collected_data/hl/df_tokenized_all.csv") %>%
-  dplyr::rename(seg_id = snippet_id) %>% # rename doc id 
-  group_by(fid) %>% 
-  dplyr::mutate(n = n()) %>% # count number of snippets per city 
-  ungroup() %>% 
-  subset(!is.na(tokenized_noloc)) # remove empty values
-
-corpus_loc = read_corpus(df_loc, text_field = "tokenized", docid_field = "seg_id")
-tokens_loc = read_tokens(corpus_loc)
-corpus_noloc = read_corpus(df_noloc, text_field = "tokenized_noloc", docid_field = "seg_id")
-tokens_noloc = read_tokens(corpus_noloc)
-
-dfmatrix_loc = calc_dtm(tokens_loc)
-dfmatrix_noloc = calc_dtm(tokens_noloc)
-
-# try multiple numbers of clusters and choose the best one
-dhc_loc = rainette(dfmatrix_loc, k = 20, min_split_members = 500)
-rainette_explor(dhc_loc, dfmatrix_loc, corpus_loc)
-dhc_noloc = rainette(dfmatrix_noloc, k = 20, min_split_members = 500)
-rainette_explor(dhc_noloc, dfmatrix_noloc, corpus_noloc)
-```
-
-#### d. For results in English and in all local languages (i.e. everything combined)
-
 ```{r all_data}
 df = read.csv("collected_data/corpus_distinct.csv") %>% 
   dplyr::rename(tokenized = tokenized_noloc) %>% # rename column
@@ -272,14 +106,15 @@ plot_en = rainette_plot(
   dhc, 
   dfmatrix, 
   14,
-  n_terms = 30,
+  n_terms = 20,
   free_scales = TRUE,
   measure = "chi2",
   show_negative = FALSE,
-  text_size = 12,
-  cluster_label = c("Health", "Government\nand conflicts", "University,\nhistory,\nreligion", "Daily life,\nnews items", "Tourism,\ntravel",  "Heritage,\nattractions", "Urban\n infrastructure\nand geography", "Online images,\nweb content", "Planning,\nmanagement,\nenvironment", "Pollution,\nsewerage", "Chemical and\nphysical\nparameters", "Alert system", "Floods", "Hydrography"),
+  text_size = 14,
+  cluster_label = c("Health", "Politics\nand conflicts", "University,\nhistory,\nreligion", "Daily life,\nnews items", "Tourism,\ntravel",  "Heritage,\nattractions", "Urban\n infrastructure\nand geography", "Online images,\nweb content", "Planning,\nmanagement,\nenvironment", "Pollution,\nsewerage", "Chemical and\nphysical\nparameters", "Alert system", "Floods", "Hydrography"),
   colors = c("#eac1f7","#fdb462", "#9e0142", "#f781bf", "#bc80bd" , "#bf812d" , "#f7bfbe", "#adadad","#b3de69", "#ffd92f","#8dd3c7", "#fb8072", "#bebada", "#80b1d3")
 )
+ggsave("analysis/clusters/clusters_article.svg", plot_en, width = 500, height = 250, units = "mm", limitsize = FALSE)
 ggsave("analysis/clusters/clusters_all_14_en.png", plot_en, width = 500, height = 250, units = "mm", limitsize = FALSE)
 
 plot_fr = rainette_plot(
@@ -296,6 +131,56 @@ plot_fr = rainette_plot(
   colors = c("#eac1f7","#fdb462", "#9e0142", "#f781bf", "#bc80bd" , "#bf812d" , "#f7bfbe", "#adadad","#b3de69", "#ffd92f","#8dd3c7", "#fb8072", "#bebada", "#80b1d3")
 )
 ggsave("analysis/clusters/clusters_all_14_fr.png", plot_fr, width = 500, height = 250, units = "mm", limitsize = FALSE)
+
+### 4 topics
+plot_en = rainette_plot(
+  dhc, 
+  dfmatrix, 
+  4,
+  n_terms = 20,
+  free_scales = TRUE,
+  measure = "chi2",
+  show_negative = FALSE,
+  text_size = 15,
+  cluster_label = c("Politics", "Leisure", "Water quality", "Water quantity"),
+  colors = c("#fdb462", "#f781bf", "#b3de69", "#8dd3c7")
+)
+ggsave("analysis/clusters/clusters_4_article.svg", plot_en, width = 500, height = 200, units = "mm", limitsize = FALSE)
+ggsave("analysis/clusters/clusters_4.png", plot_en, width = 500, height = 250, units = "mm", limitsize = FALSE)
+```
+
+#### A topic per document
+
+```{r}
+# write topics according to classification 
+corpus$topic = cutree(dhc, 14)
+# and turn it into a df, keep only two variables for the specificity calculation
+corpus_df = convert(corpus, to = "data.frame") %>% 
+  select(c("segment_source", "topic")) %>% 
+  mutate(top = paste0("_", topic))
+
+# now calculate get the most specific cluster for each document
+spec_doc = tidy_specificities(corpus_df, segment_source, cl) %>% 
+# keep only the biggest value for each document
+  group_by(segment_source) %>% 
+  filter(spec == max(spec)) %>% 
+  ungroup() 
+# if the specificity is < 2, then it is not significant. Then we will keep the cluster which is the largest.
+# if the document contains only one segment, then its cluster doesn't require any calculation. 
+max_doc = corpus_df %>% 
+  group_by(cl, segment_source) %>% 
+  dplyr::summarise(count = n(), .groups = "drop") %>% 
+  group_by(segment_source) %>% 
+  filter(count == max(count))
+max_doc = dplyr::rename(max_doc, cl_max = cl)
+max_doc = dplyr::rename(max_doc, count_max = count)
+
+spec = spec_doc %>% 
+  left_join(max_doc, by = "segment_source") %>% 
+  mutate(cluster = case_when(n == 1 ~ cl_max,
+                        spec < 2 ~ cl_max,
+                        TRUE ~ cl)) 
+# Note: a document can have two clusters. This happens when there is an equality (for example if two segments fall in cluster 1 and two segments fall in cluster 2, the document will be cluster 1 AND 2)
 ```
 
 ### 4. Plot specificities
@@ -315,26 +200,27 @@ We will use the resulting clusters and calculate their specificites, i.e. in whi
 
 ```{r spec}
 # write clusters on the corpus
-corpus$cluster = cutree(dhc, 14)
+corpus$topic = cutree(dhc, 14)
 # and turn it into a df
 corpus_segments_df = convert(corpus, to = "data.frame")
 # simplify the dataframe
 corpus_segments_df = corpus_segments_df %>% 
-  select(c("text", "fid", "link", "segment_source", "text_en", "cluster")) %>% 
-  mutate(cl = paste0("cl_", cluster))
+  select(c("text", "fid", "link", "segment_source", "text_en", "topic", "hl", "query")) %>% 
+  mutate(cl = paste0("topic_", topic))
 
 # the file is too big so we will divide it by city
 docvar_city = function(fid_city){
-  if(!file.exists(glue::glue("analysis/clusters/clusters_city/clusters_{fid_city}.csv"))){
+  if(!file.exists(glue::glue("analysis/clusters/topic_city/topics_{fid_city}.csv"))){
   df_city = corpus_segments_df %>% 
     filter(fid == fid_city) 
   print(fid_city)
-  write.csv(df_city, glue::glue("analysis/clusters/clusters_city/clusters_{fid_city}.csv"), row.names = FALSE)
+  write.csv(df_city, glue::glue("analysis/clusters/topic_city/topics_{fid_city}.csv"), row.names = FALSE)
   }
 }
-# run the function
+# rename column
 data_city_river = data_city_river %>% 
   rename("fid_city" = "fid")
+# run the function 
 data_city_river %>% 
   mutate(data = purrr::map(fid_city, docvar_city))
 
@@ -351,30 +237,6 @@ docvar_cl = function(i){
     docvar_cl(i)
     print(i)
   }
-```
-
-```{r}
- library(mixr)
-    lexicon_en = get_lexicon("en")
-    wp_segments = petit_corpus %>%
-    tidytext::unnest_tokens(output="word",input="text",token="words") %>%
-    left_join(lexicon_en,by=c("word")) #%>%
-    mutate(keep=(type!="sw" & lemma!="flood")) %>% 
-    group_by(flood,article) %>%
-    mutate(lemma=case_when(is.na(lemma)|(!keep)~"",
-                           TRUE~lemma)) %>% 
-    mutate(keep=as.numeric(keep)) %>% 
-    mutate(num_lemma=case_when(is.na(keep)~0,
-                     TRUE~keep)) %>% 
-    mutate(num_lemma=cumsum(num_lemma)) %>% 
-    mutate(num_segment=ceiling(num_lemma/10+0.000001)) %>% 
-    ungroup() #%>% 
-    group_by(flood,article,num_segment) %>% 
-    summarise(text_all=paste0(word, collapse=" "),
-              text_sig=paste0(lemma,collapse=" "),
-              .groups="drop") %>% 
-    mutate(num_segment=paste0(article,"_",num_segment)) %>% 
-    mutate(text_sig_dontkeep=text_sig)
 ```
 
 ```{r}
@@ -451,159 +313,109 @@ for(i in 1:14){ # 14 corresponds to the number of clusters
 }
 ```
 
-### 5. Summary of one web page and typologies
+#### Map specificity
 
-We will now summarise the information of the corpus, so that for each web page we obtain a unique cluster. To do that, we will calculate the specifity of the clusters.
+##### 14 clusters
 
 ```{r}
-# retrieve full corpus
-corpus$cluster = cutree(dhc, 14)
-# and turn it into a df, keep only two variables for the specificity calculation
-corpus_df = convert(corpus, to = "data.frame") %>% 
-  select(c("segment_source", "cluster")) %>% 
-  mutate(cl = paste0("cl_", cluster))
+world_map = ne_countries(scale = "medium", returnclass = "sf")
+topic_names = read.csv("input_data/topic_names.csv", sep = ",") %>% 
+  select(c("topic", "name", "couleur"))
+coords = data_city_river %>% 
+  select(c("fid", "latitude", "longitude")) %>% 
+  mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) 
 
-# now calculate get the most specific cluster for each document
-spec_doc = tidy_specificities(corpus_df, segment_source, cl) %>% 
-# keep only the biggest value for each document
-  group_by(segment_source) %>% 
+# write clusters on the corpus
+corpus$topic = cutree(dhc, 14)
+# and turn it into a df
+corpus_segments_df = convert(corpus, to = "data.frame")
+# simplify the dataframe
+corpus_segments_df = corpus_segments_df %>% 
+  select(c("text", "fid", "link", "segment_source", "text_en", "topic", "hl", "query")) %>% 
+  mutate(topic = paste0("topic_", topic))
+
+spec_city = tidy_specificities(corpus_segments_df, fid, topic) %>% 
+  # values above 2 are significant (=< 1% probability)
+  filter(spec >= 2) %>% 
+  group_by(fid) %>% 
   filter(spec == max(spec)) %>% 
-  ungroup() 
-# if the specificity is < 2, then it is not significant. Then we will keep the cluster which is the largest.
-# if the document contains only one segment, then its cluster doesn't require any calculation. 
-max_doc = corpus_df %>% 
-  group_by(cl, segment_source) %>% 
-  dplyr::summarise(count = n(), .groups = "drop") %>% 
-  group_by(segment_source) %>% 
-  filter(count == max(count))
-max_doc = dplyr::rename(max_doc, cl_max = cl)
-max_doc = dplyr::rename(max_doc, count_max = count)
+  filter(n == max(n)) %>% 
+  ungroup() %>% 
+  left_join(coords, by = "fid") %>% 
+  left_join(topic_names, by = "topic")
 
-spec = spec_doc %>% 
-  left_join(max_doc, by = "segment_source") %>% 
-  mutate(cluster = case_when(n == 1 ~ cl_max,
-                        spec < 2 ~ cl_max,
-                        TRUE ~ cl)) 
-# Note: a document can have two clusters. This happens when there is an equality (for example if two segments fall in cluster 1 and two segments fall in cluster 2, the document will be cluster 1 AND 2)
-```
+# map
+ df = st_as_sf(spec_city, coords = c("longitude", "latitude"), crs = 4326)
+ df_coords = cbind(df, st_coordinates(df))
 
-Join everything:
+ col_vec = setNames(df$couleur, df$name)
 
-```{r join}
-# corpus
-corpus$cluster = cutree(dhc, 14)
-# and turn it into a df, keep only two variables for the specificity calculation
-corpus_df = convert(corpus, to = "data.frame") %>% 
-  select(c("segment_source", "cluster")) %>% 
-  mutate(cl = paste0("cl_", cluster))
-
-# Retrieve the dataset with website typology
-df = read.csv("analysis/typology_websites/corpus_website_type.csv") 
-typo = df %>% select(c("id", "type"))
-
-# retrieve cluster names
-cluster_names = read.csv("input_data/cluster_names.csv", sep = "\t")
-
-# join everything
-results = corpus_df %>% 
-  left_join(df, by = join_by(segment_source == id))
-
-# summarise the results
-res = results %>% 
-  group_by(type, cl) %>% 
-  dplyr::summarise(count = n(), .groups = "drop") %>% 
-  left_join(cluster_names, by = "cl") %>% 
-  group_by(type) %>% 
-  mutate(perc = count/sum(count)*100) %>% 
-  ungroup() 
-write.csv(res, "analysis/typology_websites/summary_typology_website_by_cluster.csv")
-
-res_clusters = res %>% 
-  # remove websites for which the type has not been identified
-  filter(!is.na(type)) %>% 
-  group_by(cl) %>% 
-  mutate(perc_cl = count/sum(count)*100) %>% 
-  ungroup()
-```
-
-#### Plot the results
-
-##### Cluster by website
-
-First, let's plot for each website type the distribution of the topics. For example, websites of "academic and scientific" type speak mostly about quality measurements, floods, pollution.
-
-```{r plot_typology_website}
-plot_website = function(type_site){
-plot = res %>%
-  filter(type == type_site) %>% 
-  ggplot(aes(x = fct_reorder(name, perc), 
-             y = perc, 
-             fill = name)) + 
-  geom_bar(stat = "identity", 
-           position = position_dodge(width = 0.9), 
-           width = 0.8, 
-           show.legend = FALSE) +
-  scale_fill_manual(values = setNames(res$couleur, res$name)) +
-  coord_flip() + 
-  labs(x = NULL,
-       y = "%",
-       title = paste0("Répartition des thèmes abordés sur les sites\nde type « ", type_site, " »")) +
-  theme_bw(base_family = "CenturySch", 
-           base_size = 13)
+  world_map %>% 
+    ggplot() +
+    # world map 
+    geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+    # data points
+    geom_sf(data = df, aes(color = name), size = 2) +
+    scale_color_manual(values = col_vec) +
+    # equal earth projection
+    coord_sf(crs = "+proj=eqearth") +
+    # theme
+    theme_void() +
+    theme(legend.position = "bottom")
   
-  nom_fichier = str_split(type_site, ",", simplify = TRUE)[,1]
-  ggsave(plot, filename = glue::glue("analysis/typology_websites/clusters_by_website/{nom_fichier}.png"), width = 20, height = 15, units = "cm")
-  }
+  ggsave(paste0("analysis/clusters/specificite_14.svg"), width = 380, height = 200, units = "mm", limitsize = FALSE)
 ```
 
-Run the function
+##### 4 clusters
 
-```{r run_typology_website}
-list_websites = res %>% 
-  distinct(type)
+```{r}
+world_map = ne_countries(scale = "medium", returnclass = "sf")
+topic_names = read.csv("input_data/topic_names4.csv") %>% 
+  select(c("topic", "name", "col"))
+coords = data_city_river %>% 
+  select(c("fid", "latitude", "longitude")) %>% 
+  mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) 
 
-list_websites %>% 
-  mutate(data = purrr::map(type, plot_website))
-```
+# write clusters on the corpus
+corpus$topic = cutree(dhc, 4)
+# and turn it into a df
+corpus_segments_df = convert(corpus, to = "data.frame")
+# simplify the dataframe
+corpus_segments_df = corpus_segments_df %>% 
+  select(c("text", "fid", "link", "segment_source", "text_en", "topic", "hl", "query")) %>% 
+  mutate(topic = paste0("topic_", topic))
 
-##### Website by cluster
+spec_city = tidy_specificities(corpus_segments_df, fid, topic) %>% 
+  # values above 2 are significant (=< 1% probability)
+  filter(spec >= 2) %>% 
+  group_by(fid) %>% 
+  filter(spec == max(spec)) %>% 
+  filter(n == max(n)) %>% 
+  ungroup() %>% 
+  left_join(coords, by = "fid") %>% 
+  left_join(topic_names, by = "topic")
 
-Now, let's plot for each cluster the distribution of the website types. For example, for the topic "planning and environment", the websites are mostly institutional.
+# map
+ df = st_as_sf(spec_city, coords = c("longitude", "latitude"), crs = 4326)
+ df_coords = cbind(df, st_coordinates(df))
 
-```{r plot_typology_cluster}
-plot_cluster = function(nom, cluster, color){
-plot = res_clusters %>%
-  filter(cl == cluster) %>% 
-  ggplot(aes(x = fct_reorder(type, perc_cl), 
-             y = perc_cl)) + 
-  geom_bar(fill = color,
-           stat = "identity", 
-           position = position_dodge(width = 0.9), 
-           width = 0.8, 
-           show.legend = FALSE) +
-  coord_flip() + 
-  labs(x = NULL,
-       y = "%",
-       title = paste0("Répartition des types de site web qui abordent\nle thème « ", nom, " »")) +
-  theme_bw(base_family = "CenturySch", 
-           base_size = 13)
+ col_vec = setNames(df$col, df$name)
+
+  world_map %>% 
+    ggplot() +
+    # world map 
+    geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+    # data points
+    geom_sf(data = df, aes(color = name,
+                           size = spec), alpha = 0.7) +
+    scale_color_manual(values = col_vec) +
+    # equal earth projection
+    coord_sf(crs = "+proj=eqearth") +
+    # theme
+    theme_void() +
+    theme(legend.position = "bottom")
   
-  nom_fichier = str_split(nom, ",", simplify = TRUE)[,1]
-  ggsave(plot, filename = glue::glue("analysis/typology_websites/websites_by_cluster/{nom_fichier}.png"), width = 20, height = 15, units = "cm")
-  }
-```
-
-Run the function:
-
-```{r run_clusters}
-list_clusters = res %>% 
-  distinct(cl, .keep_all = TRUE) %>% 
-  select(c("cl", "name", "couleur")) %>% 
-  filter(!is.na(name))
-
-list_clusters %>% 
-  mutate(data = purrr::pmap(list(nom = name,
-                                 cluster = cl,
-                                 color = couleur),
-                            plot_cluster))
+ggsave("analysis/clusters/specificite_4.svg", width = 380, height = 200, units = "mm", limitsize = FALSE)
 ```
