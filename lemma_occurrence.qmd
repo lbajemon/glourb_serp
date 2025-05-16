@@ -178,7 +178,6 @@ It's basically the same process as for the query in English:
 ```{r def_get_words_hl}
 get_words_hl = function(fid, cityname, rivername, hl){
   
-  if(!file.exists(glue::glue("analysis/occurrence/hl/lemma_occ/word_{fid}_{hl}.csv"))){
   if(file.exists(glue::glue("collected_data/hl/scrap_tokens/tokens_{fid}_{hl}.csv"))){
   ## First, get dataframe with results
   df = read.csv(glue::glue("collected_data/hl/scrap_tokens/tokens_{fid}_{hl}.csv")) 
@@ -246,7 +245,6 @@ get_words_hl = function(fid, cityname, rivername, hl){
   else {
     print("no data")
     }
-  }
 }
 ```
 
@@ -299,7 +297,7 @@ show_results = function(fid, ville, riviere){
     theme_bw(base_family = "CenturySch")
 
   # save the plot
-  ggsave(filename = paste("plot_", fid, ".png"), plot = myplot, path = "analysis/occurrence/english/plots/", width = 20, height = 12, units = "cm")
+  ggsave(filename = paste0("plot_", fid, ".png"), plot = myplot, path = "analysis/occurrence/english/plots/", width = 20, height = 12, units = "cm")
   return()
 } 
 ```
@@ -323,7 +321,6 @@ show_results_hl = function(fid, ville, riviere, hl){
   language = data_language[data_language["code"] == hl, 1]
   
   # if the file already exists, the function is not executed
-  if(!file.exists(glue::glue("analysis/occurrence/hl/plots/plot_{fid}_{hl}.png"))){
     if(file.exists(glue::glue("analysis/occurrence/hl/lemma_occ/word_{fid}_{hl}.csv"))) {
     
   # read the data
@@ -347,11 +344,10 @@ show_results_hl = function(fid, ville, riviere, hl){
     ) + 
     theme_bw(base_family = "CenturySch")
 
-  ggsave(filename = paste0("plot_", fid, "_", hl, ".png"), plot = myplot, path = "analysis/occurrence/hl/plots/", width = 20, height = 12, units = "cm")
+  ggsave(filename = paste0("plot_",fid,"_", hl,".png"), plot = myplot, path = "analysis/occurrence/hl/plots/", width = 20, height = 12, units = "cm")
 
   return()
     } 
-  }
 }
 ```
 
