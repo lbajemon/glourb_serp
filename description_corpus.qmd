@@ -317,7 +317,7 @@ theme_wiki = corpus_df %>%
                    couleur=NA,
                    col_high = NA,
                    col_low = NA)) %>% 
-  mutate(perc = nb/sum(theme_wiki$nb)*100) 
+  mutate(perc = nb/sum(nb)*100) 
 
 write.csv(theme_wiki, "analysis/description_corpus/corpus_wikipedia_mondes_lexicaux.csv")
 

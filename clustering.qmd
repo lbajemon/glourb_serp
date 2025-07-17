@@ -40,11 +40,6 @@ set.seed(1204) # set seed to get reproductible results
 data_city_river = read.csv("input_data/data_city_river.csv", sep = ",") 
 ```
 
-```{r def_palette}
-# def palette
-big_palette = c("#8dd3c7", "#fdb462", "#bebada", "#ffed6f","#b3de69", "#bf812d", "#d9d9d9",  "#fccde5", "#bc80bd", "#80b1d3","#ccebc5","#9e0142", "#fb8072", "#f781bf", "#969696")
-```
-
 ### 1. Read corpus
 
 First, let's import our dataset and convert it to a corpus using the quanteda package:
@@ -111,11 +106,24 @@ plot_en = rainette_plot(
   measure = "chi2",
   show_negative = FALSE,
   text_size = 14,
-  cluster_label = c("Health", "Politics\nand conflicts", "University,\nhistory,\nreligion", "Daily life,\nnews items", "Tourism,\ntravel",  "Heritage,\nattractions", "Urban\n infrastructure\nand geography", "Online images,\nweb content", "Planning,\nmanagement,\nenvironment", "Pollution,\nsewerage", "Chemical and\nphysical\nparameters", "Alert system", "Floods", "Hydrography"),
+  cluster_label = c("Health", "Politics,\nconflicts", "Culture,\nknowledge", "Daily life,\nnews items", "Tourism,\ntravel",  "Heritage,\nattractions", "Urban\n infrastructure\nand geography", "Online images,\nweb content", "Planning,\nmanagement,\nenvironment", "Pollution,\nsewerage", "Physico-chemical\n parameters", "Alert system", "Floods", "Hydrography"),
   colors = c("#eac1f7","#fdb462", "#9e0142", "#f781bf", "#bc80bd" , "#bf812d" , "#f7bfbe", "#adadad","#b3de69", "#ffd92f","#8dd3c7", "#fb8072", "#bebada", "#80b1d3")
 )
-ggsave("analysis/clusters/clusters_article.svg", plot_en, width = 500, height = 250, units = "mm", limitsize = FALSE)
 ggsave("analysis/clusters/clusters_all_14_en.png", plot_en, width = 500, height = 250, units = "mm", limitsize = FALSE)
+
+plot_en = rainette_plot(
+  dhc, 
+  dfmatrix, 
+  14,
+  n_terms = 20,
+  free_scales = TRUE,
+  measure = "chi2",
+  show_negative = FALSE,
+  text_size = 14,
+  cluster_label = c("Health", "Politics,\nconflicts", "Culture,\nknowledge", "Daily life,\nnews items", "Tourism,\ntravel",  "Heritage,\nattractions", "Urban\n infrastructure\nand geography", "Online images,\nweb content", "Planning,\nmanagement,\nenvironment", "Pollution,\nsewerage", "Physico-\nchemical\n parameters", "Alert system", "Floods", "Hydrography"),
+  colors = c("black","black", "black","black", "black","black", "black","black","black","black","black","black","black","black")
+)
+ggsave("analysis/clusters/clusters_article.svg", plot_en, width = 500, height = 250, units = "mm", limitsize = FALSE)
 
 plot_fr = rainette_plot(
   dhc, 
@@ -126,7 +134,7 @@ plot_fr = rainette_plot(
   measure = "chi2",
   show_negative = FALSE,
   text_size = 12,
-  cluster_label = c("Santé", "Gouvernement\net conflits", "Université,\nhistoire,\nreligion", "Vie quotidienne,\nfaits divers", "Tourisme,\nvoyage", "Patrimoine,\nattractions", "Infrastructures\net géographie\nurbaines", "Banques d'images,\ncontenu web", "Aménagement,\ngestion,\nenvironnement", "Pollution,\ntraitement des\neaux usées","Paramètres\nchimiques\net physiques", "Système\nd'alerte", "Inondations", "Hydrographie")
+  cluster_label = c("Santé", "Gouvernement,\n conflits", "Culture,\nconnaissances", "Vie quotidienne,\nfaits divers", "Tourisme,\nvoyage", "Patrimoine,\nattractions", "Infrastructures\net géographie\nurbaines", "Banques d'images,\ncontenu web", "Aménagement,\ngestion,\nenvironnement", "Pollution,\ntraitement des\neaux usées","Paramètres\nphysico-\nchimiques", "Système\nd'alerte", "Inondations", "Hydrographie")
 ,
   colors = c("#eac1f7","#fdb462", "#9e0142", "#f781bf", "#bc80bd" , "#bf812d" , "#f7bfbe", "#adadad","#b3de69", "#ffd92f","#8dd3c7", "#fb8072", "#bebada", "#80b1d3")
 )

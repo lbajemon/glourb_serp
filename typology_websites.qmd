@@ -322,7 +322,7 @@ write.csv(compile_hl, "analysis/typology_websites/wikidata_hl.csv")
 We will use the data collected beforehand to add it to our SERP results. We consider that the most trustworthy types are the ones obtained from the ranking and from the analysis by hand, because the types have been determined manually. The less trustworthy results are the one obtained from the Wikidata queries, because they have been determined semi-automatically, and are therefore more subject to errors.
 
 ```{r retrieve_data}
-data = read.csv("collected_data/combined_all_tokens.csv")
+data = read.csv("collected_data/corpus_distinct.csv")
 
 # the wikidata results are checked by hand
 wiki_data_en = read.csv("analysis/typology_websites/wikidata_en_checked.csv") %>% 
@@ -387,10 +387,20 @@ df = data %>%
     str_detect(domain, ".org") & is.na(type) ~ "associatif",
     TRUE ~ type)) 
 
+df_non_na = df %>% 
+    filter(!is.na(tokenized_text))
+
 nb_id = df %>% 
-  filter(!is.na(type))
+  filter(!is.na(type)) %>% 
+  filter(!is.na(tokenized_text))
+non_id = df %>% 
+  filter(is.na(type)) %>% 
+  select("link") %>% 
+  group_by(link) %>% 
+  distinct()
 
 write.csv(df, "analysis/typology_websites/corpus_website_types.csv")
+write.csv(df_non_na, "analysis/typology_websites/corpus_distinct_website_types.csv")
 ```
 
 ### Plots
@@ -420,7 +430,7 @@ df_plot %>%
        y = NULL,
        fill = "Langue de requête",
        title = "Les types de sites web du corpus",
-       subtitle = "N = 42622") +
+       subtitle = "N = 30,289") +
   theme_bw()
 ggsave("analysis/typology_websites/types_sites.png", width = 20, height = 10, units = "cm")
 ```

@@ -233,3 +233,9 @@ df %>%
   theme(legend.position = "none") 
 ggsave(filename = "analysis/typology_cities/facet_wrap.png", width = 30, height = 25, units = "cm")
 ```
+
+```{r}
+typo=read.csv("analysis/typology_websites/corpus_website_types.csv")
+edu = typo %>% 
+  filter(type=="éducatif")
+```
