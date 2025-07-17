@@ -1,0 +1,246 @@
+---
+title: "correlation_typology_topic"
+format: html
+editor: visual
+---
+
+```{r}
+library(quanteda)
+library(rainette)
+library(tidyverse)
+```
+
+### Summary of one web page and typologies
+
+We will now summarise the information of the corpus, so that for each web page we obtain a unique cluster. To do that, we will calculate the specifity of the clusters.
+
+#### Retrieve and prepare data
+
+```{r}
+# retrieve full corpus
+df = read.csv("collected_data/corpus_distinct.csv") %>% 
+  dplyr::rename(tokenized = tokenized_noloc) %>% # rename column
+  subset(!is.na(tokenized))
+
+corpus = quanteda::corpus(df, docid_field = "id", text_field = "tokenized")
+corpus = split_segments(corpus, segment_size = 40)
+tok = tokens(corpus, remove_punct = TRUE, remove_numbers = TRUE, remove_symbols = TRUE, remove_url = TRUE, split_hyphens = TRUE)
+dfmatrix = dfm(tok, remove_padding = TRUE) 
+dfmatrix = dfm_trim(dfmatrix, min_docfreq = 10, min_termfreq = 200)
+dhc = readRDS("analysis/clusters/dhc_all.rds") # the classification was already calculated
+```
+
+#### Join everything:
+
+```{r join}
+# corpus
+corpus$cluster = cutree(dhc, 14)
+# and turn it into a df, keep only two variables for the specificity calculation
+corpus_df = convert(corpus, to = "data.frame") %>% 
+  select(c("segment_source", "cluster")) %>% 
+  mutate(topic = paste0("topic_", cluster))
+
+# Retrieve the dataset with website typology
+df = read.csv("analysis/typology_websites/corpus_distinct_website_types.csv") 
+typo = df %>% 
+  select(c("id", "type")) %>% 
+  mutate(type = trimws(type, "both"))
+
+# retrieve cluster names
+topic_names = read.csv("input_data/topic_names.csv")
+
+# join everything
+results = corpus_df %>% 
+  left_join(typo, by = join_by(segment_source == id))
+
+# summarise the results
+res = results %>% 
+  group_by(type, topic) %>% 
+  dplyr::summarise(count = n(), .groups = "drop") %>% 
+  left_join(topic_names, by = "topic") %>% 
+  group_by(type) %>% 
+  mutate(perc = count/sum(count)*100) %>% 
+  ungroup() 
+write.csv(res, "analysis/typology_websites/summary_typology_website_by_cluster.csv")
+
+res_clusters = res %>% 
+  # remove websites for which the type has not been identified
+  filter(!is.na(type)) %>% 
+  group_by(topic) %>% 
+  mutate(perc_cl = count/sum(count)*100) %>% 
+  ungroup()
+```
+
+#### Plot results
+
+##### Topic by website
+
+First, let's plot for each website type the distribution of the topics. For example, websites of "academic and scientific" type speak mostly about quality measurements, floods, pollution.
+
+```{r plot_typology_website}
+plot_website = function(type_site){
+plot = res %>%
+  filter(type == type_site) %>% 
+  ggplot(aes(x = fct_reorder(name, perc), 
+             y = perc, 
+             fill = name)) + 
+  geom_bar(stat = "identity", 
+           position = position_dodge(width = 0.9), 
+           width = 0.8, 
+           show.legend = FALSE) +
+  scale_fill_manual(values = setNames(res$couleur, res$name)) +
+  coord_flip() + 
+  labs(x = NULL,
+       y = "%",
+       title = paste0("Répartition des thèmes abordés sur les sites\nde type « ", type_site, " »")) +
+  theme_bw(base_family = "CenturySch", 
+           base_size = 13)
+  
+  nom_fichier = str_split(type_site, ",", simplify = TRUE)[,1]
+  ggsave(plot, filename = glue::glue("analysis/typology_websites/clusters_by_website/{nom_fichier}.png"), width = 20, height = 10, units = "cm")
+  }
+```
+
+```{r run_typology_website}
+list_websites = res %>% 
+  distinct(type)
+
+list_websites %>% 
+  mutate(data = purrr::map(type, plot_website))
+```
+
+##### Website by cluster
+
+Now, let's plot for each cluster the distribution of the website types. For example, for the topic "planning and environment", the websites are mostly institutional.
+
+```{r plot_typology_cluster}
+plot_cluster = function(nom, cluster, color){
+plot = res_clusters %>%
+  filter(cl == cluster) %>% 
+  ggplot(aes(x = fct_reorder(type, perc_cl), 
+             y = perc_cl)) + 
+  geom_bar(fill = color,
+           stat = "identity", 
+           position = position_dodge(width = 0.9), 
+           width = 0.8, 
+           show.legend = FALSE) +
+  coord_flip() + 
+  labs(x = NULL,
+       y = "%",
+       title = paste0("Répartition des types de site web qui abordent\nle thème « ", nom, " »")) +
+  theme_bw(base_family = "CenturySch", 
+           base_size = 13)
+  
+  nom_fichier = str_split(nom, ",", simplify = TRUE)[,1]
+  ggsave(plot, filename = glue::glue("analysis/typology_websites/websites_by_cluster/{nom_fichier}.png"), width = 20, height = 15, units = "cm")
+  }
+```
+
+```{r run_clusters}
+list_clusters = res %>% 
+  distinct(cl, .keep_all = TRUE) %>% 
+  select(c("cl", "name", "couleur")) %>% 
+  filter(!is.na(name))
+
+list_clusters %>% 
+  mutate(data = purrr::pmap(list(nom = name,
+                                 cluster = cl,
+                                 color = couleur),
+                            plot_cluster))
+```
+
+### Correlation of topic and website typology
+
+```{r}
+topic_names = read.csv("input_data/topic_names.csv") %>% 
+  select(c("topic", "name"))
+
+typology_names = read.csv("input_data/typology_names.csv", sep = ";") 
+
+order_topics = rev(c("Health", "Politics, conflicts", "Culture, knowledge", "Daily life, news items", "Tourism, travel", "Heritage, attractions", "Urban infrastructure and geography", "Online images, web content", "Planning, management, environment", "Pollution, sewerage", "Physico-chemical parameters", "Alert system", "Floods", "Hydrography"))
+  
+df_corr = results %>% 
+  left_join(topic_names, by = "topic") %>% 
+  left_join(typology_names, by = join_by(type == nom)) %>% 
+  select(c("name", "name_en")) %>% 
+  dplyr::rename(topic = name) %>% 
+  dplyr::rename(typology = name_en) %>% 
+  filter(!is.na(typology))
+
+df_corr$topic = factor(df_corr$topic, levels = order_topics)
+table_contingency = table(df_corr$typology, df_corr$topic)
+# chi2 < 0.05 so valid 
+chisq.test(table_contingency)
+```
+
+#### Mosaic plot
+
+```{r}
+#devtools::install_github("haleyjeppson/ggmosaic")
+library(ggmosaic)
+
+# mosaic plot
+svg("analysis/clusters/mosaic_plot.svg", width = 8, height = 8)
+mosaicplot(table_contingency, 
+           color = c("#eac1f7","#fdb462", "#9e0142", "#f781bf", "#bc80bd" , "#bf812d" , "#f7bfbe", "#adadad","#b3de69", "#ffd92f","#8dd3c7", "#fb8072", "#bebada", "#80b1d3"), 
+           las = 2, 
+           border = "white", 
+           main = "", 
+           off = 5, 
+           xlab = "Website", 
+           ylab = "Topic",
+           type="FT")
+dev.off()
+```
+
+#### Heat map
+
+```{r}
+library(reshape2)
+
+# calcul table de contingence
+table_contingency = table(df_corr$typology, df_corr$topic)
+# test du chi-2 et sélection des résidus
+chitest = chisq.test(table_contingency)
+myresiduals = chitest$stdres
+# transformation en matrice pour la fonction heatmap
+res_matrix = t(as.matrix(myresiduals))
+# choix des couleurs
+color = rev(colorRampPalette(brewer.pal(8, "RdYlBu"))(25))
+
+svg(file = "analysis/heatmap_types.svg", width = 5, height = 5)
+heatmap(res_matrix, 
+        scale = "row", 
+        Colv = NA, 
+        Rowv = NA, 
+        col = color)
+dev.off()
+```
+
+```{r}
+
+### figure par ville
+
+topic_names = read.csv("input_data/topic_names.csv") %>% 
+  select(c("topic", "short_name", "couleur"))
+
+kuching_en = convert(corpus, to = "data.frame") %>% 
+  filter(urban_aggl=="Thành Phố Hồ Chí Minh (Hô Chi Minh City)") %>% 
+  filter(query=="english") %>% 
+  mutate(topic = paste0("topic_", topic)) %>% 
+  left_join(topic_names, by = "topic") %>% 
+  group_by(short_name) %>% 
+  dplyr::summarise(count=n()) %>% 
+  mutate(perc = count/sum(count)*100) %>% 
+  ungroup()
+
+kuching_loc = convert(corpus, to = "data.frame") %>% 
+  filter(urban_aggl=="Thành Phố Hồ Chí Minh (Hô Chi Minh City)") %>% 
+  filter(query!="english") %>% 
+  mutate(topic = paste0("topic_", topic)) %>% 
+  left_join(topic_names, by = "topic") %>% 
+  group_by(short_name) %>% 
+  dplyr::summarise(count=n()) %>% 
+  mutate(perc = count/sum(count)*100) %>% 
+  ungroup()
+```
