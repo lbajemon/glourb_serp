@@ -1,0 +1,15 @@
+topic,nom,name,couleur,col_low,col_high,short_name
+topic_1,Santé,Health,#eac1f7,#f3e4f7,#9041a6,Health
+topic_2,Politique et conflits,"Politics, conflicts",#fdb462,#ffe0bd,#db7400,Politics
+topic_3,Culture et connaissances,"Culture, knowledge",#9e0142,#cfa5b6,#69002a,Culture
+topic_4,"Vie quotidienne, faits divers","Daily life, news items",#f781bf,#ffd1e9,#c2106d,News
+topic_5,"Tourisme, voyage","Tourism, travel",#bc80bd,#d6bfd6,#8a338a,Tourism
+topic_6,"Patrimoine, attractions","Heritage, attractions",#bf812d,#ffe5c2,#b36702,Heritage
+topic_7,Infrastructures et géographie urbaines,Urban infrastructure and geography,#f7bfbe,#ffe6e6,#ed5a5a,Urban
+topic_8,"Banques d’images, contenu web","Online images, web content",#adadad,#ebebeb,#424242,Online
+topic_9,"Aménagement, gestion, environnement","Planning, management, environment",#b3de69,#cfe8a5,#84b03a,Planning
+topic_10,"Pollution, traitement des eaux usées","Pollution, sewerage",#ffd92f,#fff1b0,#ebc100,Pollution
+topic_11,Paramètres physico-chimiques,Physico-chemical parameters,#8dd3c7,#dbfff9,#0f917c,Parameters
+topic_12,Système d’alerte,Alert system,#fb8072,#ffcac4,#c21400,Alert system
+topic_13,Inondations,Floods,#bebada,#ebe8ff,#806ff2,Floods
+topic_14,Hydrographie,Hydrography,#80b1d3,#cee5f5,#165f91,Hydrography
