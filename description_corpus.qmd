@@ -125,7 +125,6 @@ china %>%
         legend.box = "vertical") +
   labs(size = "Nombre de pages")
 
-
 ggsave("analysis/description_corpus/nb_pages_china.svg", width = 4000, height = 2500, units = "px")
 ```
 
@@ -176,6 +175,61 @@ world_map %>%
        color = "")
 
 ggsave("analysis/description_corpus/nb_requetes.svg", width = 4000, height = 2500, units = "px")
+```
+
+### Nombre de pages moyen
+
+```{r}
+## Préparation des données
+corpus = read.csv("collected_data/combined_all_tokens.csv")
+
+fid_fusion = read.csv("input_data/data_city_river_fid_fusion.csv") %>% 
+  select(c("fid", "fid_fusion")) 
+
+data_city_river = read.csv("input_data/data_city_river_303.csv") %>% 
+  select("fid", "latitude", "longitude", "urban_aggl") %>% 
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", ".")),
+         longitude = as.numeric(str_replace_all(longitude, ",", "."))) 
+
+# get number of languages for each agglomeration
+nb_tot = corpus %>% 
+  mutate(requete = paste0(hl, "-", query)) %>% 
+  group_by(fid) %>% 
+  summarise(n_langues = n_distinct(requete)) %>% 
+  # get number of requests for each agglomeration
+  left_join(fid_fusion, by = "fid") %>% 
+  group_by(fid_fusion) %>% 
+  summarise(n_total = sum(n_langues))
+
+corpus_fusion = corpus %>%
+  left_join(fid_fusion, by = "fid") %>% 
+  group_by(fid_fusion) %>% 
+  dplyr::summarise(n = n()) %>% 
+  dplyr::rename(n_pages = n) %>% 
+  left_join(data_city_river, by = join_by("fid_fusion" == "fid")) %>% 
+  left_join(nb_tot, by = "fid_fusion") %>% 
+  mutate(moy = n_pages/n_total)
+
+data_sf = st_as_sf(corpus_fusion, coords = c("longitude", "latitude"), crs = 4326)
+```
+
+```{r map}
+ne_countries(scale = "medium", returnclass = "sf") %>% 
+  ggplot() +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_sf, 
+          aes(color = (moy)),
+          alpha = 1,
+          size = 2) +
+  scale_color_viridis_c(direction = -1) +
+  # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom") +
+  labs(color = "Nombre moyen de pages")
 ```
 
 ### Pages wikipédia
