@@ -13,3 +13,17 @@ rainette_plot_edited.qmd
 specificity.qmd
 fonts/
 example_lyon.qmd
+rerun_mars2025.qmd
+rerunhl.qmd
+whois.qmd
+appli/
+bdd_glourb.R
+cimetiere/
+input_data/nord.png
+input_data/topic_names4.csv
+input_data/data_city_river_*
+input_data/data_city*
+figures/river*
+figures/test*
+rerunhl.csv
+input_data/domain_type.csv
