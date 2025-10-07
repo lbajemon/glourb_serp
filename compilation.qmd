@@ -7,7 +7,7 @@ editor: visual
 
 ### Description
 
-Using web-scraping methods, we extracted web content for 372 queries sent on Google. Then each extracted text was translated to English, if necessary, and lemmatised. This document aims to compile the data in one single table. This table will be used for further analysis (clustering, topic modelling, specificity score, *etc.*).
+Using web-scraping methods, we extracted web content for 373 queries sent on Google. Then each extracted text was translated to English, if necessary, and lemmatised. This document aims to compile the data in one single table. This table will be used for further analysis (clustering, topic modelling, specificity score, *etc.*).
 
 ### Set-up
 
