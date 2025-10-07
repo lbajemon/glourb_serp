@@ -66,15 +66,16 @@ domain_plot$domain = with(domain_plot, reorder(domain, nb))
 domain_plot %>% 
   ggplot(mapping = aes(x = domain,
                        y = nb)) +
-  geom_col(position = "stack", fill = "#b3de69") +
+  geom_col(position = "stack", fill = "#a6d854") +
   labs(title = "Classement des domaines du corpus",
-       x = "nom du domaine",
-       y = "nombre de pages") +
+       x = "Domaine",
+       y = "Nombre de pages",
+       caption = "Réalisation : L. Bajemon, août 2025") +
   coord_flip() + # flip x and y coordinates 
   theme_bw() +
-  theme(legend.position = "bottom",
-        plot.caption.position = "plot") 
-ggsave("analysis/typology_websites/classement_domaines.png", width = 22, height = 16, unit = "cm")
+  theme(plot.caption = element_text(color = "#d9d9d9",hjust = 0.5))
+
+ggsave("analysis/typology_websites/classement_domaines.png", width = 2200, height = 1600, unit = "px")
 write.csv(domain_plot, "analysis/typology_websites/classement_domaines.csv")
 ```
 
@@ -471,4 +472,33 @@ plot_hl = data_hl %>%
 
 combined_plot = plot_en + plot_hl
 ggsave("analysis/typology_websites/type_repartition.png", width = 28, height = 15, units = "cm")
+```
+
+Plot without distinguishing local from non local queries
+
+```{r}
+typology_names = read.csv("input_data/typology_names.csv", sep = ";")
+
+df_plot = df %>% 
+  select("type") %>% 
+  mutate(type = trimws(type)) %>% 
+  group_by(type) %>% 
+  summarise(nb = n()) %>% 
+  filter(!is.na(type))
+total = sum(df_plot$nb) # = 44239 
+df_plot = df_plot %>% 
+  left_join(df_total, by = "type") %>% 
+  left_join(typology_names, by = join_by("type" == "nom")) %>% 
+  mutate(perc = nb/44239*100) %>% 
+  mutate(name_fr = fct_reorder(name_fr, perc)) 
+
+df_plot %>% 
+  ggplot(aes(x = perc, y = name_fr)) + 
+  geom_col(fill = "#a6d854", width = 0.7) +
+  labs(x = "%",
+       y = "Type de site web",
+       caption = "Réalisation : L. Bajemon, août 2025") +
+  theme_bw() +
+  theme(plot.caption = element_text(color = "#d9d9d9",hjust = 0.5))
+ggsave("analysis/typology_websites/repartition_types_sites.png", width = 2000, height = 1000, units = "px")
 ```
