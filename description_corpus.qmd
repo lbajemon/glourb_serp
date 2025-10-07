@@ -177,7 +177,7 @@ world_map %>%
 ggsave("analysis/description_corpus/nb_requetes.svg", width = 4000, height = 2500, units = "px")
 ```
 
-### Nombre de pages moyen
+### Nombre moyen de pages
 
 ```{r}
 ## Préparation des données
@@ -211,6 +211,32 @@ corpus_fusion = corpus %>%
   mutate(moy = n_pages/n_total)
 
 data_sf = st_as_sf(corpus_fusion, coords = c("longitude", "latitude"), crs = 4326)
+
+## Table by subcontinent
+noms_conti = data.frame(nom = c("Chine", "Europe", "Asie de l'Ouest", 
+                                "Amérique du Nord", "Afrique", "Asie du Sud-Est", 
+                                "Inde", "Amérique centrale", "Amérique du Sud"),
+                        sub_continent = c("AS_CHN", "EU", "AS_W", "NAm", "AF",
+                                         "AS_SE", "AS_IND", "CA", "SA"))
+
+data_city_river = read.csv("input_data/data_city_river_303.csv") %>% 
+  select(c("fid", "sub_continent"))
+
+subcontinent = corpus_fusion %>% 
+  left_join(data_city_river, by = join_by("fid_fusion" == "fid")) %>% 
+  group_by(sub_continent) %>% 
+  mutate(moy_cont = mean(moy),
+         max_cont = max(moy),
+         min_cont = min(moy)) %>% 
+  ungroup() %>% 
+  left_join(noms_conti, by = "sub_continent") %>% 
+  select(c("nom", "moy_cont", "max_cont", "min_cont")) %>% 
+  unique() %>% 
+  arrange(nom) 
+
+colnames(subcontinent) = c("Sous-continent", "Moyenne", "Maximum", "Minimum")
+
+grid.table(subcontinent, theme = ttheme_minimal(), rows = NULL)
 ```
 
 ```{r map}
@@ -233,7 +259,7 @@ ne_countries(scale = "medium", returnclass = "sf") %>%
 ggsave("analysis/description_corpus/nb_moyen_pages.svg", width = 4000, height = 2500, units = "px")
 ```
 
-###  Pages wikipédia
+### Pages wikipédia
 
 ```{r wikipedia}
 
