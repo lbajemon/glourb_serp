@@ -230,9 +230,10 @@ ne_countries(scale = "medium", returnclass = "sf") %>%
   theme_void() +
   theme(legend.position = "bottom") +
   labs(color = "Nombre moyen de pages")
+ggsave("analysis/description_corpus/nb_moyen_pages.svg", width = 4000, height = 2500, units = "px")
 ```
 
-### Pages wikipédia
+###  Pages wikipédia
 
 ```{r wikipedia}
 
