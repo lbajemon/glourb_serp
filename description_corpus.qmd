@@ -254,7 +254,7 @@ ggsave("analysis/description_corpus/nb_pages_wiki.png", width = 4000, height = 2
 # types of wikipedia pages
 
 # identify types by hand (river, city, etc.)
-wikipedia = read.csv("analysis/description_corpus/pages_wikipedia_type.csv") #%>% 
+wikipedia = read.csv("analysis/description_corpus/pages_wikipedia_type.csv") %>% 
   select(c("fid", "urban_aggl", "theme", "title", "link")) %>% 
   group_by(theme) %>% 
   summarise(nb = n()) %>% 
@@ -300,7 +300,7 @@ corpus$cluster = cutree(dhc, 14)
 corpus_df = convert(corpus, to = "data.frame")
 
 # nom des classes
-topics = read.csv("input_data/topic_names.csv", sep = "\t")
+topic_names = read.csv("input_data/topic_names.csv", sep = ",")
 
 # calcul répartition pages wikipédia 
 theme_wiki = corpus_df %>% 
@@ -310,19 +310,21 @@ theme_wiki = corpus_df %>%
   mutate(topic = paste0("topic_", cluster)) %>% 
   left_join(topic_names, by = "topic") %>% 
   filter(!is.na(cluster)) %>% 
-  rbind(data.frame(cluster=1,
-                   nb=0,
-                   topic="topic_1",
-                   name="Santé",
-                   couleur=NA,
+  rbind(data.frame(cluster = 1,
+                   nb = 0,
+                   topic = "topic_1",
+                   name = "Health",
+                   nom = "Santé",
+                   couleur = NA,
                    col_high = NA,
-                   col_low = NA)) %>% 
+                   col_low = NA,
+                   short_name = "Health")) %>% 
   mutate(perc = nb/sum(nb)*100) 
 
 write.csv(theme_wiki, "analysis/description_corpus/corpus_wikipedia_mondes_lexicaux.csv")
 
 theme_wiki %>%
-  ggplot(aes(x = fct_reorder(name, perc), 
+  ggplot(aes(x = fct_reorder(nom, perc), 
              y = perc)) + 
   geom_bar(fill = theme_wiki$couleur,
            stat = "identity", 
@@ -331,8 +333,7 @@ theme_wiki %>%
            show.legend = FALSE) +
   coord_flip() + 
   labs(x = NULL,
-       y = "%",
-       title = "Les thématiques abordées sur Wikipédia") +
+       y = "%") +
   theme_bw()
 ggsave(filename = "analysis/description_corpus/clusters_wikipedia.png", width = 7, height = 3, units = "in")
 ```

@@ -24,6 +24,8 @@ df = read.csv("collected_data/corpus_distinct.csv") %>%
 
 corpus = quanteda::corpus(df, docid_field = "id", text_field = "tokenized")
 corpus = split_segments(corpus, segment_size = 40)
+# corpus=read.csv("analysis/clusters/corpus_segments.csv")
+# corpus=quanteda::corpus(corpus, docid_field = "x", text_field = "X")
 tok = tokens(corpus, remove_punct = TRUE, remove_numbers = TRUE, remove_symbols = TRUE, remove_url = TRUE, split_hyphens = TRUE)
 dfmatrix = dfm(tok, remove_padding = TRUE) 
 dfmatrix = dfm_trim(dfmatrix, min_docfreq = 10, min_termfreq = 200)
@@ -81,14 +83,15 @@ First, let's plot for each website type the distribution of the topics. For exam
 plot_website = function(type_site){
 plot = res %>%
   filter(type == type_site) %>% 
-  ggplot(aes(x = fct_reorder(name, perc), 
+  filter(topic!="topic_NA") %>% 
+  ggplot(aes(x = fct_reorder(nom, perc), 
              y = perc, 
-             fill = name)) + 
+             fill = nom)) + 
   geom_bar(stat = "identity", 
            position = position_dodge(width = 0.9), 
            width = 0.8, 
            show.legend = FALSE) +
-  scale_fill_manual(values = setNames(res$couleur, res$name)) +
+  scale_fill_manual(values = setNames(res$couleur, res$nom)) +
   coord_flip() + 
   labs(x = NULL,
        y = "%",
@@ -116,7 +119,7 @@ Now, let's plot for each cluster the distribution of the website types. For exam
 ```{r plot_typology_cluster}
 plot_cluster = function(nom, cluster, color){
 plot = res_clusters %>%
-  filter(cl == cluster) %>% 
+  filter(topic == cluster) %>% 
   ggplot(aes(x = fct_reorder(type, perc_cl), 
              y = perc_cl)) + 
   geom_bar(fill = color,
@@ -138,13 +141,13 @@ plot = res_clusters %>%
 
 ```{r run_clusters}
 list_clusters = res %>% 
-  distinct(cl, .keep_all = TRUE) %>% 
-  select(c("cl", "name", "couleur")) %>% 
-  filter(!is.na(name))
+  distinct(topic, .keep_all = TRUE) %>% 
+  select(c("topic", "nom", "couleur")) %>% 
+  filter(!is.na(nom))
 
 list_clusters %>% 
-  mutate(data = purrr::pmap(list(nom = name,
-                                 cluster = cl,
+  mutate(data = purrr::pmap(list(nom = nom,
+                                 cluster = topic,
                                  color = couleur),
                             plot_cluster))
 ```
@@ -152,6 +155,7 @@ list_clusters %>%
 ### Correlation of topic and website typology
 
 ```{r}
+
 topic_names = read.csv("input_data/topic_names.csv") %>% 
   select(c("topic", "name"))
 
@@ -166,6 +170,48 @@ df_corr = results %>%
   dplyr::rename(topic = name) %>% 
   dplyr::rename(typology = name_en) %>% 
   filter(!is.na(typology))
+
+## english 
+df_corr$topic = factor(df_corr$topic, levels = order_topics)
+table_contingency = table(df_corr$typology, df_corr$topic)
+# chi2 < 0.05 so valid 
+chisq.test(table_contingency)
+
+### Français
+df_corr = df_corr %>% 
+  mutate(topic = case_when(
+    topic == "Health" ~ "Santé",
+    topic == "Politics, conflicts" ~ "Gouvernement, conflits",
+    topic == "Culture, knowledge" ~ "Culture, connaissances",
+    topic == "Daily life, news items" ~ "Vie quotidienne, faits divers",
+    topic == "Tourism, travel" ~ "Tourisme, voyage",
+    topic == "Heritage, attractions" ~ "Patrimoine, attractions",
+    topic == "Urban infrastructure and geography" ~ "Infrastructures et géographie urbaines",
+    topic == "Online images, web content" ~ "Banques d'images, contenu web",
+    topic == "Planning, management, environment" ~ "Planification, gouvernance, environnement",
+    topic == "Pollution, sewerage" ~ "Pollution, traitement des eaux usées",
+    topic == "Physico-chemical parameters" ~ "Paramètres physico-chimiques",
+    topic == "Alert system" ~ "Système d'alerte",
+    topic == "Floods" ~ "Inondations, quantité",
+    topic == "Hydrography" ~ "Hydrographie")) %>% 
+  mutate(typology = case_when(
+    typology == "Associative" ~ "Associatif",
+    typology ==  "Commercial" ~ "Commercial",
+    typology ==  "Cultural" ~ "Culturel",
+    typology == "Educational" ~  "Educatif" ,
+    typology == "Encyclopaedia & DB"~  "Encyclopédie/BD",
+    typology == "Image bank"~ "Banque d’images" ,
+    typology ==  "Unknown" ~ "Inconnu",
+    typology ==  "Institutionnal" ~ "Institutionnel" ,
+    typology == "Book & report" ~ "Livre, rapport",
+    typology == "Magazine & blog"  ~ "Magazine, blog",
+    typology == "Online press"   ~ "Presse en ligne",
+    typology == "Social media" ~ "Réseau social",
+    typology == "Scientific" ~ "Scientifique",
+    typology == "Utilitarian" ~ "Utilitaire",
+    typology == "Wiki" ~ "Wiki"))
+
+order_topics = rev(c("Santé", "Gouvernement, conflits", "Culture, connaissances", "Vie quotidienne, faits divers", "Tourisme, voyage", "Patrimoine, attractions", "Infrastructures et géographie urbaines", "Banques d'images, contenu web", "Planification, gouvernance, environnement", "Pollution, traitement des eaux usées","Paramètres physico-chimiques", "Système d'alerte", "Inondations, quantité", "Hydrographie"))
 
 df_corr$topic = factor(df_corr$topic, levels = order_topics)
 table_contingency = table(df_corr$typology, df_corr$topic)
@@ -208,6 +254,7 @@ res_matrix = t(as.matrix(myresiduals))
 # choix des couleurs
 color = rev(colorRampPalette(brewer.pal(8, "RdYlBu"))(25))
 
+# english
 svg(file = "analysis/heatmap_types.svg", width = 5, height = 5)
 heatmap(res_matrix, 
         scale = "row", 
@@ -215,7 +262,18 @@ heatmap(res_matrix,
         Rowv = NA, 
         col = color)
 dev.off()
+
+# french
+svg(file = "analysis/heatmap_french.svg", width = 5, height = 5)
+heatmap(res_matrix, 
+        scale = "row", 
+        Colv = NA, 
+        Rowv = NA, 
+        col = color)
+dev.off()
 ```
+
+#### Figure par ville
 
 ```{r}
 

@@ -83,7 +83,7 @@ df = read.csv("collected_data/corpus_distinct.csv") %>%
 corpus = read_corpus(df, text_field = "tokenized", docid_field = "id")
 # split the corpus in smaller segments
 corpus = split_segments(corpus, segment_size = 40)
-saveRDS(corpus, "analysis/clusters/split_corpus_all.rds")
+# saveRDS(corpus, "analysis/clusters/split_corpus_all.rds")
 # corpus = readRDS("analysis/clusters/split_corpus_all.rds")
 tokens = read_tokens(corpus)
 
@@ -134,11 +134,13 @@ plot_fr = rainette_plot(
   measure = "chi2",
   show_negative = FALSE,
   text_size = 12,
-  cluster_label = c("Santé", "Gouvernement,\n conflits", "Culture,\nconnaissances", "Vie quotidienne,\nfaits divers", "Tourisme,\nvoyage", "Patrimoine,\nattractions", "Infrastructures\net géographie\nurbaines", "Banques d'images,\ncontenu web", "Aménagement,\ngestion,\nenvironnement", "Pollution,\ntraitement des\neaux usées","Paramètres\nphysico-\nchimiques", "Système\nd'alerte", "Inondations", "Hydrographie")
+  cluster_label = c("Santé", "Gouvernement,\n conflits", "Culture,\nconnaissances", "Vie quotidienne,\nfaits divers", "Tourisme,\nvoyage", "Patrimoine,\nattractions", "Infrastructures\net géographie\nurbaines", "Banques d'images,\ncontenu web", "Planification,\ngouvernance,\nenvironnement", "Pollution,\ntraitement des\neaux usées","Paramètres\nphysico-\nchimiques", "Système\nd'alerte", "Inondations,\nquantité", "Hydrographie")
 ,
   colors = c("#eac1f7","#fdb462", "#9e0142", "#f781bf", "#bc80bd" , "#bf812d" , "#f7bfbe", "#adadad","#b3de69", "#ffd92f","#8dd3c7", "#fb8072", "#bebada", "#80b1d3")
 )
+ggsave("analysis/clusters/clusters_all_14_fr.svg", plot_fr, width = 500, height = 250, units = "mm", limitsize = FALSE)
 ggsave("analysis/clusters/clusters_all_14_fr.png", plot_fr, width = 500, height = 250, units = "mm", limitsize = FALSE)
+
 
 ### 4 topics
 plot_en = rainette_plot(
@@ -378,13 +380,15 @@ spec_city = tidy_specificities(corpus_segments_df, fid, topic) %>%
 ##### 4 clusters
 
 ```{r}
+fid_fusion = read.csv("input_data/data_city_river_fid_fusion.csv")
 world_map = ne_countries(scale = "medium", returnclass = "sf")
 topic_names = read.csv("input_data/topic_names4.csv") %>% 
-  select(c("topic", "name", "col"))
-coords = data_city_river %>% 
+  select(c("topic", "nom", "col"))
+coords = read.csv("input_data/data_city_river_303.csv") %>% 
   select(c("fid", "latitude", "longitude")) %>% 
   mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
-  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) 
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) %>% 
+  mutate(fid = as.character(fid))
 
 # write clusters on the corpus
 corpus$topic = cutree(dhc, 4)
@@ -392,38 +396,55 @@ corpus$topic = cutree(dhc, 4)
 corpus_segments_df = convert(corpus, to = "data.frame")
 # simplify the dataframe
 corpus_segments_df = corpus_segments_df %>% 
-  select(c("text", "fid", "link", "segment_source", "text_en", "topic", "hl", "query")) %>% 
-  mutate(topic = paste0("topic_", topic))
+  left_join(fid_fusion, by = "fid") %>% 
+  select(c("text", "fid_fusion", "link", "segment_source", "text_en", "topic", "hl", "query")) %>% 
+  mutate(topic = paste0("topic_", topic)) %>% 
+  rename("fid" = "fid_fusion") %>% 
+  mutate(fid = as.character(fid))
 
 spec_city = tidy_specificities(corpus_segments_df, fid, topic) %>% 
   # values above 2 are significant (=< 1% probability)
-  filter(spec >= 2) %>% 
   group_by(fid) %>% 
   filter(spec == max(spec)) %>% 
   filter(n == max(n)) %>% 
   ungroup() %>% 
   left_join(coords, by = "fid") %>% 
-  left_join(topic_names, by = "topic")
+  left_join(topic_names, by = "topic") %>% 
+  mutate(nom = ifelse(spec<2|is.na(nom), "Non significatif", nom),
+         col = ifelse(nom=="Non significatif", "grey", col))
 
 # map
  df = st_as_sf(spec_city, coords = c("longitude", "latitude"), crs = 4326)
  df_coords = cbind(df, st_coordinates(df))
 
- col_vec = setNames(df$col, df$name)
-
-  world_map %>% 
+ col_vec = setNames(df$col, df$nom)
+ 
+ world_map %>% 
     ggplot() +
     # world map 
     geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
     # data points
-    geom_sf(data = df, aes(color = name,
+    geom_sf(data = df, aes(color = nom,
                            size = spec), alpha = 0.7) +
-    scale_color_manual(values = col_vec) +
-    # equal earth projection
+   scale_color_manual(values = col_vec,
+                      breaks = c("Société", "Loisirs", "Qualité de l’eau", "Quantité d’eau", "Non significatif")) +    
+   # equal earth projection
     coord_sf(crs = "+proj=eqearth") +
+    annotation_north_arrow(location = "tr",
+                           width = unit(1, "cm"),
+                           height = unit(1, "cm"),
+                           style = north_arrow_nautical(
+                             fill = c('white', "white"),
+                             line_col = "#d9d9d9",
+                             text_col = "#d9d9d9")) +
     # theme
     theme_void() +
-    theme(legend.position = "bottom")
+    labs(color = "Monde lexical\nle plus spécifique",
+         size = "Score de spécificité",
+         caption = "Réalisation : L. Bajemon, août 2025\nFond de carte : R Natural Earth") +
+    theme(legend.position = "bottom",
+          plot.caption = element_text(color = "#d9d9d9",hjust = 0.5),
+          legend.box = "vertical")
   
-ggsave("analysis/clusters/specificite_4.svg", width = 380, height = 200, units = "mm", limitsize = FALSE)
+ggsave("analysis/clusters/specificite_4.svg", width = 4000, height = 2500, units = "px")
 ```
