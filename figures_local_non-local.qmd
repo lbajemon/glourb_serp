@@ -1,0 +1,159 @@
+---
+title: "figure_local_types"
+format: html
+editor: visual
+---
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(patchwork)
+library(rainette)
+library(quanteda)
+```
+
+```{r}
+df = read.csv("analysis/typology_websites/corpus_distinct_website_types.csv")
+names = read.csv("input_data/typology_names.csv", sep = ";")
+
+df_plot = df %>% 
+  select(c("query", "type")) %>% 
+  mutate(type = trimws(type)) %>% 
+  group_by(query, type) %>% 
+  summarise(nb = n()) %>% 
+  filter(!is.na(type)) %>% 
+  left_join(names, by = join_by(type == nom)) %>% 
+  select(c("query", "nb", "name_fr"))
+df_total = df_plot %>% 
+  group_by(name_fr) %>% 
+  summarise(total = sum(nb)) 
+df_plot = df_plot %>% 
+  left_join(df_total, by = "name_fr") %>% 
+  mutate(type = fct_reorder(name_fr, total)) 
+
+# prepare data 
+data_en = df_plot %>% 
+  filter(query == "english") %>% 
+  mutate(perc = nb/sum(nb)*100)
+
+plot_en = data_en %>% 
+  mutate(name_fr = fct_reorder(name_fr, perc)) %>% 
+  ggplot(aes(x = name_fr, y = perc)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.8, fill = "#fa9fb5") + 
+  coord_flip() + # flip x and y coordinates 
+  labs(x = NULL,
+       y = "%",
+       caption = "Réalisation : L. Bajemon, septembre 2025",
+       title = "Requêtes non locales") +
+  ylim(0, 30) +
+  theme_bw() +
+  theme(plot.caption = element_text(color = "#d9d9d9"))
+
+data_hl = df_plot %>% 
+  filter(query == "hl") %>% 
+  mutate(perc = nb/sum(nb)*100)
+
+plot_hl = data_hl %>% 
+  mutate(name_fr = fct_reorder(name_fr, perc)) %>% 
+  ggplot(aes(x = name_fr, y = perc)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.8, fill = "#b3de69") + 
+  coord_flip() + # flip x and y coordinates 
+  labs(x = "",
+       y = "%",
+       title = "Requêtes locales") +
+  ylim(0, 30) +
+  theme_bw() 
+
+combined_plot =  plot_hl + plot_en
+ggsave("analysis/local_non_local/figure_websites_local.svg", width = 20, height = 10, units = "cm")
+
+### Figure globale
+df_plot %>% 
+  ggplot(aes(x = nb, y = type)) + 
+  geom_col(aes(fill = query), width = 0.7) +
+  scale_fill_manual(values = c("#fa9fb5", "#a6d854"),
+                    labels = c("Non-local", "Local")) +
+  labs(x = "Number of pages",
+       y = NULL,
+       fill = "Query") +
+  theme_bw()
+
+ggsave("figure_types.svg", width = 28, height = 15, units = "cm")
+```
+
+Local vs non-local topics
+
+```{r}
+topic_names = read.csv("input_data/topic_names.csv")
+
+col = topic_names %>% 
+  select(-"topic")
+
+df = read.csv("collected_data/corpus_distinct.csv") %>% 
+  dplyr::rename(tokenized = tokenized_noloc) %>% # rename column
+  subset(!is.na(tokenized)) 
+
+corpus = quanteda::corpus(df, docid_field = "id", text_field = "tokenized")
+corpus = split_segments(corpus, segment_size = 40)
+tokens = tokens(corpus, remove_punct = TRUE, remove_numbers = TRUE, remove_symbols = TRUE, remove_url = TRUE, split_hyphens = TRUE)
+dfmatrix = dfm(tokens, remove_padding = TRUE) 
+dfmatrix = dfm_trim(dfmatrix, min_docfreq = 10, min_termfreq = 200)
+dhc = readRDS("analysis/clusters/dhc_all.rds")
+corpus$topic = cutree(dhc, 14)
+
+corpus_loc = convert(corpus, to = "data.frame") %>% 
+  filter(query != "english") %>% 
+  mutate(topic = paste0("topic_", topic)) %>% 
+  left_join(topic_names, by = "topic") %>% 
+  group_by(nom) %>% 
+  dplyr::summarise(count=n()) %>% 
+  mutate(perc = count/sum(count)*100) %>% 
+  ungroup() %>% 
+  mutate(nom = replace_na(nom, "NA")) 
+
+corpus_en = convert(corpus, to = "data.frame") %>% 
+  filter(query == "english") %>% 
+  mutate(topic = paste0("topic_", topic)) %>% 
+  left_join(topic_names, by = "topic") %>% 
+  group_by(nom) %>% 
+  dplyr::summarise(count=n()) %>% 
+  mutate(perc = count/sum(count)*100) %>% 
+  ungroup() %>% 
+  mutate(nom = replace_na(nom, "NA")) 
+
+# diagram
+plot1 = corpus_loc %>% 
+  mutate(nom = fct_reorder(nom, perc)) %>% 
+  ggplot(aes(x = nom, y = perc)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.8, fill = "#b3de69") + 
+  coord_flip() + # flip x and y coordinates 
+  labs(x = "",
+       y = "%",
+       title = "Requêtes locales") +
+  ylim(0, 15) +
+  theme_bw() +
+  theme(legend.position = "none",
+        axis.title.x = element_text(size = 15))
+
+plot2 = corpus_en %>% 
+  mutate(nom = fct_reorder(nom, perc)) %>% 
+  ggplot(aes(x = nom, y = perc)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.8, fill = "#fa9fb5") + 
+  coord_flip() + # flip x and y coordinates 
+  labs(x = NULL,
+       y = "%",
+       title = "Requêtes non locales",
+       caption = "Réalisation : L. Bajemon, septembre 2025") +
+  ylim(0, 15) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  theme(plot.caption = element_text(color = "#d9d9d9"))
+
+combined_plot = plot1 / plot2
+ggsave("analysis/local_non_local/figure_local_topics.svg", width = 20, height = 20, units = "cm")
+```
+
+```{r}
+combined_plot = (plot1 + plot2)/(plot_hl+plot_en)
+ggsave("analysis/local_non_local/figure_local_non_local.svg", width = 30, height = 30, units = "cm")
+```
