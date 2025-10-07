@@ -1,0 +1,118 @@
+---
+title: "Corpus gravières"
+format: html
+editor: visual
+---
+
+### Set-up
+
+```{r}
+library(tidyverse)
+library(strex)
+library(rnaturalearth)
+library(sf)
+```
+
+### Get corpus
+
+```{r}
+corpus = read.csv("collected_data/corpus_distinct.csv")
+
+graviere = corpus %>% 
+  filter(str_detect(text_en, "quarry|gravel pit|sand pit|sand mining|gravel mining|clay mining|clay mine|gravel mine|sand mine|quarries|quarrying|sand extraction|gravel extraction|metal extraction|metal mining|metal mine|sand dredging|gravel dredging|clay extraction"))
+write.csv(graviere, "analysis/gravieres/corpus_gravieres.csv")
+```
+
+#### Get number of pages per city
+
+```{r}
+nb_gravieres = graviere %>% 
+  group_by(urban_aggl) %>% 
+  distinct(link, .keep_all = TRUE) %>% 
+  count()
+nb_gravieres = rename(nb_gravieres, nb = n)
+write.csv(nb_gravieres, "analysis/gravieres/nb_occ_gravieres_villes.csv")
+```
+
+#### Map
+
+```{r}
+# read data on gravel pits from observation of satellite imagery
+data_satellite = read.csv("analysis/gravieres/data_city_river_gravieres.csv") %>% 
+  select(c("fid", "urban_aggl", "latitude", "longitude", "Presence", "Datation.estimee", "intensitee.estimee", "Loc.laterale", "Loc.longitu", "intens2", "datation2")) %>% 
+  left_join(nb_gravieres, by = "urban_aggl") %>% 
+  mutate(classif_dates = case_when(
+    Datation.estimee %in% c("Env. 1950","Env. 1984","Env. 1985","Pre-1984","Pre-1985") ~ "Avant 1990",
+    Datation.estimee %in% c("Env. 1990","Env. 1995","Env. 1995-2000","Env. 1990-1995","Env. 1997","Env. 1998","Pre-2000") ~ "1990-2000",
+    Datation.estimee %in% c("Env. 2000","Env. 2000-2005","Env. 2004","Env. 2005","Env. 2006","Env. 2007","Env. 2009","Post-2000") ~ "2000-2010",
+    Datation.estimee %in% c("Env. 2010","Env. 2011","Env. 2013","Env. 2015","Env. 2016","Env. 2020") ~ "2010-2020",
+    intensitee.estimee == 0 ~ "Pas d'extraction", 
+    TRUE ~ "Pas de données")) %>% 
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) %>% 
+  mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
+  mutate(nb = replace_na(nb, 0))
+
+data_sf = st_as_sf(data_satellite, coords = c("longitude", "latitude"),crs = 4326)
+# map
+world_map = ne_countries(scale = "medium", returnclass = "sf")
+
+# map
+world_map %>% 
+  ggplot() +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_sf, 
+          aes(color = classif_dates, 
+              size = nb)) +
+  scale_color_manual(breaks = c("Avant 1990", "1990-2000", "2000-2010", "2010-2020", "Pas d'extraction", "Pas de données"),
+                    values = c("#d7b5d8", "#df65b0", "#dd1c77", "#980043", "#7bccc4", "#636363")) + 
+  # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom",
+        legend.box = "vertical") +
+  labs(size = "Nombre d'occurrences dans le corpus",
+       color = "Période d'extraction estimée") 
+
+ggsave("analysis/gravieres/map_occurrences_date.svg", width = 4000, height = 2500, units = "px")
+```
+
+#### List of cities
+
+```{r}
+mentions_corpus = data_satellite %>% 
+  filter(nb >= 5)  # 27 cities 
+
+extraction_intense = data_satellite %>% 
+  filter(intensitee.estimee > 3) # 59 cities, of intensity 4 or 5
+
+extraction_recente = data_satellite %>% 
+  filter(classif_dates == "2010-2020") # 30 cities, with extraction from 2010 to 2020
+
+list_cities = mentions_corpus %>% 
+  rbind(extraction_intense, extraction_recente) %>% 
+  group_by(urban_aggl) %>% 
+  distinct(.keep_all = TRUE) %>% 
+  mutate(corpus = ifelse(nb >= 5, "Plus de 5 mentions dans le corpus", "Moins de 5 mentions dans le corpus"),
+         intensite = ifelse(intensitee.estimee > 3, "Extraction d'intensité 4 ou 5", "Extraction de faible intensité"),
+         recent = ifelse(classif_dates == "2010-2020", "Extraction récente", "Extraction non récente"))
+
+write.csv(list_cities, "analysis/gravieres/villes_gravieres_a_analyser.csv")
+```
+
+Number of occurrences per page and per city
+
+```{r}
+graviere = corp %>% 
+  mutate(nb = str_count(text_en, regex("quarry|gravel pit|sand pit|sand mining|gravel mining|clay mining|clay mine|gravel mine|sand mine|quarries|quarrying|sand extraction|gravel extraction|metal extraction|metal mining|metal mine|sand dredging|gravel dredging|clay extraction", ignore_case = TRUE))) %>% 
+  filter(nb > 0) %>% 
+  select(c("fid", "urban_aggl", "title", "link", "text", "text_en", "nb"))
+write.csv(graviere, "analysis/gravieres/occurrences_pages.csv")
+
+nb_occ_villes = graviere %>% 
+  group_by(urban_aggl) %>% 
+  dplyr::summarise(nb_occ = sum(nb))
+write.csv(nb_occ_villes, "analysis/gravieres/occurrences_villes.csv")
+```

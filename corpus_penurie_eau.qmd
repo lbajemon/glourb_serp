@@ -1,0 +1,142 @@
+---
+title: "Corpus pénurie d'eau"
+format: html
+editor: visual
+---
+
+### Set-up
+
+```{r}
+library(tidyverse)
+library(strex)
+library(rnaturalearth)
+library(sf)
+```
+
+### Get corpus
+
+```{r}
+corpus = read.csv("collected_data/corpus_distinct.csv")
+
+penurie = corpus %>% 
+  filter(str_detect(text_en, "water scarcity|water shortage|shortage of water|water stress|lack of water"))
+
+write.csv(penurie, "analysis/penurie/corpus_penurie.csv")
+```
+
+#### Get number of pages per city
+
+```{r}
+nb_penurie = penurie %>% 
+  group_by(urban_aggl) %>% 
+  distinct(link, .keep_all = TRUE) %>% 
+  count()
+nb_penurie = rename(nb_penurie, nb = n)
+write.csv(nb_penurie, "analysis/penurie/nb_occ_penurie_villes.csv")
+```
+
+### Geophysical data
+
+```{r}
+
+### Préparation des données de Fanny 
+data_fb = read.csv("analysis/penurie/data_FB.csv") 
+
+data = data_fb %>% 
+  mutate(study_zone = paste0(reach, "_", zone)) %>% 
+  filter(!is.na(Urban_Aggl), !is.na(reach), !is.na(neg_perc)) %>% 
+  select(c("Urban_Aggl", "study_zone", "neg_perc")) %>% 
+  mutate(neg_perc = round(neg_perc, 3)) %>% 
+  pivot_wider(names_from = study_zone, values_from = neg_perc) %>% 
+  rowwise() %>%
+  mutate(moy = mean(c_across(where(is.numeric)), na.rm = TRUE)) %>%
+  mutate(max = max(c_across(where(is.numeric)), na.rm = TRUE)) %>% 
+  ungroup()
+
+write.csv(data, "analysis/penurie/data_FB_format.csv")
+```
+
+### Map
+
+```{r}
+data_penurie = read.csv("input_data/data_city_river.csv") %>% 
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) %>% 
+  mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
+  left_join(nb_penurie, by = "urban_aggl") %>% 
+  left_join(data, by = join_by("urban_aggl" == "Urban_Aggl")) %>% 
+  mutate(cat_negatif = case_when(max >= 0.8 ~ "Plus de 80 %",
+                                 max < 0.8 & max >= 0.6 ~ "80 à 60 %",
+                                 max < 0.6 & max >= 0.4 ~ "60 à 40 %",
+                                 max < 0.4 & max >= 0.2 ~ "40 à 20 %",
+                                 max < 0.2 ~ "Moins de 20 %",
+                                 is.na(max) ~ "Pas de données")) %>% 
+  mutate(cat_city_corridor = case_when(city_corridor >= 0.8 ~ "Plus de 80 %",
+                                 city_corridor < 0.8 & city_corridor >= 0.6 ~ "80 à 60 %",
+                                 city_corridor < 0.6 & city_corridor >= 0.4 ~ "60 à 40 %",
+                                 city_corridor < 0.4 & city_corridor >= 0.2 ~ "40 à 20 %",
+                                 city_corridor < 0.2 ~ "Moins de 20 %",
+                                 is.na(city_corridor) ~ "Pas de données"))
+
+data_sf = st_as_sf(data_penurie, coords = c("longitude", "latitude"),crs = 4326)
+
+# map
+world_map = ne_countries(scale = "medium", returnclass = "sf")
+
+# map max
+world_map %>% 
+  ggplot() +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_sf, 
+          aes(size = nb,
+              color = cat_negatif),
+          alpha = 0.8) +
+  scale_color_manual(breaks = c("Plus de 80 %", "80 à 60 %", "60 à 40 %", "40 à 20 %", "Moins de 20 %", "Pas de données"),
+                    values =c("#d7191c", "#fdae61", "#ffffbf", "#a6d96a", "#1a9641", "#bababa")) + 
+   # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom",
+        legend.box = "vertical",
+        plot.background = element_rect(fill = "white")) +
+  labs(size = "Nombre d'occurrences dans le corpus",
+       col = "Pourcentage maximal de pixels négatifs dans la ville") 
+ggsave("analysis/penurie/map_penurie_max.svg", width = 4000, height = 2500, units = "px")
+ggsave("analysis/penurie/map_penurie_max.png", width = 4000, height = 2500, units = "px")
+
+# map city corridor 
+world_map %>% 
+  ggplot() +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_sf, 
+          aes(size = nb,
+              color = cat_city_corridor),
+          alpha = 0.8) +
+  scale_color_manual(breaks = c("Plus de 80 %", "80 à 60 %", "60 à 40 %", "40 à 20 %", "Moins de 20 %", "Pas de données"),
+                    values = c("#d7191c", "#fdae61", "#ffffbf", "#a6d96a", "#1a9641", "#bababa")) + 
+   # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom",
+        legend.box = "vertical",
+        plot.background = element_rect(fill = "white")) +
+  labs(size = "Nombre d'occurrences dans le corpus",
+       col = "Pourcentage de pixels négatifs dans le corridor urbain") 
+ggsave("analysis/penurie/map_penurie_corridor.svg", width = 4000, height = 2500, units = "px")
+ggsave("analysis/penurie/map_penurie_corridor.png", width = 4000, height = 2500, units = "px")
+```
+
+### Cities to analyse
+
+```{r}
+penurie_analysis = data_penurie %>% 
+  filter(nb > 3 | max >= 0.75) %>% 
+  select(c("fid", "urban_aggl", "country_fr", "riviere", "nb", "city_plain", "downstream_plain", "upstream_plain", "city_corridor", "downstream_corridor", "upstream_corridor", "moy", "max"))
+
+write.csv(penurie_analysis, "analysis/penurie/liste_villes_penurie.csv")
+```
