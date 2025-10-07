@@ -1,0 +1,128 @@
+---
+title: "corpus_pollution"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(sf)
+library(rnaturalearth)
+```
+
+### Micro-organisms
+
+```{r}
+## filter data
+data_pollution = readxl::read_xlsx("analysis/pollution/data_pollution.xlsx") %>%   
+# keep recent data (year > 2015)
+  filter(year>=2015) %>% 
+  # keep cities where the micro-organisms state is medium/poor/bad
+  filter(str_detect(etat_m, "Medium|Poor|Bad")) %>% 
+  select("urbanaggl") %>% 
+  distinct() %>% 
+  mutate(data_poll = "poor_state") %>% 
+  mutate(urbanaggl = case_when(
+    urbanaggl == "Ahmadabad" ~ "Ahmedabad",
+    urbanaggl == "Bruxelles" ~ "Bruxelles-Brussel",
+    urbanaggl == "Koln (Cologne)" ~ "Köln",
+    urbanaggl == "Quebec" ~ "Québec",
+    urbanaggl == "Montreal" ~ "Montréal",
+    urbanaggl == "Roma (Rome)" ~ "Roma",
+    urbanaggl == "Munchen" ~ "München",
+    urbanaggl == "Zaghreb" ~ "Zagreb",
+    TRUE ~ urbanaggl
+  ))
+
+## filter corpus
+corpus = read.csv("collected_data/corpus_distinct.csv") %>% 
+  filter(str_detect(text_en, "micro-organism|escherichia coli|E.coli|E.Coli|E. Coli|E. coli|Escherichia coli|Escherichia Coli|coliform"))
+villes_microorga = corpus %>% 
+    mutate(urban_aggl = case_when(str_detect(urban_aggl, "Neuquen|Plottier|Cipolletti") ~ "Neuquen-Plottier-Cipolletti",
+                   str_detect(urban_aggl, "Ottawa|Gatineau") ~ "Ottawa-Gatineau",
+                   str_detect(urban_aggl, "Reading|Wokingham") ~ "Reading-Wokingham",
+                   str_detect(urban_aggl, "Denver|Aurora") ~ "Denver-Aurora",
+                   str_detect(urban_aggl, "Allentown|Bethlehem") ~ "Allentown-Bethlehem",
+                   str_detect(urban_aggl, "Kitchener|Cambridge|Waterloo") ~ "Kitchener-Cambridge-Waterloo",
+                   str_detect(urban_aggl, "La Serena|Coquimbo") ~ "La Serena-Coquimbo",
+                   str_detect(urban_aggl, "Newcastle|Maitland") ~ "Newcastle-Maitland",
+                   str_detect(urban_aggl, "Palm Bay|Melbourne|Titusville") ~ "Palm Bay-Melbourne-Titusville",
+                   str_detect(urban_aggl, "Round Lake Beach|McHenry|Grayslake") ~ "Round Lake Beach-McHenry-Grayslake",
+                   TRUE ~ urban_aggl)) %>%
+  group_by(urban_aggl) %>% 
+  distinct(link, .keep_all = TRUE) %>% 
+  count() 
+
+## join data
+data_city_river = read.csv("input_data/data_city_river.csv") %>% 
+  select(urban_aggl) %>% 
+  distinct() %>% 
+  left_join(data_pollution, by = join_by(urban_aggl == urbanaggl)) %>% 
+  left_join(villes_microorga, by = "urban_aggl") %>% 
+  filter(!is.na(n)&n>1| !is.na(data_poll))
+write.csv(data_city_river, "analysis/pollution/liste_villes_microorga.csv")
+```
+
+### Map
+
+```{r}
+data_pollution2 = readxl::read_xlsx("analysis/pollution/data_pollution.xlsx") %>%   
+# keep recent data (year > 2015) 
+  filter(year>=2015) %>% 
+  mutate(etat_m = factor(etat_m, levels = c("Excellent", "Good", "Medium", "Bad", "Poor"), ordered = TRUE)) %>% 
+  group_by(urbanaggl) %>% 
+  filter(year == max(year)) %>% 
+  filter(
+    if (any(reach == "city")) {
+      reach == "city"
+    } else {
+      etat_m == max(etat_m)
+    }) %>% 
+  select(c("urbanaggl", "etat_m")) %>% 
+  mutate(urbanaggl = case_when(
+    urbanaggl == "Ahmadabad" ~ "Ahmedabad",
+    urbanaggl == "Bruxelles" ~ "Bruxelles-Brussel",
+    urbanaggl == "Koln (Cologne)" ~ "Köln",
+    urbanaggl == "Quebec" ~ "Québec",
+    urbanaggl == "Montreal" ~ "Montréal",
+    urbanaggl == "Roma (Rome)" ~ "Roma",
+    urbanaggl == "Munchen" ~ "München",
+    urbanaggl == "Zaghreb" ~ "Zagreb",
+    TRUE ~ urbanaggl
+  ))
+
+data = read.csv("analysis/pollution/data_city_river.csv") %>% 
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) %>% 
+  mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
+  left_join(villes_microorga, by = "urban_aggl") %>% 
+  left_join(data_pollution2, by = join_by("urban_aggl" == "urbanaggl")) %>% 
+  mutate(etat_m = as.character(etat_m)) %>% 
+  mutate(n = replace_na(n, 0),
+         etat_m = replace_na(etat_m, "No data"))
+
+data_sf = st_as_sf(data, coords = c("longitude", "latitude"),crs = 4326)
+# map
+world_map = ne_countries(scale = "medium", returnclass = "sf")
+
+# map
+world_map %>% 
+  ggplot() +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_sf,
+          alpha = 0.5,
+          aes(size = n, color = etat_m)) +
+  scale_color_manual(breaks = c("Pas de données", "Poor", "Bad", "Medium", "Good", "Excellent"),
+                    values = c("grey", "#d7191c", "#fdae61", "#ffffbf", "#a6d96a", "#1a9641")) + 
+   # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom",
+        legend.box = "vertical") +
+  labs(size = "Nombre d'occurrences dans le corpus",
+       color = "Etat (micro-organismes)") 
+
+ggsave("analysis/pollution/carte_microorga.svg", width = 4000, height = 2500, units = "px")
+```
