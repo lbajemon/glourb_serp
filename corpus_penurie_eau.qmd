@@ -19,7 +19,8 @@ library(sf)
 corpus = read.csv("collected_data/corpus_distinct.csv")
 
 penurie = corpus %>% 
-  filter(str_detect(text_en, "water scarcity|water shortage|shortage of water|water stress|lack of water"))
+  filter(str_detect(text_en, "water scarcity|water shortage|shortage of water|water stress|lack of water")) %>% 
+  select(c("fid", "position", "title", "link", "domain", "displayed_link", "snippet", "trans_snippet", "text", "text_en", "tokenized_text", "tokenized_noloc", "hl"))
 
 write.csv(penurie, "analysis/penurie/corpus_penurie.csv")
 ```
@@ -27,12 +28,25 @@ write.csv(penurie, "analysis/penurie/corpus_penurie.csv")
 #### Get number of pages per city
 
 ```{r}
+citycodes = read.csv("input_data/citycodes.csv", sep = ";") %>% 
+  select(c("ID", "fid"))
+
+data_fusion = read.csv("input_data/data_city_river_fid_fusion.csv") %>% 
+  select(c("fid", "fid_fusion", "urban_aggl", "latitude", "longitude")) %>% 
+  left_join(citycodes, by = join_by("fid_fusion" == "fid"))
+
+data_303 = read.csv("input_data/data_city_river_303.csv") %>% 
+  select(c("fid", "urban_aggl"))
+
 nb_penurie = penurie %>% 
-  group_by(urban_aggl) %>% 
-  distinct(link, .keep_all = TRUE) %>% 
+  left_join(data_fusion, by = "fid") %>% 
+  group_by(ID) %>% 
   count()
+
 nb_penurie = rename(nb_penurie, nb = n)
+
 write.csv(nb_penurie, "analysis/penurie/nb_occ_penurie_villes.csv")
+write.csv(nb_penurie, "analysis/article_WS/data_LB.csv")
 ```
 
 ### Geophysical data
@@ -54,30 +68,41 @@ data = data_fb %>%
   ungroup()
 
 write.csv(data, "analysis/penurie/data_FB_format.csv")
+
+### V2
+data_tt = data_fb %>% 
+  group_by(citycode) %>% 
+  summarize(tot_neg = sum(ntype_neg, na.rm = TRUE),
+            tot_pos = sum(ntype_pos, na.rm = TRUE),
+            tot_neu = sum(ntype_neut, na.rm = TRUE)) %>% 
+  mutate(total = tot_neg + tot_pos + tot_neu) %>% 
+  mutate(perc_neg = tot_neg/total*100,
+         perc_pos = tot_pos/total*100,
+         perc_neu = tot_neu/total*100) %>% 
+  left_join(citycodes, by = join_by("citycode" == "ID"))
+
+write.csv(data_tt, "analysis/article_WS/data_FB.csv")
 ```
 
 ### Map
 
 ```{r}
-data_penurie = read.csv("input_data/data_city_river.csv") %>% 
+data_penurie = data_fusion %>% 
   mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) %>% 
   mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
-  left_join(nb_penurie, by = "urban_aggl") %>% 
-  left_join(data, by = join_by("urban_aggl" == "Urban_Aggl")) %>% 
-  mutate(cat_negatif = case_when(max >= 0.8 ~ "Plus de 80 %",
-                                 max < 0.8 & max >= 0.6 ~ "80 à 60 %",
-                                 max < 0.6 & max >= 0.4 ~ "60 à 40 %",
-                                 max < 0.4 & max >= 0.2 ~ "40 à 20 %",
-                                 max < 0.2 ~ "Moins de 20 %",
-                                 is.na(max) ~ "Pas de données")) %>% 
-  mutate(cat_city_corridor = case_when(city_corridor >= 0.8 ~ "Plus de 80 %",
-                                 city_corridor < 0.8 & city_corridor >= 0.6 ~ "80 à 60 %",
-                                 city_corridor < 0.6 & city_corridor >= 0.4 ~ "60 à 40 %",
-                                 city_corridor < 0.4 & city_corridor >= 0.2 ~ "40 à 20 %",
-                                 city_corridor < 0.2 ~ "Moins de 20 %",
-                                 is.na(city_corridor) ~ "Pas de données"))
+  left_join(nb_penurie, by = "ID") %>% 
+  left_join(data_tt, by = join_by("ID" == "citycode")) %>% 
+  mutate(nb = replace_na(nb, 0)) %>% 
+  filter(!is.na(perc_neg)) %>% 
+  select(-c(1,3)) %>% 
+  unique() %>% 
+  left_join(data_303, by = join_by("fid_fusion" == "fid"))
+write.csv(data_penurie, "analysis/article_WS/data_penurie.csv")
 
-data_sf = st_as_sf(data_penurie, coords = c("longitude", "latitude"),crs = 4326)
+# code by hand
+data_penurie = read.csv("analysis/article_WS/data_penurie_code.csv")
+
+data_sf = st_as_sf(data_penurie, coords = c("longitude", "latitude"), crs = 4326)
 
 # map
 world_map = ne_countries(scale = "medium", returnclass = "sf")
@@ -90,10 +115,9 @@ world_map %>%
   # city points
   geom_sf(data = data_sf, 
           aes(size = nb,
-              color = cat_negatif),
+              color = perc_neg),
           alpha = 0.8) +
-  scale_color_manual(breaks = c("Plus de 80 %", "80 à 60 %", "60 à 40 %", "40 à 20 %", "Moins de 20 %", "Pas de données"),
-                    values =c("#d7191c", "#fdae61", "#ffffbf", "#a6d96a", "#1a9641", "#bababa")) + 
+  scale_color_viridis_b() +
    # equal earth projection
   coord_sf(crs = "+proj=eqearth") +
   # theme
@@ -102,33 +126,9 @@ world_map %>%
         legend.box = "vertical",
         plot.background = element_rect(fill = "white")) +
   labs(size = "Nombre d'occurrences dans le corpus",
-       col = "Pourcentage maximal de pixels négatifs dans la ville") 
-ggsave("analysis/penurie/map_penurie_max.svg", width = 4000, height = 2500, units = "px")
-ggsave("analysis/penurie/map_penurie_max.png", width = 4000, height = 2500, units = "px")
-
-# map city corridor 
-world_map %>% 
-  ggplot() +
-  # world map 
-  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
-  # city points
-  geom_sf(data = data_sf, 
-          aes(size = nb,
-              color = cat_city_corridor),
-          alpha = 0.8) +
-  scale_color_manual(breaks = c("Plus de 80 %", "80 à 60 %", "60 à 40 %", "40 à 20 %", "Moins de 20 %", "Pas de données"),
-                    values = c("#d7191c", "#fdae61", "#ffffbf", "#a6d96a", "#1a9641", "#bababa")) + 
-   # equal earth projection
-  coord_sf(crs = "+proj=eqearth") +
-  # theme
-  theme_void() +
-  theme(legend.position = "bottom",
-        legend.box = "vertical",
-        plot.background = element_rect(fill = "white")) +
-  labs(size = "Nombre d'occurrences dans le corpus",
-       col = "Pourcentage de pixels négatifs dans le corridor urbain") 
-ggsave("analysis/penurie/map_penurie_corridor.svg", width = 4000, height = 2500, units = "px")
-ggsave("analysis/penurie/map_penurie_corridor.png", width = 4000, height = 2500, units = "px")
+       col = "Pourcentage moyen de pixels négatifs") 
+ggsave("analysis/article_WS/map_FB_LB.svg", width = 4000, height = 2500, units = "px")
+ggsave("analysis/article_WS/map_FB_LB.png", width = 4000, height = 2500, units = "px")
 ```
 
 ### Cities to analyse
@@ -140,3 +140,41 @@ penurie_analysis = data_penurie %>%
 
 write.csv(penurie_analysis, "analysis/penurie/liste_villes_penurie.csv")
 ```
+
+### Cube de corrélation
+
+```{r}
+data_cube = data_penurie %>% 
+  mutate(classe = case_when(
+    perc_neg > 32.2439 & data_corpus == 1 ~ "B",
+    perc_neg > 32.2439 &  data_corpus == 0  ~ "A",
+    perc_neg < 32.2439 &  data_corpus == 1 ~ "D",
+    perc_neg < 32.2439 &  data_corpus == 0 ~ "C"))
+
+nb_cube = data_cube %>% 
+  group_by(classe) %>% 
+  count()
+
+data_sf = st_as_sf(data_cube, coords = c("longitude", "latitude"), crs = 4326)
+
+world_map %>% 
+  ggplot() +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_sf, 
+          aes(color = classe),
+          alpha = 0.8) +
+  scale_color_manual(breaks = c("A", "B", "C", "D"),
+                     values = c("#8dd3c7", "#fb8072",  "#b3de69", "#fdb462")) +
+   # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom",
+        legend.box = "vertical",
+        plot.background = element_rect(fill = "white")) 
+ggsave("analysis/article_WS/typologie_ws.png", width = 4000, height = 2500, units = "px")
+```
+
+\
