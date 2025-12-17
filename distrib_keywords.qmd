@@ -38,9 +38,18 @@ tag.map.title = tags$style(HTML("
 
 ```{r read_corpus}
 corpus = read.csv("collected_data/corpus_distinct.csv") 
-data_city_river = read.csv("input_data/data_city_river_303.csv") 
+data_city_river = read.csv("input_data/data_city_river_303.csv")  
 fid_fusion = read.csv("input_data/data_city_river_fid_fusion.csv") %>% 
   select(c("fid","fid_fusion"))
+
+noms_conti = data.frame(nom = c("Chine", "Europe", "Asie de l'Ouest", 
+                                "Amérique du Nord", "Afrique", "Asie du Sud-Est", 
+                                "Inde", "Amérique centrale", "Amérique du Sud"),
+                        sub_continent = c("AS_CHN", "EU", "AS_W", "NAm", "AF",
+                                         "AS_SE", "AS_IND", "CA", "SA"))
+
+continents = data_city_river %>% 
+  select(c("urban_aggl", "sub_continent"))
 ```
 
 ### Major keywords
@@ -196,82 +205,6 @@ leaf = leaflet(data = data, options = leafletOptions(zoomControl = TRUE, minZoom
 saveWidget(leaf, file = "occurrence_water_scarcity_leaflet.html")
 ```
 
-#### Climate change
-
-```{r climate_change}
-climate_change = corpus %>% 
-  # keep pages mentioning climate change, global warming
-  filter(str_detect(text_en, "climate change|global warming")) %>% 
-  # do not keep the exact same page twice
-  distinct(link, .keep_all = TRUE) %>% # 811 pages
-  group_by(urban_aggl) %>% 
-  # count nb of occurrences per city
-  count() 
-
-# 245 cities
-
-# prepare dataset for representing it on a map
-data = corpus %>% 
-  select(c("urban_aggl", "latitude", "longitude")) %>% 
-  distinct(urban_aggl, .keep_all = TRUE) %>% 
-  left_join(climate_change, by = "urban_aggl") %>% 
-  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) %>% 
-  mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
-  # remove cities which do not mention the keyword
-  filter(!is.na(n))
-
-### MAP
-# Prepare data
-data_sf = st_as_sf(data, coords = c("longitude", "latitude"), crs = 4326)
-world_map = ne_countries(scale = "medium", returnclass = "sf")
-
-map = ggplot(world_map) +
-  # world map 
-  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
-  # city points
-  geom_sf(data = data_sf, aes(size = n), color = "#fc8d62", alpha = 0.7, show.legend = TRUE) +
-  scale_size_area(max_size = 5)  +
-  # equal earth projection
-  coord_sf(crs = "+proj=eqearth") +
-  # theme
-  theme_void() +
-  theme(legend.position = "bottom",
-        plot.background = element_rect(fill = "white", color = "white")) +
-  # legend
-  labs(size = "Nombre de mentions de 'climate change' ou de 'global warming'")
-
-
-### DIAGRAM
-diagram = data %>% 
-  mutate(urban_aggl = fct_reorder(urban_aggl, n)) %>% 
-  filter(n >= 9) %>% 
-  ggplot(mapping = aes(x = urban_aggl, # create the plot
-                      y = n)) + 
-    geom_col(fill = "#fc8d62", position = "stack") +
-    coord_flip() + # flip x and y coordinates 
-    labs(x = "",
-         y = "") + 
-    theme_bw(base_family = "CenturySch")
-
-### JOIN EVERYTHING AND SAVE
-plot_grid(map, diagram, rel_widths = c(2,1))
-ggsave("occurrence_climate_change.png", path = "analysis/keywords/", width = 4000, height = 2500, units = "px")
-
-### LEAFLET MAP (Interactive)
-title = tags$div(
-  tag.map.title, HTML("<td align=justify><b>Nombre de mentions de 'climate change' ou de 'global warming'</b></td>"))
-leaf = leaflet(data = data, options = leafletOptions(zoomControl = TRUE, minZoom = 1, maxZoom = 5)) %>% 
-  addProviderTiles("CartoDB.VoyagerNoLabels") %>% 
-  addCircleMarkers(~longitude, 
-                   ~latitude,
-                   label = paste0(data$urban_aggl,", ", data$n),
-                   color = "#fc8d62",
-                   opacity = 1,
-                   radius = 0.5*data$n) %>% 
-  addControl(title, position = "topright") 
-saveWidget(leaf, file = "occurrence_climate_change_leaflet.html")
-```
-
 #### Gravel mining
 
 ```{r gravel_mining}
@@ -399,7 +332,7 @@ data_city_river = read.csv("input_data/data_city_river_303.csv")
 fid_fusion = read.csv("input_data/data_city_river_fid_fusion.csv") %>% 
   select(c("fid","fid_fusion"))
 
-df = corpus %>% 
+inondations = corpus %>% 
   dplyr::rename(tokenized = tokenized_noloc) %>% 
   subset(!is.na(tokenized)) %>% 
   filter(str_detect(tokenized, "flood|flooding|inundation")) %>%  
@@ -669,4 +602,389 @@ ggplot(world_map) +
   labs(size = "Nombre de pages mentionnant un front d'eau",
        color = "Waterfront ou riverfront ?")   
 ggsave("analysis/keywords/map_riverfront.svg", width = 4000, height = 2500, units = "px")
+```
+
+### Sécheresse et manque d'eau
+
+#### Sécheresse
+
+```{r}
+drought = corpus %>% 
+  filter(str_detect(text_en, "drought")) %>% 
+  left_join(fid_fusion, by = "fid") %>% 
+  group_by(fid_fusion) %>% 
+  count() 
+
+# prepare dataset for representing it on a map
+data = data_city_river %>% 
+  select(c("fid", "nom", "latitude", "longitude")) %>% 
+  left_join(drought, by = join_by("fid" == "fid_fusion")) %>% 
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) %>% 
+  mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
+  filter(!is.na(n))
+
+### MAP
+# Prepare data
+data_sf = st_as_sf(data, coords = c("longitude", "latitude"), crs = 4326)
+world_map = ne_countries(scale = "medium", returnclass = "sf") %>% 
+  filter(sovereignt != "Antarctica")
+
+ggplot(world_map) +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_sf, aes(size = n), color = "#fec44f", alpha = 0.7, show.legend = TRUE) +
+  scale_size_area(breaks = c(1, 5, 10, 20, 40),
+                  limits = c(1, 44)) +
+  # color palette
+  # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom",
+        plot.background = element_rect(fill = "white", color = "white"),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 15)) +
+  # legend
+  labs(size = "Nombre de pages mentionnant une sécheresse")   
+ggsave("analysis/keywords/map_drought.svg", width = 4000, height = 2500, units = "px")
+
+### DIAGRAM
+data %>% 
+  mutate(nom = fct_reorder(nom, n)) %>% 
+  top_n(15) %>% 
+  ggplot(mapping = aes(x = nom, # create the plot
+                      y = n)) + 
+    geom_col(fill = "#fdb462", position = "stack") +
+    coord_flip() + # flip x and y coordinates 
+    scale_y_continuous(limits = c(0,45)) +
+    labs(x = "",
+         y = "") + 
+    theme_bw(base_family = "CenturySch") +
+  theme(axis.text.x = element_text(size = 15),
+        axis.text.y = element_text(size = 15))
+
+ggsave("analysis/keywords/diagram_drought.png", width = 2000, height = 1000, units = "px")
+```
+
+#### Scarcity
+
+```{r}
+scarcity = corpus %>% 
+  filter(str_detect(text_en, "water scarcity|water shortage|shortage of water|water stress|lack of water")) %>% 
+  left_join(fid_fusion, by = "fid") %>% 
+  group_by(fid_fusion) %>% 
+  count() 
+# prepare dataset for representing it on a map
+data = data_city_river %>% 
+  select(c("fid", "nom", "latitude", "longitude")) %>% 
+  left_join(scarcity, by = join_by("fid" == "fid_fusion")) %>% 
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) %>% 
+  mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
+  filter(!is.na(n))
+
+### MAP
+# Prepare data
+data_sf = st_as_sf(data, coords = c("longitude", "latitude"), crs = 4326)
+world_map = ne_countries(scale = "medium", returnclass = "sf") %>% 
+  filter(sovereignt != "Antarctica")
+
+ggplot(world_map) +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_sf, aes(size = n), color = "#d94801", alpha = 0.7, show.legend = TRUE) +
+  scale_size_area(breaks = c(1, 5, 10, 20, 40),
+                  limits = c(1, 44)) +
+  # color palette
+  # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom",
+        plot.background = element_rect(fill = "white", color = "white"),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 15)) +
+  # legend
+  labs(size = "Nombre de pages mentionnant un manque d'eau")   
+ggsave("analysis/keywords/map_scarcity.svg", width = 4000, height = 2500, units = "px")
+
+### DIAGRAM
+data %>% 
+  mutate(nom = fct_reorder(nom, n)) %>% 
+  top_n(15) %>% 
+  ggplot(mapping = aes(x = nom, # create the plot
+                       y = n)) + 
+  geom_col(fill = "#d94801", position = "stack") +
+  coord_flip() + # flip x and y coordinates 
+  scale_y_continuous(limits = c(0,44)) +
+  labs(x = "",
+       y = "") + 
+  theme_bw(base_family = "CenturySch") +
+  theme(axis.text.x = element_text(size = 15),
+        axis.text.y = element_text(size = 15))
+
+ggsave("analysis/keywords/diagram_scarcity.png", width = 2000, height = 1000, units = "px")
+```
+
+#### Drought + scarcity
+
+```{r}
+drought = corpus %>% 
+  filter(str_detect(text_en, "drought"))
+
+scarcity = corpus %>% 
+  filter(str_detect(text_en, "water scarcity|water shortage|shortage of water|water stress|lack of water")) %>% 
+  select("id") %>%
+  mutate(scarcity = TRUE)
+
+scarcity_drought = drought %>% 
+  left_join(scarcity, by = "id") %>% 
+  filter(!is.na(scarcity)) %>% 
+  left_join(fid_fusion, by = "fid") %>% 
+  group_by(fid_fusion) %>% 
+  count() 
+  
+# prepare dataset for representing it on a map
+data = data_city_river %>% 
+  select(c("fid", "nom", "latitude", "longitude")) %>% 
+  left_join(scarcity_drought, by = join_by("fid" == "fid_fusion")) %>% 
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) %>% 
+  mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
+  filter(!is.na(n))
+
+### MAP
+# Prepare data
+data_sf = st_as_sf(data, coords = c("longitude", "latitude"), crs = 4326)
+world_map = ne_countries(scale = "medium", returnclass = "sf") %>% 
+  filter(sovereignt != "Antarctica")
+
+ggplot(world_map) +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_sf, aes(size = n), color = "#fe9929", alpha = 0.7, show.legend = TRUE) +
+  scale_size_area(breaks = c(1, 5, 10, 20, 40),
+                  limits = c(1, 45)) +
+  # color palette
+  # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom",
+        plot.background = element_rect(fill = "white", color = "white"),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 15)) +
+  # legend
+  labs(size = "Nombre de pages mentionnant à la fois un manque d'eau et une sécheresse")   
+ggsave("analysis/keywords/map_scarcity_drought.svg", width = 4000, height = 2500, units = "px")
+
+### DIAGRAM
+data %>% 
+  mutate(nom = fct_reorder(nom, n)) %>% 
+  top_n(15) %>% 
+  ggplot(mapping = aes(x = nom, # create the plot
+                       y = n)) + 
+  geom_col(fill = "#fe9929", position = "stack") +
+  coord_flip() + # flip x and y coordinates 
+  scale_y_continuous(limits = c(0,45)) +
+  labs(x = "",
+       y = "") + 
+  theme_bw(base_family = "CenturySch") +
+  theme(axis.text.x = element_text(size = 15),
+        axis.text.y = element_text(size = 15))
+
+ggsave("analysis/keywords/diagram_scarcity_drought.png", width = 2000, height = 1000, units = "px")
+```
+
+### Climate change
+
+#### Map
+
+```{r}
+climate_change = corpus %>% 
+  filter(str_detect(text_en, "climate change|global warming|climate crisis|climate warming|global change")) %>% 
+  distinct(link, .keep_all = TRUE) %>% 
+  left_join(fid_fusion, by = "fid") %>% 
+  group_by(fid_fusion) %>% 
+  count()
+
+# prepare dataset for representing it on a map
+data = data_city_river %>% 
+  select(c("fid", "urban_aggl", "latitude", "longitude")) %>% 
+  left_join(climate_change, by = join_by("fid" == "fid_fusion")) %>% 
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) %>% 
+  mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
+  filter(!is.na(n)) %>% 
+  left_join(continents, by = "urban_aggl") %>% 
+  left_join(noms_conti, by = "sub_continent")
+
+### MAP
+# Prepare data
+data_sf = st_as_sf(data, coords = c("longitude", "latitude"), crs = 4326)
+world_map = ne_countries(scale = "medium", returnclass = "sf") %>% 
+  filter(sovereignt != "Antarctica")
+
+world_map %>% 
+ggplot() +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_sf, aes(size = n), color = "#99000d", alpha = 0.8, show.legend = TRUE) +
+ # scale_size_area(breaks = c(1, 5, 10, 38)) +
+  # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom",
+        plot.background = element_rect(fill = "white", color = "white"),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 15),
+        plot.tag = element_text(color = "#d9d9d9", 
+                                angle = 90,
+                                size = 8),
+        plot.tag.position = "right") +
+  # legend
+  labs(size = "Nombre de pages mentionnant le changement climatique",
+       tag = "Fond de carte : R Natural Earth. Réalisation : L. Bajemon, décembre 2025.")   
+ggsave("analysis/keywords/map_climate_change.svg", width = 4000, height = 2500, units = "px")
+
+# now make a chart of porportional circles per continent
+data_cont = data %>% 
+  group_by(nom) %>% 
+  mutate(nb_continent = sum(n)) %>% 
+  select(c("nb_continent", "nom")) %>% 
+  unique() %>% 
+  mutate(nom = fct_reorder(nom, nb_continent),
+         y = 1, # y position
+         radius = sqrt(nb_continent)/30) # size of the circles 
+
+data_cont$x = c(9, 8, 2, 4, 7, 3, 5, 6, 1) # x position on the grid
+
+data_cont %>% 
+  ggplot() +
+    geom_circle(aes(x0 = x, y0 = y, r = radius), 
+                fill = "#99000d", 
+                color = "white",
+                alpha = 0.8) +
+    geom_text(aes(x = x, 
+                  y = 1.7,
+                  label = paste(nom, nb_continent, sep = " - "),
+                  angle = 90,
+                  hjust = "bottom"),
+              size = 3) +
+    coord_fixed(ylim = c(0,5)) +
+    theme_void()
+
+ggsave("analysis/keywords/diagram_climate.svg", width = 1500, height = 1500, units = "px")
+```
+
+#### Common pages with climate change
+
+```{r}
+climate_change = corpus %>% 
+  filter(str_detect(text_en, "climate change|global warming|climate crisis|climate warming|global change")) %>% 
+  select("id") %>% 
+  mutate(cchange = TRUE) 
+# 1233 pages 
+
+drought = corpus %>% 
+  filter(str_detect(text_en, "drought")) %>% 
+  left_join(climate_change, by = "id") %>% 
+  filter(!is.na(cchange))
+# 369 pages out of 1289
+
+scarcity = corpus %>% 
+  filter(str_detect(text_en, "water scarcity|water shortage|shortage of water|water stress|lack of water")) %>% 
+  left_join(climate_change, by = "id") %>% 
+  filter(!is.na(cchange))
+# 184 pages out of 573
+
+inondations = corpus %>% 
+  filter(str_detect(text_en, "flood|flooding|inundation")) %>% 
+  left_join(climate_change, by = "id") %>% 
+  filter(!is.na(cchange))
+# 694 pages out of 7743
+```
+
+### Religion
+
+```{r}
+religion = corpus %>% 
+  filter(str_detect(text_en, "religion|sacred|divine| god |religious|divinity|goddess|worship")) %>% 
+  distinct(link, .keep_all = TRUE) %>% 
+  left_join(fid_fusion, by = "fid") %>% 
+  group_by(fid_fusion) %>% 
+  count()
+
+# prepare dataset for representing it on a map
+data = data_city_river %>% 
+  select(c("fid", "urban_aggl", "latitude", "longitude")) %>% 
+  left_join(religion, by = join_by("fid" == "fid_fusion")) %>% 
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) %>% 
+  mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
+  filter(!is.na(n)) %>% 
+  left_join(continents, by = "urban_aggl") %>% 
+  left_join(noms_conti, by = "sub_continent")
+
+### MAP
+# Prepare data
+data_sf = st_as_sf(data, coords = c("longitude", "latitude"), crs = 4326)
+world_map = ne_countries(scale = "medium", returnclass = "sf") %>% 
+  filter(sovereignt != "Antarctica")
+
+world_map %>% 
+ggplot() +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_sf, aes(size = n), color = "#6e016b", alpha = 0.8, show.legend = TRUE) +
+  scale_size_area(breaks = c(1, 2, 5, 10, 80)) +
+  # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void() +
+  theme(legend.position = "bottom",
+        plot.background = element_rect(fill = "white", color = "white"),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 15),
+        plot.tag = element_text(color = "#d9d9d9", 
+                                angle = 90,
+                                size = 8),
+        plot.tag.position = "right") +
+  # legend
+  labs(size = "Nombre de pages mentionnant la religion",
+       tag = "Fond de carte : R Natural Earth. Réalisation : L. Bajemon, décembre 2025.")   
+
+ggsave("analysis/keywords/map_religion.svg", width = 4000, height = 2500, units = "px")
+ggsave("analysis/keywords/map_religion.png", width = 4000, height = 2500, units = "px")
+
+# now make a chart of porportional circles per continent
+data_cont = data %>% 
+  group_by(nom) %>% 
+  mutate(nb_continent = sum(n)) %>% 
+  select(c("nb_continent", "nom")) %>% 
+  unique() %>% 
+  mutate(nom = fct_reorder(nom, nb_continent),
+         y = 1, # y position
+         radius = sqrt(nb_continent)/30) # size of the circles 
+
+data_cont$x = c(9, 8, 2, 4, 7, 3, 5, 6, 1) # x position on the grid
+
+data_cont %>% 
+  ggplot() +
+    geom_circle(aes(x0 = x, y0 = y, r = radius), 
+                fill = "#99000d", 
+                color = "white",
+                alpha = 0.8) +
+    geom_text(aes(x = x, 
+                  y = 1.7,
+                  label = paste(nom, nb_continent, sep = " - "),
+                  angle = 90,
+                  hjust = "bottom"),
+              size = 3) +
+    coord_fixed(ylim = c(0,5)) +
+    theme_void()
+
+ggsave("analysis/keywords/diagram_climate.svg", width = 1500, height = 1500, units = "px")
 ```

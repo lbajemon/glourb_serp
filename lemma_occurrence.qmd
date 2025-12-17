@@ -285,15 +285,15 @@ show_results = function(fid, ville, riviere){
   freq_cut = freq_cut[1:30,] # only display 30 words so it's more readable
  
   # make the plot
-  myplot = freq_cut %>% # our data
+myplot = freq_cut %>% # our data
     mutate(word = fct_reorder(word, n)) %>% # rearrange in decreasing order
     ggplot(mapping = aes(x = word,
                          y = n)) + 
-    geom_col(fill = "#b2df8a", position = "stack") +
+    geom_col(fill = "grey", position = "stack") +
     coord_flip() + # flip x and y coordinates 
-    labs(x = "lemme",
-         y = "nombre d'occurrences",
-         title = paste0(ville, " et ", riviere)) +
+    labs(x = "Lemme",
+         y = "Nombre d'occurrences",
+         title = paste0(riviere, " et ", ville)) +
     theme_bw(base_family = "CenturySch")
 
   # save the plot
@@ -420,4 +420,25 @@ tokClmot = fcm(tokClmot)
 featCl = names(topfeatures(tokClmot, 30))
 net = fcm_select(tokClmot, pattern = featCl)
 textplot_network(net)
+```
+
+### Euphrate et Tigre
+
+```{r}
+c_fid = c("37", "51", "164", "185", "139", "65", "985")
+
+df_tokens = read.csv("collected_data/english/df_tokens.csv")
+df_tok2 = df_tokens %>% 
+  select(c("fid", "urban_aggl", "river_en", "token", "snippet_id"))
+df_tokens_hl = read.csv("collected_data/hl/df_tokens_all_hl.csv")
+df_tok3 = df_tokens_hl %>% 
+  select(c("fid", "urban_aggl", "river_en", "token", "snippet_id"))
+
+combinaisons = df_tok2 %>% 
+  rbind(df_tok3) %>% 
+  filter(fid %in% c("37", "51", "164", "185", "139", "65", "985")) %>% 
+  filter(token != "al") %>% 
+  filter(token != "diyarbakır") %>% 
+  group_by(token) %>% 
+  count()
 ```
