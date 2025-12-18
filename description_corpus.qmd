@@ -181,18 +181,22 @@ ggsave("analysis/description_corpus/nb_requetes.svg", width = 4000, height = 250
 ### Nombre moyen de pages
 
 ```{r}
-## Préparation des données
+## Data prep
 corpus = read.csv("collected_data/combined_all_tokens.csv")
 
 fid_fusion = read.csv("input_data/data_city_river_fid_fusion.csv") %>% 
   select(c("fid", "fid_fusion")) 
 
-data_city_river = read.csv("input_data/data_city_river_303.csv") %>% 
+data_city_river_303 = read.csv("input_data/data_city_river_303.csv") %>% 
+  select("fid", "latitude", "longitude", "urban_aggl") %>% 
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", ".")),
+         longitude = as.numeric(str_replace_all(longitude, ",", "."))) 
+data_city_river = read.csv("input_data/data_city_river.csv") %>% 
   select("fid", "latitude", "longitude", "urban_aggl") %>% 
   mutate(latitude = as.numeric(str_replace_all(latitude, ",", ".")),
          longitude = as.numeric(str_replace_all(longitude, ",", "."))) 
 
-# get number of languages for each agglomeration
+# get number of pages for each agglomeration
 nb_tot = corpus %>% 
   mutate(requete = paste0(hl, "-", query)) %>% 
   group_by(fid) %>% 
@@ -207,11 +211,29 @@ corpus_fusion = corpus %>%
   group_by(fid_fusion) %>% 
   dplyr::summarise(n = n()) %>% 
   dplyr::rename(n_pages = n) %>% 
-  left_join(data_city_river, by = join_by("fid_fusion" == "fid")) %>% 
+  left_join(data_city_river_303, by = join_by("fid_fusion" == "fid")) %>% 
   left_join(nb_tot, by = "fid_fusion") %>% 
   mutate(moy = n_pages/n_total)
 
-write.csv(corpus_fusion, "analysis/description_corpus/nb_pages_par_ville.csv")
+write.csv(corpus_fusion, "analysis/description_corpus/nb_pages_par_agglo.csv")
+
+# get number of pages for each city-river combination
+nb_tot = corpus %>% 
+  mutate(requete = paste0(hl, "-", query)) %>% 
+  group_by(fid) %>% 
+  summarise(n_langues = n_distinct(requete))
+
+nb_per_combi = corpus %>%
+  group_by(fid) %>% 
+  dplyr::summarise(n = n()) %>% 
+  dplyr::rename(n_pages = n) %>% 
+  left_join(data_city_river, by = "fid") %>% 
+  left_join(nb_tot, by = "fid") %>% 
+  mutate(moy = n_pages/n_langues)
+
+write.csv(nb_per_combi, "analysis/description_corpus/nb_pages_combi.csv")
+
+### MAP 
 data_sf = st_as_sf(corpus_fusion, coords = c("longitude", "latitude"), crs = 4326)
 
 ## Table by subcontinent
