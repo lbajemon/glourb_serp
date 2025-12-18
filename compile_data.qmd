@@ -1,0 +1,95 @@
+---
+title: "compile_data"
+format: html
+---
+
+```{r}
+library(tidyverse)
+```
+
+```{r read_data}
+data = read.csv("input_data/data_city_river.csv") %>% 
+  select(c("fid", "urban_aggl", "river_en", "latitude", "longitude", "country_en", "gl", "hl1", "hl2", "hl3", "hl4", "hl5", "hl6", "river_position", "sub_continent", "clim", "clco", "biome"))
+```
+
+### Number of pages by combination
+
+• Total number of pages
+
+• Mean number of pages
+
+```{r}
+nb_pages = read.csv("analysis/description_corpus/nb_pages_combi.csv") %>% 
+  select(c("fid", "n_pages", "moy")) %>% 
+  rename(n_pages_tot = n_pages,
+         n_pages_mean = moy)
+```
+
+### Localness of pages
+
+• Percentage of pages for which the top-level domain is local
+
+• Percentage of pages for which the language of the website is a local one.
+
+• Percentage of pages for which the language is the one of the sent query.
+
+```{r}
+localness1 = read.csv("analysis/localness/localness_compile.csv") %>% 
+  group_by(fid, local_tld) %>% 
+  dplyr::mutate(nb = n()) %>% 
+  ungroup() %>% 
+  group_by(fid) %>% 
+  dplyr::mutate(total_fid = n()) %>% 
+  mutate(perc = nb/total_fid*100) %>% 
+  filter(local_tld == TRUE) %>% 
+  select(c("fid", "perc")) %>% 
+  distinct() %>% 
+  rename(local_tld = perc)
+
+localness2 = read.csv("analysis/localness/localness_compile.csv") %>% 
+  group_by(fid, local_lang) %>% 
+  dplyr::mutate(nb = n()) %>% 
+  ungroup() %>% 
+  group_by(fid) %>% 
+  dplyr::mutate(total_fid = n()) %>% 
+  mutate(perc = nb/total_fid*100) %>% 
+  filter(local_lang == TRUE) %>% 
+  select(c("fid", "perc")) %>% 
+  distinct() %>% 
+  rename(local_lang = perc)
+
+localness3 = read.csv("analysis/localness/localness_compile.csv") %>% 
+  group_by(fid, search_lang) %>% 
+  dplyr::mutate(nb = n()) %>% 
+  ungroup() %>% 
+  group_by(fid) %>% 
+  dplyr::mutate(total_fid = n()) %>% 
+  mutate(perc = nb/total_fid*100) %>% 
+  filter(search_lang == TRUE) %>% 
+  select(c("fid", "perc")) %>% 
+  distinct() %>% 
+  rename(search_lang = perc)
+```
+
+### Distribution of lexical worlds 
+
+```{r}
+topics14 = read.csv("analysis/clusters/summary_14_topics.csv")
+topics4 = read.csv("analysis/clusters/summary_4_topics.csv")
+```
+
+### Distribution of websites types
+
+```{r}
+websites = read.csv("analysis/typology_websites/corpus_website_types.csv")
+```
+
+### Additional data
+
+• Access to Internet
+
+• Internet censorship
+
+<https://www.comparitech.com/blog/vpn-privacy/internet-censorship-map/#Methodology>
+
+<https://freedomhouse.org/explore-the-map?type=all&year=2025>
