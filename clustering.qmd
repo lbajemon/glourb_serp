@@ -58,9 +58,7 @@ read_tokens = function(corpus){
 
 The tokenized snippets are already quite short, so we can skip the step of splitting the text in segments (using `split_segments`) and move on to the calculation of the document-feature matrix (dfm). The dfm is a mathematical matrix describing for each term, its frequency in each document. In rows are the documents (i.e. one row per snippet) and in columns are the terms.
 
-### 2. Define functions for clustering
-
-#### a. Calculate the DFM
+### 2. Define function for clustering
 
 ```{r def_calc_dtm}
 calc_dtm = function(tokens){
@@ -75,7 +73,7 @@ calc_dtm = function(tokens){
 ### 3. Run functions
 
 ```{r all_data}
-df = read.csv("collected_data/corpus_distinct.csv") %>% 
+df = read.csv("collected_data/corpus_distinct_2025.csv") %>% 
   dplyr::rename(tokenized = tokenized_noloc) %>% # rename column
   subset(!is.na(tokenized)) 
 
@@ -447,4 +445,48 @@ spec_city = tidy_specificities(corpus_segments_df, fid, topic) %>%
           legend.box = "vertical")
   
 ggsave("analysis/clusters/specificite_4.svg", width = 4000, height = 2500, units = "px")
+```
+
+### Summary
+
+```{r}
+# write lexical worlds 
+corpus$topic4 = cutree(dhc, 4)
+corpus$topic14 = cutree(dhc, 14)
+
+# get a summary for each city
+summary_4 = convert(corpus, to = "data.frame") %>% 
+  select(c("fid", "topic4")) %>% 
+  group_by(fid, topic4) %>% 
+  # count number of segments by topic
+  dplyr::mutate(n_topic4 = n()) %>% 
+  distinct() %>% 
+  group_by(fid) %>% 
+  dplyr::mutate(n_tot = sum(n_topic4)) %>% 
+  # count percentage of topics
+  mutate(n_topic4 = n_topic4/n_tot*100) %>% 
+  mutate(topic_4 = paste0("topic4_", topic4)) %>% 
+  # pivot df to keep one row per city 
+  pivot_wider(names_from = topic_4,
+              id_cols = fid,
+              values_from = n_topic4) %>% 
+  replace(is.na(.), 0)
+
+summary_14 = convert(corpus, to = "data.frame") %>% 
+  select(c("fid", "topic14")) %>% 
+  group_by(fid, topic14) %>% 
+  dplyr::mutate(n_topic14 = n()) %>% 
+  distinct() %>%
+  group_by(fid) %>% 
+  dplyr::mutate(n_tot = sum(n_topic14)) %>% 
+  # count percentage of topics
+  mutate(n_topic14 = n_topic14/n_tot*100) %>% 
+  mutate(topic_14 = paste0("topic14_", topic14)) %>% 
+  pivot_wider(names_from = topic_14,
+              id_cols = fid,
+              values_from = n_topic14) %>% 
+  replace(is.na(.), 0)
+
+write.csv(summary_4, "analysis/clusters/summary_4_topics.csv", row.names = FALSE)
+write.csv(summary_14, "analysis/clusters/summary_14_topics.csv", row.names = FALSE)
 ```
