@@ -1,0 +1,411 @@
+---
+title: "correlation_what_who_where"
+format: html
+---
+
+#### Load packages
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+fid_fusion = read.csv("input_data/data_city_river_fid_fusion.csv") %>% 
+  select(c("fid", "fid_fusion"))
+
+typology_names = read.csv("input_data/typology_names.csv", sep = ";") %>% 
+  select(-name_fr)
+
+topic_names4 = read.csv("input_data/topic_names4.csv") %>% 
+  select(topic, name)
+topic_names14 = read.csv("input_data/topic_names.csv") %>% 
+  select(topic, name)
+```
+
+#### Load datasets
+
+-   The segmented corpus with topics.
+
+-   The website types for each web page.
+
+-   The "localness" for each web page.
+
+```{r retrieve_topics}
+df_corpus = read.csv("analysis/clusters/segments_topics.csv") %>% 
+  rename(page = segment,
+         segment = doc_id)
+```
+
+```{r retrieve_website_types}
+df_types = read.csv("analysis/typology_websites/corpus_website_types.csv") %>% 
+  select(c("id", "type")) %>% 
+  mutate(type = trimws(type)) %>% 
+  rename(page = id)
+```
+
+```{r retrieve_localness}
+data_clus = read.csv("analysis/localness/df_localness_cluster.csv") %>% 
+  rename(fid = X) %>% 
+  left_join(fid_fusion, by = join_by("fid" == "fid_fusion")) %>% 
+  select(-"fid") %>% 
+  rename(fid = fid.y)
+
+df_localness = read.csv("analysis/localness/localness_compile.csv") %>% 
+  mutate(hl = tolower(hl),
+         page = paste0(fid, "_", hl, "_", X)) %>% 
+  select(c("local_tld", "search_lang", "local_lang", "page"))
+```
+
+### For four discourse topics
+
+#### Compile datasets
+
+```{r}
+df = df_corpus %>% 
+  left_join(df_types, by = "page") %>% 
+  left_join(data_clus, by = "fid") %>% 
+  left_join(df_localness, by = "page") %>% 
+  mutate(topic_ch = paste0("topic_", topic_4)) %>% 
+  left_join(typology_names, by = join_by(type == nom)) %>% 
+  select(-type) %>% 
+  rename(type = name_en)
+```
+
+#### Get and plot specificities
+
+```{r def_plot_specificities}
+## based on the mixr function, with choice of colors 
+plot_specificities2 = function(df_spec, 
+                               cat1, 
+                               cat2, 
+                               x_label_name, 
+                               colors = NULL, 
+                               facet_labels = NULL){
+  cat1 <- rlang::enquo(cat1)
+  cat2 <- rlang::enquo(cat2)
+  df_spec <- df_spec %>%
+    dplyr::group_by(!!cat2)
+  
+  df_spec <- df_spec %>%
+    dplyr::arrange(!!cat2,.data$spec)%>%
+    dplyr::mutate(id=1:length(.data$spec))
+  
+  p=ggplot2::ggplot(df_spec,
+                    ggplot2::aes(x = df_spec$id,
+                                 y = df_spec$spec,
+                                 fill = factor(!!cat2)))+
+    ggplot2::geom_bar(stat="identity", alpha=0.8)+
+    ggplot2::geom_text(ggplot2::aes(label=!!cat1, y=0), hjust=0)+
+    ggplot2::coord_flip() +
+    ggplot2::scale_y_continuous(limits = c(0, NA),
+                                  expand = c(0, NA)) +
+    ggplot2::facet_wrap(
+      ggplot2::vars(!!cat2),
+      scales="free",
+      labeller = if(!is.null(facet_labels))
+        ggplot2::labeller(.cols = facet_labels)
+          else ggplot2::labeller(.default = label_value)
+    ) +
+    ggplot2::scale_x_discrete(breaks=NULL)+
+    ggplot2::theme(legend.position="none")+
+    ggplot2::labs(x = x_label_name, y="Specificity score")
+  
+   if(!is.null(colors)){
+    p <- p + ggplot2::scale_fill_manual(values = colors)
+   }
+  
+  return(p)
+}
+```
+
+```{r}
+## WHAT / WHO
+df_spec_what_who = mixr::tidy_specificities(df, topic_4, type) %>% 
+  filter(topic_4 != "topic_NA") %>% 
+  group_by(topic_4) %>% 
+  top_n(4, spec)
+# replace infinite values 
+df_spec_what_who[sapply(df_spec_what_who, is.infinite)] = 324
+
+plot_specificities2(df_spec_what_who, 
+                    type, 
+                    topic_4,
+                    x_label_name = "Website type",
+                    colors = c("topic_1" = "#fdb462",
+                               "topic_2" = "#f781bf",
+                               "topic_3" = "#b3de69",
+                               "topic_4" = "#8dd3c7"),
+                    facet_labels = c("topic_1" = "Topic 1 - Society",
+                                     "topic_2" = "Topic 2 - Recreation",
+                                     "topic_3" = "Topic 3 - Water quality",
+                                     "topic_4" = "Topic 4 - Water quantity"))
+ggsave("analysis/correlations_WWW/plot_what_who.png", width = 2000, height = 1200, units = "px")
+ggsave("analysis/correlations_WWW/plot_what_who.svg", width = 2000, height = 1200, units = "px")
+
+## WHO / WHERE
+df_who_where = df_corpus %>% 
+  left_join(df_types, by = "page") %>% 
+  left_join(data_clus, by = "fid") %>% 
+  left_join(df_localness, by = "page") %>% 
+  mutate(topic_ch = paste0("topic_", topic_4)) %>% 
+  select(c("page", "type", "cluster")) %>% 
+  unique() %>% 
+  mutate(cluster_geo = paste0("cl_", cluster)) %>% 
+  left_join(typology_names, by = join_by(type == nom)) %>% 
+  select(-type) %>% 
+  rename(type = name_en)
+
+df_spec_who_where = mixr::tidy_specificities(df_who_where, cluster_geo, type) %>% 
+  filter(spec > 2) %>% 
+  group_by(cluster_geo) %>% 
+  top_n(3, spec)
+
+plot_specificities2(df_spec_who_where, 
+                   type, 
+                   cluster_geo, 
+                   x_label_name = "Website type",
+                   colors = c("cl_1" = "#ffd92f",
+                              "cl_2" = "#fc8d62",
+                              "cl_3" = "#8da0cb"),
+                   facet_labels = c("cl_1" = "Cluster 1 - not very local",
+                                    "cl_2" = "Cluster 2 - moderately local",
+                                    "cl_3" = "Cluster 3 - more local"))
+ggsave("analysis/correlations_WWW/plot_who_where.png", width = 1800, height = 600, units = "px")
+ggsave("analysis/correlations_WWW/plot_who_where.svg", width = 2000, height = 500, units = "px")
+
+## WHAT / WHERE
+df_what_where = df_corpus %>% 
+  left_join(df_types, by = "page") %>% 
+  left_join(data_clus, by = "fid") %>% 
+  left_join(df_localness, by = "page") %>% 
+  mutate(topic_ch = paste0("topic_", topic_4)) %>% 
+  mutate(cluster_geo = paste0("cl_", cluster))
+
+df_spec_what_where = mixr::tidy_specificities(df_what_where, cluster_geo, topic_ch) %>%
+  filter(topic_ch != "topic_NA") %>% 
+  filter(spec > 2) %>% 
+  left_join(topic_names4, by = join_by(topic_ch == topic))
+
+df_spec_what_where[sapply(df_spec_what_where, is.infinite)] = 324
+
+plot_specificities2(df_spec_what_where, 
+                   name, 
+                   cluster_geo,
+                   x_label_name = "Discourse topic",
+                   colors = c("cl_1" = "#ffd92f",
+                              "cl_2" = "#fc8d62",
+                              "cl_3" = "#8da0cb"),
+                   facet_labels = c("cl_1" = "Cluster 1 - not very local",
+                                    "cl_2" = "Cluster 2 - moderately local",
+                                    "cl_3" = "Cluster 3 - more local")
+                   )
+
+ggsave("analysis/correlations_WWW/plot_what_where.png", width = 1800, height = 600, units = "px")
+ggsave("analysis/correlations_WWW/plot_what_where.svg", width = 2000, height = 500, units = "px")
+```
+
+### For fourteen discourse topics
+
+#### Compile datasets
+
+```{r}
+df14 = df_corpus %>% 
+  left_join(df_types, by = "page") %>% 
+  left_join(data_clus, by = "fid") %>% 
+  left_join(df_localness, by = "page") %>% 
+  mutate(topic_ch = paste0("topic_", topic_14)) %>% 
+  left_join(typology_names, by = join_by(type == nom)) %>% 
+  left_join(topic_names14, by = join_by(topic_ch == topic)) %>% 
+  select(-type, -topic_ch) %>% 
+  rename(type = name_en,
+         topic = name) %>% 
+  mutate(cluster = paste0("cl_", cluster))
+```
+
+#### Get and plot specificities
+
+```{r}
+## WHAT / WHO
+df_spec_what_who = mixr::tidy_specificities(df14, topic, type) %>% 
+  filter(topic != "topic_NA") %>% 
+  filter(spec > 6) %>% 
+  group_by(topic) %>% 
+  top_n(2, spec)
+
+# replace infinite values 
+df_spec_what_who[sapply(df_spec_what_who, is.infinite)] = 324
+
+plot_specificities2(df_spec_what_who, 
+                    type, 
+                    topic,
+                    x_label_name = "Website type",
+                    colors = c("Alert system" = "#8dd3c7",
+                               "Heritage, attractions" = "#f781bf",
+                               "Tourism, travel" = "#f781bf",
+                               "Culture, knowledge" = "#fdb462",
+                               "Online images, web content" = "#f781bf",
+                               "Planning, management, environment" = "#b3de69",
+                               "Daily life, news items" = "#f781bf",
+                               "Pollution, sewerage" = "#b3de69", 
+                               "Floods, quantity" = "#8dd3c7",
+                               "Physico-chemical parameters" = "#b3de69",
+                               "Hydrography" = "#8dd3c7",
+                               "Urban infrastructure and geography" = "#f781bf",
+                               "Health" = "#fdb462",
+                               "Politics, conflicts" = "#fdb462"))
+
+ggsave("analysis/correlations_WWW/Topics_14/plot_what_who.png", width = 2000, height = 1200, units = "px")
+
+## WHAT / WHERE
+df_spec_what_where = mixr::tidy_specificities(df14, cluster, topic) %>%
+  filter(topic != "topic_NA") %>% 
+  filter(spec > 2) %>% 
+  group_by(cluster) %>% 
+  top_n(5, spec)
+
+df_spec_what_where[sapply(df_spec_what_where, is.infinite)] = 324
+
+plot_specificities2(df_spec_what_where, 
+                   topic, 
+                   cluster,
+                   x_label_name = "Discourse topic",
+                   colors = c("cl_1" = "#ffd92f",
+                              "cl_2" = "#fc8d62",
+                              "cl_3" = "#8da0cb"),
+                   facet_labels = c("cl_1" = "Cluster 1 - not very local",
+                                    "cl_2" = "Cluster 2 - moderately local",
+                                    "cl_3" = "Cluster 3 - more local")
+                   )
+
+ggsave("analysis/correlations_WWW/Topics_14/plot_what_where.png", width = 2200, height = 1200, units = "px")
+ggsave("analysis/correlations_WWW/plot_what_where.svg", width = 2000, height = 500, units = "px")
+```
+
+### Local vs non-local discourses
+
+#### Compile datasets
+
+```{r}
+df_types2 = read.csv("analysis/typology_websites/corpus_website_types.csv") %>% 
+  select(id, type, query) %>% 
+  rename(google_query = query) %>% 
+  mutate(type = trimws(type)) %>% 
+  rename(page = id)
+
+df = df_corpus %>% 
+  left_join(df_types2, by = "page") %>% 
+  left_join(data_clus, by = "fid") %>% 
+  left_join(df_localness, by = "page") %>% 
+  mutate(topic_14 = paste0("topic_", topic_14),
+         topic_4 = paste0("topic_", topic_4)) %>% 
+  left_join(typology_names, by = join_by(type == nom)) %>% 
+  left_join(topic_names14, by = join_by(topic_14 == topic)) %>% 
+  left_join(topic_names4, by = join_by(topic_4 == topic)) %>% 
+  select(-type) %>% 
+  rename(type = name_en,
+         name_4 = name.y,
+         name_14 = name.x) %>% 
+  mutate(cluster = paste0("cl_", cluster))
+```
+
+#### Plots
+
+```{r}
+### 14 topics
+df_spec_loc_what = mixr::tidy_specificities(df, google_query, name_14) %>% 
+  filter(!is.na(name_14)) %>% 
+  group_by(google_query) %>% 
+  top_n(4, spec)
+
+# replace infinite values 
+df_spec_loc_what[sapply(df_spec_loc_what, is.infinite)] = 324
+
+plot_specificities2(df_spec_loc_what, 
+                    name_14, 
+                    google_query,
+                    x_label_name = "Discourse topic",
+                    colors = c("english" = "#cab2d6",
+                               "hl" = "#a6cee3"),
+                    facet_labels = c("english" = "Non-local queries",
+                                     "hl" = "Local queries"))
+ggsave("analysis/correlations_WWW/LocalNLocal/plot_what14_local.png", width = 2000, height = 600, units = "px")
+ggsave("analysis/correlations_WWW/LocalNLocal/plot_what14_local.svg", width = 2000, height = 600, units = "px")
+
+### 4 topics
+df_spec_loc_what = mixr::tidy_specificities(df, google_query, name_4) %>% 
+  filter(!is.na(name_4) & spec > 2) 
+
+# replace infinite values 
+df_spec_loc_what[sapply(df_spec_loc_what, is.infinite)] = 324
+
+plot_specificities2(df_spec_loc_what, 
+                    name_4, 
+                    google_query,
+                    x_label_name = "Discourse topic",
+                    colors = c("english" = "#cab2d6",
+                               "hl" = "#a6cee3"),
+                    facet_labels = c("english" = "Non-local queries",
+                                     "hl" = "Local queries"))
+ggsave("analysis/correlations_WWW/LocalNLocal/plot_what4_local.png", width = 2000, height = 600, units = "px")
+ggsave("analysis/correlations_WWW/LocalNLocal/plot_what4_local.svg", width = 2000, height = 600, units = "px")
+
+### Types
+df_spec_loc_who = mixr::tidy_specificities(df, google_query, type) %>% 
+  group_by(google_query) %>% 
+  top_n(5, spec)
+
+# replace infinite values 
+df_spec_loc_who[sapply(df_spec_loc_who, is.infinite)] = 324
+
+plot_specificities2(df_spec_loc_who, 
+                    type, 
+                    google_query,
+                    x_label_name = "Website type",
+                    colors = c("english" = "#cab2d6",
+                               "hl" = "#a6cee3"),
+                    facet_labels = c("english" = "Non-local queries",
+                                     "hl" = "Local queries"))
+ggsave("analysis/correlations_WWW/LocalNLocal/plot_who_local.png", width = 2000, height = 800, units = "px")
+ggsave("analysis/correlations_WWW/LocalNLocal/plot_who_local.svg", width = 2000, height = 800, units = "px")
+```
+
+#### Dissimilarity between local and non-local discourse
+
+```{r}
+library(sf)
+library(rnaturalearth)
+
+res = df %>% 
+  group_by(fid, google_query, topic_4) %>% 
+  dplyr::summarise(count = n(), .groups = "drop") %>% 
+  pivot_wider(id_cols = c(fid, google_query), values_from = count, names_from = topic_4) %>% 
+  mutate(total = topic_1+topic_2+topic_3+topic_4) %>% 
+  mutate(topic_1 = topic_1/total*100,
+         topic_2 = topic_2/total*100,
+         topic_3 = topic_3/total*100,
+         topic_4 = topic_4/total*100) %>% 
+  group_by(fid) %>% 
+  summarise(distance = as.numeric(dist(as.matrix(across(starts_with("topic"))), method = "manhattan")))
+
+data = read.csv("input_data/data_city_river.csv") %>% 
+  left_join(res, by = "fid") %>% 
+  select(c(fid, latitude, longitude, distance, urban_aggl)) %>% 
+  mutate(longitude = as.numeric(str_replace_all(longitude, ",", "."))) %>% 
+  mutate(latitude = as.numeric(str_replace_all(latitude, ",", "."))) 
+data_sf = st_as_sf(data, coords = c("longitude", "latitude"), crs = 4326)
+
+world_map = ne_countries(scale = "medium", returnclass = "sf") %>% 
+  filter(sovereignt!="Antarctica")
+
+world_map %>% 
+  ggplot() +
+  # world map 
+  geom_sf(fill = "#f0f0f1", color = "white", size = 0.2) +
+  # city points
+  geom_sf(data = data_sf, aes(color = distance), size = 3) +
+  # color palette
+  # equal earth projection
+  coord_sf(crs = "+proj=eqearth") +
+  # theme
+  theme_void()
+```
