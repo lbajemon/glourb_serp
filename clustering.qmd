@@ -449,6 +449,10 @@ ggsave("analysis/clusters/specificite_4.svg", width = 4000, height = 2500, units
 
 ### Summary
 
+#### By city
+
+##### Percentages
+
 ```{r}
 # write lexical worlds 
 corpus$topic4 = cutree(dhc, 4)
@@ -487,6 +491,99 @@ summary_14 = convert(corpus, to = "data.frame") %>%
               values_from = n_topic14) %>% 
   replace(is.na(.), 0)
 
-write.csv(summary_4, "analysis/clusters/summary_4_topics.csv", row.names = FALSE)
-write.csv(summary_14, "analysis/clusters/summary_14_topics.csv", row.names = FALSE)
+write.csv(summary_4, "analysis/clusters/summary_4_topics_city_perc.csv", row.names = FALSE)
+write.csv(summary_14, "analysis/clusters/summary_14_topics_city_perc.csv", row.names = FALSE)
+```
+
+##### Number of segments
+
+```{r}
+# write lexical worlds 
+corpus$topic4 = cutree(dhc, 4)
+corpus$topic14 = cutree(dhc, 14)
+
+# get a summary for each city
+summary_4 = convert(corpus, to = "data.frame") %>% 
+  select(c("fid", "topic4")) %>% 
+  group_by(fid, topic4) %>% 
+  # count number of segments by topic
+  dplyr::mutate(n_topic4 = n()) %>% 
+  distinct() %>% 
+  mutate(topic_4 = paste0("topic4_", topic4)) %>% 
+  # pivot df to keep one row per city 
+  pivot_wider(names_from = topic_4,
+              id_cols = fid,
+              values_from = n_topic4) %>% 
+  replace(is.na(.), 0)
+
+summary_14 = convert(corpus, to = "data.frame") %>% 
+  select(c("fid", "topic14")) %>% 
+  group_by(fid, topic14) %>% 
+  dplyr::mutate(n_topic14 = n()) %>% 
+  distinct() %>%
+  mutate(topic_14 = paste0("topic14_", topic14)) %>% 
+  pivot_wider(names_from = topic_14,
+              id_cols = fid,
+              values_from = n_topic14) %>% 
+  replace(is.na(.), 0)
+
+write.csv(summary_4, "analysis/clusters/summary_4_topics_city_seg.csv", row.names = FALSE)
+write.csv(summary_14, "analysis/clusters/summary_14_topics_city_seg.csv", row.names = FALSE)
+
+### Get summary for 303 agglomerations (i.e. group the 373 cities)
+```
+
+#### By page
+
+```{r}
+# write lexical worlds 
+corpus$topic4 = cutree(dhc, 4)
+corpus$topic14 = cutree(dhc, 14)
+
+# get a summary for each city
+summary_4 = convert(corpus, to = "data.frame") %>% 
+  select(c("segment_source", "topic4")) %>% 
+  group_by(segment_source, topic4) %>% 
+  # count number of segments by topic
+  dplyr::mutate(n_topic4 = n()) %>% 
+  distinct() %>% 
+  mutate(topic_4 = paste0("topic4_", topic4)) %>% 
+  # pivot df to keep one row per city 
+  pivot_wider(names_from = topic_4,
+              id_cols = segment_source,
+              values_from = n_topic4) %>% 
+  replace(is.na(.), 0)
+
+summary_14 = convert(corpus, to = "data.frame") %>% 
+  select(c("segment_source", "topic14")) %>% 
+  group_by(segment_source, topic14) %>% 
+  dplyr::mutate(n_topic14 = n()) %>% 
+  distinct() %>%
+  mutate(topic_14 = paste0("topic14_", topic14)) %>% 
+  pivot_wider(names_from = topic_14,
+              id_cols = segment_source,
+              values_from = n_topic14) %>% 
+  replace(is.na(.), 0)
+
+write.csv(summary_4, "analysis/clusters/summary_4_topics_page_seg.csv", row.names = FALSE)
+write.csv(summary_14, "analysis/clusters/summary_14_topics_page_seg.csv", row.names = FALSE)
+```
+
+### AFC
+
+```{r}
+## AFC thematics by city
+data = read.csv("analysis/clusters/summary_14_topics_city_seg.csv") %>% 
+  column_to_rownames("fid") %>% 
+  select(-c("topic14_12", "topic14_1"))
+res.ca = CA(data)
+
+data = read.csv("analysis/clusters/summary_4_topics_city_seg.csv") %>% 
+  column_to_rownames("fid") 
+res.ca = CA(data)
+
+### AFC thematics by page
+data = read.csv("analysis/clusters/summary_14_topics_page_seg.csv") %>%   
+  column_to_rownames("segment_source")
+res.ca = CA(data)
 ```
