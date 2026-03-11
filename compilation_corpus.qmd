@@ -125,8 +125,6 @@ write.csv(df, "collected_data/hl/df_scrap_tokens_hl2.csv", row.names = FALSE)
 
 #### Compilation 3: in the 3rd local language
 
-##### Combine tokens
-
 ```{r compile_hl3}
 
 df = data.frame(data_city_river[,c(1,2,7,10,21)]) %>% 
@@ -262,8 +260,6 @@ df_en = read.csv("collected_data/english/scrap_data_river_en.csv") %>%
   select(-english)
 df_hl = read.csv("collected_data/hl/df_scrap_tokens_all_hl.csv") %>% 
   mutate(query = "hl") %>% 
-  # remove data for american cities in English (duplicate)
-  filter(!(gl == "us" & hl == "en")) %>% 
   select(-c("gl", "river_en", "snippet_id"))
 
 data = data_city_river %>% 
@@ -280,7 +276,7 @@ write.csv(df_all, "collected_data/combined_all_tokens.csv")
 We will remove the pages which appear multiple times for the same city (duplicates).
 
 ```{r}
-df = read.csv("collected_data/combined_all_tokens.csv") # 76927 pages
+df = read.csv("collected_data/combined_all_tokens.csv") # 84 267 pages
 
 df_distinct = df %>% 
   group_by(fid) %>% 
@@ -294,5 +290,5 @@ df_distinct = df %>%
   ## remove 480_ko_56 which is a list of industries 
   filter(id != "480_ko_56")
 
-write.csv(df_distinct, "collected_data/corpus_distinct.csv") # 72722 pages
+write.csv(df_distinct, "collected_data/corpus_distinct.csv") # 72813 pages
 ```
